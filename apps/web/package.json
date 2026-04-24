@@ -4,12 +4,14 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
     "build": "vite build && tsc --noEmit",
+    "cf-typegen": "wrangler types",
+    "deploy": "pnpm run build && wrangler deploy",
+    "dev": "vite dev",
     "preview": "pnpm run build && wrangler dev",
     "start": "pnpx srvx --prod -s ../client dist/server/server.js",
-    "deploy": "pnpm run build && wrangler deploy",
-    "cf-typegen": "wrangler types"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -34,6 +36,7 @@
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
     "vite": "^8.0.0",
+    "vitest": "^3.2.4",
     "wrangler": "^4.85.0"
   }
 }
