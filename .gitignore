@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build caches
+.turbo/
+.vite/
+.cache/
+
+# App build output
+dist/
+.output/
+build/
+public/build/
+server/build/
+api/
+
+# Cloudflare / Wrangler
+.wrangler/
+.dev.vars
+.env.local
+.env.*.local
+worker-configuration.d.ts
+
+# Environment files
+.env
+.env.*
+!.env.example
+.env.sentry-build-plugin
+
+# Test and browser tooling
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Deployment / platform
+.vercel/
+
+# OS files
+.DS_Store
+
+# Package manager lockfiles not used in this repo
+package-lock.json
+yarn.lock
