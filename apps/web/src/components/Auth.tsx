@@ -21,8 +21,9 @@ export function Auth({
               <span className="eyebrow">Viva Voce AI</span>
               <h1>{actionText}</h1>
               <p className="muted">
-                A quieter workspace for academic review, reporting, and oral
-                assessment preparation.
+                Strengthen examination integrity with AI-assisted review that
+                helps educators judge whether submitted work genuinely reflects
+                the student behind it.
               </p>
             </div>
             <form
@@ -61,10 +62,11 @@ export function Auth({
           <div className="auth-visual-overlay">
             <div className="auth-visual-copy">
               <span className="eyebrow">Paper & Ink</span>
-              <h2>Professional tools for serious academic work.</h2>
+              <h2>Evidence-led support for authentic assessment.</h2>
               <p>
-                Designed to feel like a clean desk, a bright reading room, and
-                a calm hour set aside for concentrated evaluation.
+                Designed for teachers who need calm, defensible signals when
+                deciding whether coursework, viva responses, and written
+                submissions are truly a student&apos;s own.
               </p>
             </div>
           </div>
