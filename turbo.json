@@ -1,5 +1,10 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    "apps/web/.env",
+    "packages/database/supabase/config.toml",
+    "packages/database/supabase/seed.sql"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -17,6 +22,15 @@
       "dependsOn": ["build"],
       "cache": false,
       "persistent": true
+    },
+    "db:start": {
+      "cache": false
+    },
+    "db:stop": {
+      "cache": false
+    },
+    "db:reset": {
+      "cache": false
     }
   }
 }

@@ -1,0 +1,9 @@
+{
+  "name": "@viva-voce-ai/database",
+  "private": true,
+  "scripts": {
+    "db:start": "pnpm exec supabase start",
+    "db:stop": "pnpm exec supabase stop",
+    "db:reset": "pnpm exec supabase db reset --local --yes"
+  }
+}

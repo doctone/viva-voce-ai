@@ -4,6 +4,9 @@
   "packageManager": "pnpm@10.14.0",
   "scripts": {
     "build": "turbo run build",
+    "db:start": "turbo run db:start --filter=@viva-voce-ai/database",
+    "db:stop": "turbo run db:stop --filter=@viva-voce-ai/database",
+    "db:reset": "turbo run db:reset --filter=@viva-voce-ai/database",
     "dev": "turbo run dev --parallel",
     "dev:web": "turbo run dev --filter=web",
     "deploy:web": "pnpm --filter web deploy",
@@ -12,6 +15,7 @@
     "start": "turbo run start --filter=web"
   },
   "devDependencies": {
+    "supabase": "^2.89.1",
     "turbo": "^2.5.3"
   }
 }
