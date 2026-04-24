@@ -1,7 +1,11 @@
 name: Deploy Cloudflare
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - Web Tests
+    types:
+      - completed
     branches:
       - main
   workflow_dispatch:
@@ -12,6 +16,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -31,7 +36,10 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
+
+      - name: Run web tests
+        run: pnpm --filter web test
 
       - name: Build web app
         run: pnpm --filter web build
