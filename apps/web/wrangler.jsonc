@@ -8,5 +8,8 @@
   "main": "@tanstack/react-start/server-entry",
   "compatibility_flags": [
     "nodejs_compat"
-  ]
+  ],
+  "vars": {
+    "SUPABASE_URL": "https://fbpgwluiblrmcmqfjaem.supabase.co"
+  }
 }

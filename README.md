@@ -38,5 +38,12 @@ GitHub Actions deploys on pushes to `main` using Wrangler. Add these repository 
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
+
+`SUPABASE_URL` is defined in `apps/web/wrangler.jsonc` using Cloudflare `vars`, following the same pattern as `Snapdish`.
+
+Set `SUPABASE_ANON_KEY` as a Cloudflare Worker secret before the first deploy:
+
+```sh
+cd apps/web
+pnpm wrangler secret put SUPABASE_ANON_KEY
+```

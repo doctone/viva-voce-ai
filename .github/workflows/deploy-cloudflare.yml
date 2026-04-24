@@ -42,9 +42,3 @@ jobs:
           workingDirectory: apps/web
           wranglerVersion: "4"
           command: deploy
-          secrets: |
-            SUPABASE_URL
-            SUPABASE_ANON_KEY
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
