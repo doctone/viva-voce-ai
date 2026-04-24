@@ -20,9 +20,9 @@ function PostComponent() {
   const post = Route.useLoaderData()
 
   return (
-    <div className="space-y-2">
-      <h4 className="text-xl font-bold underline">{post.title}</h4>
-      <div className="text-sm">{post.body}</div>
-    </div>
+    <article className="space-y-4">
+      <h2>{post.title}</h2>
+      <div className="muted">{post.body}</div>
+    </article>
   )
 }

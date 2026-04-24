@@ -5,6 +5,8 @@ import {
   Outlet,
   Scripts,
   createRootRoute,
+  redirect,
+  useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { createServerFn } from '@tanstack/react-start'
@@ -29,8 +31,22 @@ const fetchUser = createServerFn({ method: 'GET' }).handler(async () => {
 })
 
 export const Route = createRootRoute({
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     const user = await fetchUser()
+    const isAuthPage =
+      location.pathname === '/login' || location.pathname === '/signup'
+
+    if (!user && !isAuthPage) {
+      throw redirect({
+        to: '/login',
+      })
+    }
+
+    if (user && isAuthPage) {
+      throw redirect({
+        to: '/',
+      })
+    }
 
     return {
       user,
@@ -46,9 +62,9 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       ...seo({
-        title:
-          'TanStack Start | Type-Safe, Client-First, Full-Stack React Framework',
-        description: `TanStack Start is a type-safe, client-first, full-stack React framework. `,
+        title: 'Viva Voce AI | Academic Assessment Workspace',
+        description:
+          'A paper-and-ink assessment workspace for teachers, oral exams, and thoughtful academic review.',
       }),
     ],
     links: [
@@ -95,6 +111,10 @@ function RootComponent() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { user } = Route.useRouteContext()
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  const isAuthPage = pathname === '/login' || pathname === '/signup'
 
   return (
     <html>
@@ -102,37 +122,58 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <div className="p-2 flex gap-2 text-lg">
-          <Link
-            to="/"
-            activeProps={{
-              className: 'font-bold',
-            }}
-            activeOptions={{ exact: true }}
-          >
-            Home
-          </Link>{' '}
-          <Link
-            to="/posts"
-            activeProps={{
-              className: 'font-bold',
-            }}
-          >
-            Posts
-          </Link>
-          <div className="ml-auto">
-            {user ? (
-              <>
-                <span className="mr-2">{user.email}</span>
-                <Link to="/logout">Logout</Link>
-              </>
-            ) : (
-              <Link to="/login">Login</Link>
+        <div className="page-shell">
+          <div className={isAuthPage ? '' : 'page-frame'}>
+            {isAuthPage ? null : (
+              <header className="topbar">
+                <div className="brand-block">
+                  <span className="eyebrow">Academic Minimalist</span>
+                  <Link to="/" className="brand-title">
+                    Viva Voce AI
+                  </Link>
+                  <p className="brand-copy">
+                    Quiet software for grading, transcripts, and oral assessment
+                    workflows.
+                  </p>
+                </div>
+                <nav className="nav-links">
+                  <Link
+                    to="/"
+                    className="nav-link"
+                    activeProps={{
+                      className: 'nav-link nav-link-active',
+                    }}
+                    activeOptions={{ exact: true }}
+                  >
+                    Home
+                  </Link>
+                  <Link
+                    to="/posts"
+                    className="nav-link"
+                    activeProps={{
+                      className: 'nav-link nav-link-active',
+                    }}
+                  >
+                    Posts
+                  </Link>
+                  {user ? (
+                    <>
+                      <span className="user-chip">{user.email}</span>
+                      <Link to="/logout" className="nav-link">
+                        Logout
+                      </Link>
+                    </>
+                  ) : (
+                    <Link to="/login" className="nav-link">
+                      Login
+                    </Link>
+                  )}
+                </nav>
+              </header>
             )}
+            {children}
           </div>
         </div>
-        <hr />
-        {children}
         <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
       </body>

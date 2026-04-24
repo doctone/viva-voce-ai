@@ -4,6 +4,7 @@ import { useMutation } from '../hooks/useMutation'
 import { loginFn } from '../routes/_authed'
 import { signupFn } from '../routes/signup'
 import { Auth } from './Auth'
+import { Button } from './ui/Button'
 
 export function Login() {
   const router = useRouter()
@@ -40,12 +41,12 @@ export function Login() {
       afterSubmit={
         loginMutation.data ? (
           <>
-            <div className="text-red-400">{loginMutation.data.message}</div>
+            <div className="feedback-error">{loginMutation.data.message}</div>
             {loginMutation.data.error &&
             loginMutation.data.message === 'Invalid login credentials' ? (
               <div>
-                <button
-                  className="text-blue-500"
+                <Button
+                  variant="secondary"
                   onClick={(e) => {
                     const formData = new FormData(
                       (e.target as HTMLButtonElement).form!,
@@ -60,8 +61,8 @@ export function Login() {
                   }}
                   type="button"
                 >
-                  Sign up instead?
-                </button>
+                  Sign Up Instead
+                </Button>
               </div>
             ) : null}
           </>

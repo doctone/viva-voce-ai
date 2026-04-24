@@ -14,7 +14,7 @@ const logoutFn = createServerFn().handler(async () => {
   }
 
   throw redirect({
-    href: '/',
+    href: '/login',
   })
 })
 

@@ -1,3 +1,6 @@
+import { Button } from './ui/Button'
+import { TextField } from './ui/TextField'
+
 export function Auth({
   actionText,
   onSubmit,
@@ -10,47 +13,62 @@ export function Auth({
   afterSubmit?: React.ReactNode
 }) {
   return (
-    <div className="fixed inset-0 bg-white dark:bg-black flex items-start justify-center p-8">
-      <div className="bg-white dark:bg-gray-900 p-8 rounded-lg shadow-lg">
-        <h1 className="text-2xl font-bold mb-4">{actionText}</h1>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            onSubmit(e)
-          }}
-          className="space-y-4"
+    <div className="auth-shell">
+      <div className="auth-layout">
+        <section className="auth-panel">
+          <div className="paper-panel auth-card">
+            <div className="auth-header">
+              <span className="eyebrow">Viva Voce AI</span>
+              <h1>{actionText}</h1>
+              <p className="muted">
+                A quieter workspace for academic review, reporting, and oral
+                assessment preparation.
+              </p>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                onSubmit(e)
+              }}
+              className="auth-form"
+            >
+              <TextField
+                id="email"
+                label="Email"
+                name="email"
+                type="email"
+                placeholder="will@viva-voce.org"
+              />
+              <TextField
+                id="password"
+                label="Password"
+                name="password"
+                type="password"
+                placeholder="Enter your password"
+              />
+              <Button type="submit" fullWidth disabled={status === 'pending'}>
+                {status === 'pending' ? 'Working' : actionText}
+              </Button>
+              {afterSubmit ? afterSubmit : null}
+            </form>
+          </div>
+        </section>
+        <aside
+          className="auth-visual"
+          aria-hidden="true"
+          style={{ backgroundImage: "url('/auth-hero.png')" }}
         >
-          <div>
-            <label htmlFor="email" className="block text-xs">
-              Username
-            </label>
-            <input
-              type="email"
-              name="email"
-              id="email"
-              className="px-2 py-1 w-full rounded-sm border border-gray-500/20 bg-white dark:bg-gray-800"
-            />
+          <div className="auth-visual-overlay">
+            <div className="auth-visual-copy">
+              <span className="eyebrow">Paper & Ink</span>
+              <h2>Professional tools for serious academic work.</h2>
+              <p>
+                Designed to feel like a clean desk, a bright reading room, and
+                a calm hour set aside for concentrated evaluation.
+              </p>
+            </div>
           </div>
-          <div>
-            <label htmlFor="password" className="block text-xs">
-              Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              id="password"
-              className="px-2 py-1 w-full rounded-sm border border-gray-500/20 bg-white dark:bg-gray-800"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-cyan-600 text-white rounded-sm py-2 font-black uppercase"
-            disabled={status === 'pending'}
-          >
-            {status === 'pending' ? '...' : actionText}
-          </button>
-          {afterSubmit ? afterSubmit : null}
-        </form>
+        </aside>
       </div>
     </div>
   )

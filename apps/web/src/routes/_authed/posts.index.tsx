@@ -4,5 +4,9 @@ export const Route = createFileRoute('/_authed/posts/')({
 })
 
 function PostsIndexComponent() {
-  return <div>Select a post.</div>
+  return (
+    <div className="muted">
+      Select a post from the list to open it in this reading pane.
+    </div>
+  )
 }
