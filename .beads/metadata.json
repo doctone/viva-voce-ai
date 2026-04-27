@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "viva_voce_ai",
+  "project_id": "0047e532-7308-4fca-b92a-795031797e1b"
+}

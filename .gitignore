@@ -43,3 +43,8 @@ playwright/.cache/
 # Package manager lockfiles not used in this repo
 package-lock.json
 yarn.lock
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
