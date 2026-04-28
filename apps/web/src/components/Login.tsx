@@ -14,7 +14,7 @@ export function Login() {
     onSuccess: async (ctx) => {
       if (!ctx.data?.error) {
         await router.invalidate()
-        router.navigate({ to: '/' })
+        router.navigate({ to: '/vivas' })
         return
       }
     },

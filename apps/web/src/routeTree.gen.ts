@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DesignRouteImport } from './routes/design'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthedVivasRouteImport } from './routes/_authed/vivas'
 import { Route as AuthedPostsRouteImport } from './routes/_authed/posts'
 import { Route as AuthedPostsIndexRouteImport } from './routes/_authed/posts.index'
 import { Route as AuthedPostsPostIdRouteImport } from './routes/_authed/posts.$postId'
@@ -48,6 +49,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedVivasRoute = AuthedVivasRouteImport.update({
+  id: '/vivas',
+  path: '/vivas',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedPostsRoute = AuthedPostsRouteImport.update({
   id: '/posts',
   path: '/posts',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/posts': typeof AuthedPostsRouteWithChildren
+  '/vivas': typeof AuthedVivasRoute
   '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/posts/': typeof AuthedPostsIndexRoute
 }
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
+  '/vivas': typeof AuthedVivasRoute
   '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/posts': typeof AuthedPostsIndexRoute
 }
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/_authed/posts': typeof AuthedPostsRouteWithChildren
+  '/_authed/vivas': typeof AuthedVivasRoute
   '/_authed/posts/$postId': typeof AuthedPostsPostIdRoute
   '/_authed/posts/': typeof AuthedPostsIndexRoute
 }
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/signup'
     | '/posts'
+    | '/vivas'
     | '/posts/$postId'
     | '/posts/'
   fileRoutesByTo: FileRoutesByTo
@@ -113,6 +123,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/signup'
+    | '/vivas'
     | '/posts/$postId'
     | '/posts'
   id:
@@ -124,6 +135,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/signup'
     | '/_authed/posts'
+    | '/_authed/vivas'
     | '/_authed/posts/$postId'
     | '/_authed/posts/'
   fileRoutesById: FileRoutesById
@@ -181,6 +193,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/vivas': {
+      id: '/_authed/vivas'
+      path: '/vivas'
+      fullPath: '/vivas'
+      preLoaderRoute: typeof AuthedVivasRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/posts': {
       id: '/_authed/posts'
       path: '/posts'
@@ -221,10 +240,12 @@ const AuthedPostsRouteWithChildren = AuthedPostsRoute._addFileChildren(
 
 interface AuthedRouteChildren {
   AuthedPostsRoute: typeof AuthedPostsRouteWithChildren
+  AuthedVivasRoute: typeof AuthedVivasRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedPostsRoute: AuthedPostsRouteWithChildren,
+  AuthedVivasRoute: AuthedVivasRoute,
 }
 
 const AuthedRouteWithChildren =

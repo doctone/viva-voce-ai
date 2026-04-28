@@ -1,5 +1,6 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
+import { AuthenticatedAppShell } from '../components/navigation/AuthenticatedAppShell'
 import { getSupabaseServerClient } from '../utils/supabase'
 
 export const loginFn = createServerFn({ method: 'POST' })
@@ -27,4 +28,13 @@ export const Route = createFileRoute('/_authed')({
       })
     }
   },
+  component: AuthenticatedLayout,
 })
+
+function AuthenticatedLayout() {
+  return (
+    <AuthenticatedAppShell>
+      <Outlet />
+    </AuthenticatedAppShell>
+  )
+}

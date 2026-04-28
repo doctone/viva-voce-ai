@@ -101,6 +101,16 @@ export const Route = createRootRoute({
   component: RootComponent,
 })
 
+export function getShouldShowTopbar(
+  pathname: string,
+  routeIds: readonly string[],
+) {
+  const isAuthPage = pathname === '/login' || pathname === '/signup'
+  const isAuthenticatedRoute = routeIds.includes('/_authed')
+
+  return !isAuthPage && !isAuthenticatedRoute
+}
+
 function RootComponent() {
   return (
     <RootDocument>
@@ -111,10 +121,13 @@ function RootComponent() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { user } = Route.useRouteContext()
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
+  const shouldShowTopbar = useRouterState({
+    select: (state) =>
+      getShouldShowTopbar(
+        state.location.pathname,
+        state.matches.map((match) => match.routeId),
+      ),
   })
-  const isAuthPage = pathname === '/login' || pathname === '/signup'
 
   return (
     <html>
@@ -123,8 +136,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <div className="page-shell">
-          <div className={isAuthPage ? '' : 'page-frame'}>
-            {isAuthPage ? null : (
+          <div className={shouldShowTopbar ? 'page-frame' : ''}>
+            {shouldShowTopbar ? (
               <header className="topbar">
                 <div className="brand-block">
                   <span className="eyebrow">Academic Minimalist</span>
@@ -170,7 +183,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                   )}
                 </nav>
               </header>
-            )}
+            ) : null}
             {children}
           </div>
         </div>
