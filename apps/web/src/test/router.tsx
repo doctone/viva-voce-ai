@@ -19,3 +19,5 @@ export function renderWithRouter(ui: ReactElement, initialPath = '/') {
 
   return render(<RouterProvider router={router} />)
 }
+
+export { render }

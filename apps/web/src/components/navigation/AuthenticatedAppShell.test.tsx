@@ -1,55 +1,82 @@
-import { render, screen } from '@testing-library/react'
-import { Outlet } from '@tanstack/react-router'
+import { act, fireEvent, screen } from '@testing-library/react'
+import {
+  Outlet,
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from '@tanstack/react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthenticatedAppShell } from './AuthenticatedAppShell'
-import { renderWithRouter } from '../../test/router'
+import { render } from '../../test/router'
 import { getShouldShowTopbar } from '../../routes/__root'
-
-vi.mock('@tanstack/react-router', async () => {
-  const actual = await vi.importActual<typeof import('@tanstack/react-router')>(
-    '@tanstack/react-router',
-  )
-
-  return {
-    ...actual,
-    Outlet: () => <section>Authenticated content</section>,
-  }
-})
 
 describe('AuthenticatedAppShell', () => {
   beforeEach(() => {
-    vi.restoreAllMocks()
+    window.scrollTo = vi.fn()
   })
 
-  it('renders the vivas placeholder panel inside the authenticated shell', async () => {
-    renderWithRouter(
-      <AuthenticatedAppShell>
-        <section className="paper-panel section-card">
-          <span className="eyebrow">Workspace</span>
-          <h1>Vivas</h1>
-          <p className="muted">
-            Practice sessions will appear here soon.
-          </p>
-        </section>
-      </AuthenticatedAppShell>,
-      '/vivas',
-    )
+  it('renders the whole page and changes routes when a sidebar nav item is clicked', async () => {
+    const rootRoute = createRootRoute({
+      component: () => (
+        <AuthenticatedAppShell
+          items={[
+            { label: 'Vivas', to: '/vivas' },
+            { label: 'Reports', to: '/reports' },
+          ]}
+          userEmail="teacher@example.com"
+        >
+          <Outlet />
+        </AuthenticatedAppShell>
+      ),
+    })
 
-    expect(await screen.findByText('Viva Voce AI')).toBeInTheDocument()
+    const vivasRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/vivas',
+      component: () => (
+        <section className="paper-panel section-card">
+          <h1>Vivas</h1>
+          <p className="muted">Practice sessions will appear here soon.</p>
+        </section>
+      ),
+    })
+
+    const reportsRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/reports',
+      component: () => (
+        <section className="paper-panel section-card">
+          <h1>Reports</h1>
+          <p className="muted">Assessment summaries live here.</p>
+        </section>
+      ),
+    })
+
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([vivasRoute, reportsRoute]),
+      history: createMemoryHistory({ initialEntries: ['/vivas'] }),
+    })
+
+    render(<RouterProvider router={router} />)
+
+    expect(await screen.findByRole('link', { name: 'Vivas' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Vivas' })).toBeInTheDocument()
     expect(screen.getByText('teacher@example.com')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Vivas' })).toHaveAttribute(
-      'href',
-      '/vivas',
-    )
     expect(screen.getByRole('link', { name: 'Logout' })).toHaveAttribute(
       'href',
       '/logout',
     )
-    expect(screen.getByRole('heading', { name: 'Vivas' })).toBeInTheDocument()
-    expect(screen.getByText('Workspace')).toBeInTheDocument()
-    expect(
-      screen.getByText('Practice sessions will appear here soon.'),
-    ).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Reports' }))
+    })
+
+    expect(await screen.findByRole('heading', { name: 'Reports' })).toBeInTheDocument()
+    expect(screen.getByText('Assessment summaries live here.')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/reports')
   })
 
   it('returns false for the public topbar on authenticated vivas routes', () => {
