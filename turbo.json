@@ -18,6 +18,10 @@
       "cache": false,
       "persistent": true
     },
+    "test": {
+      "dependsOn": ["^test"],
+      "outputs": []
+    },
     "start": {
       "dependsOn": ["build"],
       "cache": false,

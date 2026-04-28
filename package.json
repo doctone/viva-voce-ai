@@ -12,7 +12,9 @@
     "deploy:web": "pnpm --filter web deploy",
     "cf-typegen:web": "pnpm --filter web cf-typegen",
     "preview": "turbo run preview --filter=web",
-    "start": "turbo run start --filter=web"
+    "start": "turbo run start --filter=web",
+    "test": "turbo run test",
+    "test:web": "pnpm --filter web test"
   },
   "devDependencies": {
     "supabase": "^2.89.1",
