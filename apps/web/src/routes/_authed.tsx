@@ -32,8 +32,14 @@ export const Route = createFileRoute('/_authed')({
 })
 
 function AuthenticatedLayout() {
+  const { user } = Route.useRouteContext()
+
+  if (!user) {
+    return null
+  }
+
   return (
-    <AuthenticatedAppShell>
+    <AuthenticatedAppShell userEmail={user.email}>
       <Outlet />
     </AuthenticatedAppShell>
   )
