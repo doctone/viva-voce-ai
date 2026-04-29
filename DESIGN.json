@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-04-29T13:13:18Z",
+  "title": "Design System: Viva Voce AI",
+  "extensions": {
+    "colorMeta": {
+      "archival-paper": {
+        "role": "neutral",
+        "displayName": "Archival Paper",
+        "canonical": "#faf9f5",
+        "tonalRamp": ["#2a2927", "#464542", "#63615d", "#7f7d79", "#9c9995", "#b8b5b1", "#d5d1cd", "#f2eee9"]
+      },
+      "reading-surface": {
+        "role": "neutral",
+        "displayName": "Reading Surface",
+        "canonical": "#f4f4f0",
+        "tonalRamp": ["#262624", "#41413e", "#5c5c58", "#787873", "#93938f", "#afaeaa", "#cacac6", "#e6e5e1"]
+      },
+      "panel-surface": {
+        "role": "neutral",
+        "displayName": "Panel Surface",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#2b2b2b", "#474747", "#636363", "#7f7f7f", "#9b9b9b", "#b7b7b7", "#d3d3d3", "#efefef"]
+      },
+      "rule-line": {
+        "role": "neutral",
+        "displayName": "Rule Line",
+        "canonical": "#c4c6cf",
+        "tonalRamp": ["#23252c", "#3d3f48", "#575963", "#71737e", "#8c8d98", "#a6a8b2", "#c0c2cd", "#dbdce7"]
+      },
+      "graphite-ink": {
+        "role": "neutral",
+        "displayName": "Graphite Ink",
+        "canonical": "#1a1c1a",
+        "tonalRamp": ["#121412", "#2a2d2b", "#434643", "#5c5f5c", "#757874", "#8f918d", "#a9aba7", "#c3c5c1"]
+      },
+      "quiet-ink": {
+        "role": "neutral",
+        "displayName": "Quiet Ink",
+        "canonical": "#44474e",
+        "tonalRamp": ["#191b20", "#2f3238", "#45484f", "#5c6067", "#737780", "#8b8f99", "#a3a8b2", "#bcc1cc"]
+      },
+      "institutional-navy": {
+        "role": "primary",
+        "displayName": "Institutional Navy",
+        "canonical": "#002046",
+        "tonalRamp": ["#06111d", "#0c1d31", "#122947", "#19355d", "#1f4274", "#264f8b", "#305da3", "#4d78bd"]
+      },
+      "reserve-navy": {
+        "role": "primary",
+        "displayName": "Reserve Navy",
+        "canonical": "#1b365d",
+        "tonalRamp": ["#111a26", "#18283b", "#203650", "#274466", "#30537c", "#396293", "#4272aa", "#5887c1"]
+      },
+      "dry-stone": {
+        "role": "neutral",
+        "displayName": "Dry Stone",
+        "canonical": "#74777f",
+        "tonalRamp": ["#1f2024", "#35383d", "#4c4f56", "#63666f", "#7a7e87", "#92959f", "#aaadb7", "#c2c5cf"]
+      },
+      "burnished-umber": {
+        "role": "tertiary",
+        "displayName": "Burnished Umber",
+        "canonical": "#321c00",
+        "tonalRamp": ["#140b02", "#281305", "#3c1c08", "#52270b", "#68320f", "#7f3e13", "#974c18", "#b05b1d"]
+      },
+      "error-red": {
+        "role": "error",
+        "displayName": "Error Red",
+        "canonical": "#ba1a1a",
+        "tonalRamp": ["#2d0c0c", "#4e1010", "#701414", "#921818", "#b51d1d", "#d33a3a", "#e56b6b", "#f3a0a0"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page-defining headings and major entry points."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section titles inside substantial surfaces."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Brand marks and compact high-importance headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default reading copy and explanatory text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Navigation, field labels, and compact structural language."
+      }
+    },
+    "shadows": [
+      {
+        "name": "technical-edge",
+        "value": "0 0 0 1px rgb(26 28 26 / 0.06)",
+        "purpose": "Subtle edge definition for paper panels on warm page fields."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "ease-out",
+        "purpose": "Default state transition easing across controls."
+      },
+      {
+        "name": "duration-fast",
+        "value": "150ms",
+        "purpose": "Hover, focus, border, and color feedback."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default high-authority action with restrained editorial weight.",
+      "html": "<button class=\"ds-btn-primary\">Enter Workspace</button>",
+      "css": ".ds-btn-primary { background: var(--color-primary-container); color: var(--color-on-primary); min-height: 44px; padding: 0 18px; border: 1px solid var(--color-primary-container); font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, transform 150ms ease-out; } .ds-btn-primary:hover { background: var(--color-primary); border-color: var(--color-primary); } .ds-btn-primary:focus-visible { outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, white); outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(1px); border-color: color-mix(in srgb, var(--color-primary) 88%, black); background: color-mix(in srgb, var(--color-primary) 88%, black); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Structural action for alternate paths and lower-emphasis decisions.",
+      "html": "<button class=\"ds-btn-secondary\">Sign Up Instead</button>",
+      "css": ".ds-btn-secondary { background: transparent; color: var(--color-on-surface); min-height: 44px; padding: 0 18px; border: 1px solid var(--color-outline); font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: background-color 150ms ease-out, border-color 150ms ease-out, transform 150ms ease-out; } .ds-btn-secondary:hover { background: var(--color-surface-container-low); border-color: var(--color-on-surface-variant); } .ds-btn-secondary:focus-visible { outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, white); outline-offset: 2px; } .ds-btn-secondary:active { transform: translateY(1px); background: var(--color-surface-container); border-color: var(--color-outline); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "text-field",
+      "description": "Bottom-led field treatment that brightens into focus rather than floating above the page.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Email</span><input class=\"ds-input\" type=\"email\" placeholder=\"will@viva-voce.org\" /></label>",
+      "css": ".ds-field { display: grid; gap: 8px; font-family: var(--font-sans); } .ds-field-label { color: var(--color-on-surface-variant); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; line-height: 1; text-transform: uppercase; } .ds-input { width: 100%; padding: 12px; border: 1px solid transparent; border-bottom-color: var(--color-outline); background: transparent; color: var(--color-on-surface); font-family: var(--font-sans); font-size: 16px; line-height: 1.6; transition: border-color 150ms ease-out, background-color 150ms ease-out, box-shadow 150ms ease-out; } .ds-input:hover { background: color-mix(in srgb, var(--color-surface-container-low) 55%, transparent); } .ds-input:focus-visible { outline: none; border-color: var(--color-primary); background: var(--color-surface-container-lowest); box-shadow: inset 0 -1px 0 var(--color-primary); }"
+    },
+    {
+      "name": "Paper Panel",
+      "kind": "card",
+      "refersTo": "paper-panel",
+      "description": "Canonical reading container used across workspace and auth surfaces.",
+      "html": "<section class=\"ds-panel\"><span class=\"ds-eyebrow\">Workspace</span><h2 class=\"ds-panel-title\">Vivas</h2><p class=\"ds-panel-copy\">Practice sessions will appear here soon.</p></section>",
+      "css": ".ds-panel { background: var(--color-surface-container-lowest); color: var(--color-on-surface); border: 1px solid var(--color-outline-variant); box-shadow: var(--shadow-technical); padding: 32px; display: grid; gap: 16px; } .ds-eyebrow { color: var(--color-on-surface-variant); font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; line-height: 1; text-transform: uppercase; } .ds-panel-title { margin: 0; color: var(--color-primary); font-family: var(--font-display); font-size: 32px; font-weight: 500; line-height: 1.3; letter-spacing: -0.01em; } .ds-panel-copy { margin: 0; color: var(--color-on-surface-variant); font-family: var(--font-sans); font-size: 16px; line-height: 1.6; }"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "nav-link-active",
+      "description": "Uppercase structural navigation with strong active inversion and quiet resting state.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Primary\"><a class=\"ds-nav-link ds-nav-link-active\" href=\"#\">Vivas</a><a class=\"ds-nav-link\" href=\"#\">Posts</a></nav>",
+      "css": ".ds-nav { display: grid; gap: 8px; } .ds-nav-link { display: flex; align-items: center; min-height: 42px; padding: 10px 32px; border-top: 1px solid var(--color-outline-variant); border-bottom: 1px solid var(--color-outline-variant); background: var(--color-surface-container-lowest); color: var(--color-on-surface-variant); font-family: var(--font-sans); font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-decoration: none; text-transform: uppercase; transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out; } .ds-nav-link:hover { background: var(--color-surface-container-low); color: var(--color-on-surface); } .ds-nav-link:focus-visible { outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, white); outline-offset: 2px; } .ds-nav-link-active { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-primary); }"
+    },
+    {
+      "name": "Auth Split Panel",
+      "kind": "custom",
+      "refersTo": "paper-panel",
+      "description": "Signature authentication composition that pairs a calm form panel with a photographic reassurance pane.",
+      "html": "<section class=\"ds-auth-shell\"><div class=\"ds-auth-panel\"><span class=\"ds-eyebrow\">Viva Voce AI</span><h1 class=\"ds-auth-title\">Login</h1><p class=\"ds-auth-copy\">Strengthen examination integrity with AI-assisted review that helps educators judge whether submitted work genuinely reflects the student behind it.</p></div><aside class=\"ds-auth-aside\"><div class=\"ds-auth-overlay\"><span class=\"ds-eyebrow\">Paper &amp; Ink</span><h2 class=\"ds-auth-aside-title\">Evidence-led support for authentic assessment.</h2><p class=\"ds-auth-copy\">Designed for teachers who need calm, defensible signals when deciding whether coursework and viva responses are truly a student's own.</p></div></aside></section>",
+      "css": ".ds-auth-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr); min-height: 560px; background: var(--color-background); } .ds-auth-panel { display: grid; align-content: center; gap: 8px; padding: 48px; background: var(--color-surface-container-lowest); border: 1px solid var(--color-outline-variant); box-shadow: var(--shadow-technical); } .ds-auth-title { margin: 0; color: var(--color-primary); font-family: var(--font-display); font-size: 48px; font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; } .ds-auth-copy { margin: 0; color: var(--color-on-surface-variant); font-family: var(--font-sans); font-size: 16px; line-height: 1.6; max-width: 38ch; } .ds-auth-aside { display: flex; align-items: end; padding: 40px; background: linear-gradient(180deg, rgba(0, 32, 70, 0.08), rgba(0, 32, 70, 0.5)), linear-gradient(0deg, rgba(250, 249, 245, 0.05), rgba(250, 249, 245, 0.05)), linear-gradient(135deg, #6a7887, #23344f); } .ds-auth-overlay { max-width: 28rem; padding: 24px; border: 1px solid var(--color-outline-variant); background: rgb(250 249 245 / 0.82); color: var(--color-on-surface); backdrop-filter: blur(10px); } .ds-auth-aside-title { margin: 8px 0; color: var(--color-primary); font-family: var(--font-display); font-size: 32px; font-weight: 500; line-height: 1.3; letter-spacing: -0.01em; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Paper & Ink Workspace",
+    "overview": "Viva Voce AI uses product UI patterns, but its emotional center comes from scholarly work rather than startup software. The system is built for teachers reviewing evidence, preparing oral assessments, and keeping defensible records in long, focused sessions. Surfaces feel like paper under clear daylight: warm, matte, and steady. Accent color is reserved for authority, state, and navigation, not decoration.\n\nThe aesthetic is editorial without becoming theatrical. Newsreader gives headings a measured academic voice, while Manrope keeps forms, controls, and navigation disciplined. Depth is handled through tonal layering, hairline rules, and a single technical shadow. The interface should feel composed enough for institutional work, but never ornate or ceremonial.\n\nThis system explicitly rejects gamified edtech, generic SaaS dashboard polish, and casual consumer-product softness. It should never feel reward-driven, KPI-obsessed, or lifestyle-branded. The teacher stays in control, the content stays legible, and the visual language stays quiet under pressure.",
+    "keyCharacteristics": [
+      "Warm paper neutrals instead of cold app chrome.",
+      "Institutional navy used sparingly for command and active state.",
+      "Serif display paired with efficient sans UI copy.",
+      "Flat layers, crisp controls, and technical shadows only.",
+      "Predictable structure that supports concentrated reading and judgment."
+    ],
+    "rules": [
+      {
+        "name": "The One Voice Rule",
+        "body": "Blue is used to indicate command, current state, or important emphasis only. It is not a decorative wash and it does not spread across large inactive surfaces.",
+        "section": "colors"
+      },
+      {
+        "name": "The Scholarly Contrast Rule",
+        "body": "Serif type may lead sections and establish tone, but all controls, labels, and repetitive UI language stay in the sans system so the tool remains legible and familiar.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Layers Rule",
+        "body": "If a surface can be separated with tone and a hairline rule, do that first. Reach for shadow only when the boundary would otherwise disappear.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep the page atmosphere on warm neutrals like `#faf9f5` and `#f4f4f0`, with `#ffffff` reserved for focused content panels and fields.",
+      "Do use `#002046` and `#1b365d` for command, active state, and high-importance emphasis only.",
+      "Do keep controls square-edged, label-driven, and mechanically precise.",
+      "Do preserve visible structure through hairline rules, borders, and tonal layers before adding any extra depth.",
+      "Do let serif typography establish tone in headings while keeping UI controls, labels, and utility copy in Manrope."
+    ],
+    "donts": [
+      "Don't make this feel like gamified edtech with bright rewards, playful microcopy, or student-app energy.",
+      "Don't slip into generic SaaS dashboard tropes with KPI hero blocks, startup gradients, or decorative metrics.",
+      "Don't soften the product into a casual consumer-product aesthetic with oversized pills, friendly blob shapes, or lifestyle-brand warmth.",
+      "Don't use border-left or border-right accents greater than 1px as decorative stripes on panels, alerts, or list items.",
+      "Don't use gradient text, decorative glassmorphism, or heavy inactive accent fills."
+    ]
+  }
+}
