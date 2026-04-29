@@ -23,7 +23,7 @@ import {
   pageShellClassName,
 } from '../styles/classes'
 import { seo } from '../utils/seo'
-import { getSupabaseServerClient } from '../utils/supabase'
+import { getSupabaseServerClient } from '../utils/supabase-server'
 
 const fetchUser = createServerFn({ method: 'GET' }).handler(async () => {
   const supabase = getSupabaseServerClient()
@@ -57,6 +57,10 @@ export const Route = createRootRoute({
     }
 
     return {
+      publicEnv: {
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
+        SUPABASE_URL: process.env.SUPABASE_URL!,
+      },
       user,
     }
   },
@@ -128,7 +132,8 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { user } = Route.useRouteContext()
+  const { publicEnv, user } = Route.useRouteContext()
+  const publicEnvScript = JSON.stringify(publicEnv)
   const navLinkClassName =
     'border border-outline-variant bg-surface-container-lowest px-[14px] py-[10px] text-[13px] font-bold uppercase tracking-[0.05em] text-on-surface-variant'
   const navLinkActiveClassName = 'border-primary bg-primary text-on-primary'
@@ -144,6 +149,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     <html>
       <head>
         <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__PUBLIC_ENV__ = ${publicEnvScript};`,
+          }}
+        />
       </head>
       <body>
         <div className={pageShellClassName}>
