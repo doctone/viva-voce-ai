@@ -1,4 +1,12 @@
 import { Button } from './ui/Button'
+import {
+  cn,
+  eyebrowClassName,
+  headingOneClassName,
+  headingTwoClassName,
+  mutedTextClassName,
+  paperPanelClassName,
+} from '../styles/classes'
 import { TextField } from './ui/TextField'
 
 export function Auth({
@@ -13,14 +21,19 @@ export function Auth({
   afterSubmit?: React.ReactNode
 }) {
   return (
-    <div className="auth-shell">
-      <div className="auth-layout">
-        <section className="auth-panel">
-          <div className="paper-panel auth-card">
-            <div className="auth-header">
-              <span className="eyebrow">Viva Voce AI</span>
-              <h1>{actionText}</h1>
-              <p className="muted">
+    <div className="min-h-screen">
+      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
+        <section className="flex items-stretch justify-center p-[clamp(20px,5vw,48px)] lg:p-0">
+          <div
+            className={cn(
+              paperPanelClassName,
+              'w-full max-w-[560px] self-center p-[clamp(24px,4vw,48px)] lg:mx-auto lg:max-w-[520px]',
+            )}
+          >
+            <div className="mb-8 grid gap-2">
+              <span className={eyebrowClassName}>Viva Voce AI</span>
+              <h1 className={headingOneClassName}>{actionText}</h1>
+              <p className={mutedTextClassName}>
                 Strengthen examination integrity with AI-assisted review that
                 helps educators judge whether submitted work genuinely reflects
                 the student behind it.
@@ -31,7 +44,7 @@ export function Auth({
                 e.preventDefault()
                 onSubmit(e)
               }}
-              className="auth-form"
+              className="grid gap-8"
             >
               <TextField
                 id="email"
@@ -55,15 +68,17 @@ export function Auth({
           </div>
         </section>
         <aside
-          className="auth-visual"
+          className="hidden min-h-[40vh] bg-cover bg-center bg-no-repeat lg:block lg:min-h-screen"
           aria-hidden="true"
           style={{ backgroundImage: "url('/auth-hero.png')" }}
         >
-          <div className="auth-visual-overlay">
-            <div className="auth-visual-copy">
-              <span className="eyebrow">Paper & Ink</span>
-              <h2>Evidence-led support for authentic assessment.</h2>
-              <p>
+          <div className="flex min-h-full items-end bg-[linear-gradient(180deg,rgba(0,32,70,0.08),rgba(0,32,70,0.5)),linear-gradient(0deg,rgba(250,249,245,0.05),rgba(250,249,245,0.05))] p-[clamp(24px,4vw,40px)]">
+            <div className="max-w-[28rem] border border-outline-variant bg-[rgb(250_249_245_/_0.82)] p-6 text-on-surface backdrop-blur-[10px]">
+              <span className={eyebrowClassName}>Paper & Ink</span>
+              <h2 className={cn(headingTwoClassName, 'mb-2')}>
+                Evidence-led support for authentic assessment.
+              </h2>
+              <p className={mutedTextClassName}>
                 Designed for teachers who need calm, defensible signals when
                 deciding whether coursework, viva responses, and written
                 submissions are truly a student&apos;s own.

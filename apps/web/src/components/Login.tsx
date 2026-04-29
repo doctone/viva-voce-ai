@@ -3,6 +3,7 @@ import { useServerFn } from '@tanstack/react-start'
 import { useMutation } from '../hooks/useMutation'
 import { loginFn } from '../routes/_authed'
 import { signupFn } from '../routes/signup'
+import { cn, mutedTextClassName } from '../styles/classes'
 import { Auth } from './Auth'
 import { Button } from './ui/Button'
 
@@ -41,7 +42,9 @@ export function Login() {
       afterSubmit={
         loginMutation.data ? (
           <>
-            <div className="feedback-error">{loginMutation.data.message}</div>
+            <div className={cn(mutedTextClassName, 'text-error')}>
+              {loginMutation.data.message}
+            </div>
             {loginMutation.data.error &&
             loginMutation.data.message === 'Invalid login credentials' ? (
               <div>

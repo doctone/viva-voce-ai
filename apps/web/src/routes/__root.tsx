@@ -14,6 +14,14 @@ import * as React from 'react'
 import { DefaultCatchBoundary } from '../components/DefaultCatchBoundary'
 import { NotFound } from '../components/NotFound'
 import appCss from '../styles/app.css?url'
+import {
+  brandTitleClassName,
+  cn,
+  eyebrowClassName,
+  mutedTextClassName,
+  pageFrameClassName,
+  pageShellClassName,
+} from '../styles/classes'
 import { seo } from '../utils/seo'
 import { getSupabaseServerClient } from '../utils/supabase'
 
@@ -121,6 +129,9 @@ function RootComponent() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { user } = Route.useRouteContext()
+  const navLinkClassName =
+    'border border-outline-variant bg-surface-container-lowest px-[14px] py-[10px] text-[13px] font-bold uppercase tracking-[0.05em] text-on-surface-variant'
+  const navLinkActiveClassName = 'border-primary bg-primary text-on-primary'
   const shouldShowTopbar = useRouterState({
     select: (state) =>
       getShouldShowTopbar(
@@ -135,26 +146,26 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <div className="page-shell">
-          <div className={shouldShowTopbar ? 'page-frame' : ''}>
+        <div className={pageShellClassName}>
+          <div className={shouldShowTopbar ? pageFrameClassName : ''}>
             {shouldShowTopbar ? (
-              <header className="topbar">
-                <div className="brand-block">
-                  <span className="eyebrow">Academic Minimalist</span>
-                  <Link to="/" className="brand-title">
+              <header className="mb-16 flex flex-wrap items-center gap-4 border-b border-outline-variant pb-4">
+                <div className="grid gap-1">
+                  <span className={eyebrowClassName}>Academic Minimalist</span>
+                  <Link to="/" className={brandTitleClassName}>
                     Viva Voce AI
                   </Link>
-                  <p className="brand-copy">
+                  <p className={cn('max-w-[42rem] text-sm', mutedTextClassName)}>
                     Quiet software for grading, transcripts, and oral assessment
                     workflows.
                   </p>
                 </div>
-                <nav className="nav-links">
+                <nav className="ml-auto flex flex-wrap items-center gap-2">
                   <Link
                     to="/"
-                    className="nav-link"
+                    className={navLinkClassName}
                     activeProps={{
-                      className: 'nav-link nav-link-active',
+                      className: cn(navLinkClassName, navLinkActiveClassName),
                     }}
                     activeOptions={{ exact: true }}
                   >
@@ -162,22 +173,24 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                   </Link>
                   <Link
                     to="/posts"
-                    className="nav-link"
+                    className={navLinkClassName}
                     activeProps={{
-                      className: 'nav-link nav-link-active',
+                      className: cn(navLinkClassName, navLinkActiveClassName),
                     }}
                   >
                     Posts
                   </Link>
                   {user ? (
                     <>
-                      <span className="user-chip">{user.email}</span>
-                      <Link to="/logout" className="nav-link">
+                      <span className="border border-outline-variant bg-surface-container-low px-[14px] py-[10px] text-sm text-on-surface-variant">
+                        {user.email}
+                      </span>
+                      <Link to="/logout" className={navLinkClassName}>
                         Logout
                       </Link>
                     </>
                   ) : (
-                    <Link to="/login" className="nav-link">
+                    <Link to="/login" className={navLinkClassName}>
                       Login
                     </Link>
                   )}

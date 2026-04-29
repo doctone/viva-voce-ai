@@ -1,8 +1,38 @@
 import * as React from 'react'
+import { cn } from '../../styles/classes'
 
-type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+type ButtonVariant = 'primary' | 'secondary'
+
+type ButtonClassNameOptions = {
+  className?: string
   fullWidth?: boolean
-  variant?: 'primary' | 'secondary'
+  variant?: ButtonVariant
+}
+
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
+  ButtonClassNameOptions
+
+const buttonBaseClassName =
+  'inline-flex min-h-11 items-center justify-center border px-[18px] text-sm font-bold uppercase tracking-[0.08em] transition-[background-color,border-color,color,transform,opacity] duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)] disabled:cursor-not-allowed disabled:opacity-50'
+
+const buttonVariantClassNames: Record<ButtonVariant, string> = {
+  primary:
+    'border-primary-container bg-primary-container text-on-primary enabled:hover:border-primary enabled:hover:bg-primary enabled:active:translate-y-px enabled:active:border-[color:color-mix(in_srgb,var(--color-primary)_88%,black)] enabled:active:bg-[color:color-mix(in_srgb,var(--color-primary)_88%,black)]',
+  secondary:
+    'border-outline bg-transparent text-on-surface enabled:hover:border-on-surface-variant enabled:hover:bg-surface-container-low enabled:active:translate-y-px enabled:active:border-outline enabled:active:bg-surface-container',
+}
+
+export function buttonClassName({
+  className,
+  fullWidth = false,
+  variant = 'primary',
+}: ButtonClassNameOptions = {}) {
+  return cn(
+    buttonBaseClassName,
+    buttonVariantClassNames[variant],
+    fullWidth && 'w-full',
+    className,
+  )
 }
 
 export function Button({
@@ -12,14 +42,11 @@ export function Button({
   variant = 'primary',
   ...props
 }: ButtonProps) {
-  const classes = [
-    'ui-button',
-    `ui-button-${variant}`,
-    fullWidth ? 'ui-button-full' : '',
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ')
-
-  return <button type={type} className={classes} {...props} />
+  return (
+    <button
+      type={type}
+      className={buttonClassName({ className, fullWidth, variant })}
+      {...props}
+    />
+  )
 }

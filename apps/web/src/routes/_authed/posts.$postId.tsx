@@ -1,6 +1,7 @@
 import { ErrorComponent, createFileRoute } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 import { NotFound } from '~/components/NotFound'
+import { headingTwoClassName, mutedTextClassName } from '~/styles/classes'
 import { fetchPost } from '~/utils/posts'
 
 export const Route = createFileRoute('/_authed/posts/$postId')({
@@ -21,8 +22,8 @@ function PostComponent() {
 
   return (
     <article className="space-y-4">
-      <h2>{post.title}</h2>
-      <div className="muted">{post.body}</div>
+      <h2 className={headingTwoClassName}>{post.title}</h2>
+      <div className={mutedTextClassName}>{post.body}</div>
     </article>
   )
 }

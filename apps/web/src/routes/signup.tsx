@@ -2,6 +2,7 @@ import { redirect, createFileRoute } from '@tanstack/react-router'
 import { createServerFn, useServerFn } from '@tanstack/react-start'
 import { useMutation } from '../hooks/useMutation'
 import { Auth } from '../components/Auth'
+import { cn, mutedTextClassName } from '../styles/classes'
 import { getSupabaseServerClient } from '../utils/supabase'
 
 export const signupFn = createServerFn({ method: 'POST' })
@@ -52,9 +53,9 @@ function SignupComp() {
       }}
       afterSubmit={
         signupMutation.data?.error ? (
-          <>
-            <div className="feedback-error">{signupMutation.data.message}</div>
-          </>
+          <div className={cn(mutedTextClassName, 'text-error')}>
+            {signupMutation.data.message}
+          </div>
         ) : null
       }
     />

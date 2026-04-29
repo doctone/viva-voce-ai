@@ -8,6 +8,15 @@ import {
 } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 import { Button } from './ui/Button'
+import { buttonClassName } from './ui/Button'
+import {
+  cn,
+  eyebrowClassName,
+  pageFrameClassName,
+  pageShellClassName,
+  paperPanelClassName,
+  sectionCardClassName,
+} from '../styles/classes'
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter()
@@ -19,10 +28,10 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   console.error(error)
 
   return (
-    <div className="page-shell">
-      <div className="page-frame">
-        <div className="paper-panel section-card min-w-0">
-          <span className="eyebrow">Application Error</span>
+    <div className={pageShellClassName}>
+      <div className={pageFrameClassName}>
+        <div className={cn(paperPanelClassName, sectionCardClassName, 'min-w-0')}>
+          <span className={eyebrowClassName}>Application Error</span>
           <ErrorComponent error={error} />
           <div className="flex gap-2 items-center flex-wrap">
             <Button
@@ -33,13 +42,13 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
               Try Again
             </Button>
             {isRoot ? (
-              <Link to="/" className="button-secondary">
+              <Link to="/" className={buttonClassName({ variant: 'secondary' })}>
                 Home
               </Link>
             ) : (
               <Link
                 to="/"
-                className="button-secondary"
+                className={buttonClassName({ variant: 'secondary' })}
                 onClick={(e) => {
                   e.preventDefault()
                   window.history.back()

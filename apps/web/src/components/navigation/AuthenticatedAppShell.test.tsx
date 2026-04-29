@@ -8,6 +8,13 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  cn,
+  headingOneClassName,
+  mutedTextClassName,
+  paperPanelClassName,
+  sectionCardClassName,
+} from '../../styles/classes'
 import { AuthenticatedAppShell } from './AuthenticatedAppShell'
 import { render } from '../../test/router'
 import { getShouldShowTopbar } from '../../routes/__root'
@@ -36,9 +43,9 @@ describe('AuthenticatedAppShell', () => {
       getParentRoute: () => rootRoute,
       path: '/vivas',
       component: () => (
-        <section className="paper-panel section-card">
-          <h1>Vivas</h1>
-          <p className="muted">Practice sessions will appear here soon.</p>
+        <section className={cn(paperPanelClassName, sectionCardClassName)}>
+          <h1 className={headingOneClassName}>Vivas</h1>
+          <p className={mutedTextClassName}>Practice sessions will appear here soon.</p>
         </section>
       ),
     })
@@ -47,9 +54,9 @@ describe('AuthenticatedAppShell', () => {
       getParentRoute: () => rootRoute,
       path: '/reports',
       component: () => (
-        <section className="paper-panel section-card">
-          <h1>Reports</h1>
-          <p className="muted">Assessment summaries live here.</p>
+        <section className={cn(paperPanelClassName, sectionCardClassName)}>
+          <h1 className={headingOneClassName}>Reports</h1>
+          <p className={mutedTextClassName}>Assessment summaries live here.</p>
         </section>
       ),
     })

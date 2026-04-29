@@ -1,4 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
+import {
+  cn,
+  eyebrowClassName,
+  headingOneClassName,
+  mutedTextClassName,
+  paperPanelClassName,
+  sectionCardClassName,
+} from '../../styles/classes'
 
 export const Route = createFileRoute('/_authed/vivas')({
   component: VivasPage,
@@ -6,10 +14,10 @@ export const Route = createFileRoute('/_authed/vivas')({
 
 function VivasPage() {
   return (
-    <section className="paper-panel section-card">
-      <span className="eyebrow">Workspace</span>
-      <h1>Vivas</h1>
-      <p className="muted">
+    <section className={cn(paperPanelClassName, sectionCardClassName)}>
+      <span className={eyebrowClassName}>Workspace</span>
+      <h1 className={headingOneClassName}>Vivas</h1>
+      <p className={mutedTextClassName}>
         Practice sessions will appear here soon.
       </p>
     </section>
