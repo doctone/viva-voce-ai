@@ -5,6 +5,7 @@ type ButtonVariant = 'primary' | 'secondary'
 
 type ButtonClassNameOptions = {
   className?: string
+  disabled?: boolean
   fullWidth?: boolean
   variant?: ButtonVariant
 }
@@ -13,7 +14,7 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
   ButtonClassNameOptions
 
 const buttonBaseClassName =
-  'inline-flex min-h-11 items-center justify-center border px-[18px] text-sm font-bold uppercase tracking-[0.08em] transition-[background-color,border-color,color,transform,opacity] duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)] disabled:cursor-not-allowed disabled:opacity-50'
+  'inline-flex h-11 items-center justify-center border px-[18px] text-sm font-bold uppercase tracking-[0.08em] whitespace-nowrap transition-[background-color,border-color,color,transform] duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]'
 
 const buttonVariantClassNames: Record<ButtonVariant, string> = {
   primary:
@@ -22,14 +23,18 @@ const buttonVariantClassNames: Record<ButtonVariant, string> = {
     'border-outline bg-transparent text-on-surface enabled:hover:border-on-surface-variant enabled:hover:bg-surface-container-low enabled:active:translate-y-px enabled:active:border-outline enabled:active:bg-surface-container',
 }
 
+const buttonDisabledClassName =
+  'cursor-not-allowed pointer-events-none border-outline-variant bg-surface-container-high text-on-surface-variant opacity-100'
+
 export function buttonClassName({
   className,
+  disabled = false,
   fullWidth = false,
   variant = 'primary',
 }: ButtonClassNameOptions = {}) {
   return cn(
     buttonBaseClassName,
-    buttonVariantClassNames[variant],
+    disabled ? buttonDisabledClassName : buttonVariantClassNames[variant],
     fullWidth && 'w-full',
     className,
   )
@@ -37,6 +42,7 @@ export function buttonClassName({
 
 export function Button({
   className = '',
+  disabled = false,
   fullWidth = false,
   type = 'button',
   variant = 'primary',
@@ -44,8 +50,9 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
+      disabled={disabled}
       type={type}
-      className={buttonClassName({ className, fullWidth, variant })}
+      className={buttonClassName({ className, disabled, fullWidth, variant })}
       {...props}
     />
   )
