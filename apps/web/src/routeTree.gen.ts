@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedVivasRouteImport } from './routes/_authed/vivas'
 import { Route as AuthedPostsRouteImport } from './routes/_authed/posts'
 import { Route as AuthedPostsIndexRouteImport } from './routes/_authed/posts.index'
+import { Route as AuthedVivasNewRouteImport } from './routes/_authed/vivas.new'
 import { Route as AuthedPostsPostIdRouteImport } from './routes/_authed/posts.$postId'
 
 const SignupRoute = SignupRouteImport.update({
@@ -64,6 +65,11 @@ const AuthedPostsIndexRoute = AuthedPostsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedPostsRoute,
 } as any)
+const AuthedVivasNewRoute = AuthedVivasNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthedVivasRoute,
+} as any)
 const AuthedPostsPostIdRoute = AuthedPostsPostIdRouteImport.update({
   id: '/$postId',
   path: '/$postId',
@@ -77,8 +83,9 @@ export interface FileRoutesByFullPath {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/posts': typeof AuthedPostsRouteWithChildren
-  '/vivas': typeof AuthedVivasRoute
+  '/vivas': typeof AuthedVivasRouteWithChildren
   '/posts/$postId': typeof AuthedPostsPostIdRoute
+  '/vivas/new': typeof AuthedVivasNewRoute
   '/posts/': typeof AuthedPostsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -87,8 +94,9 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
-  '/vivas': typeof AuthedVivasRoute
+  '/vivas': typeof AuthedVivasRouteWithChildren
   '/posts/$postId': typeof AuthedPostsPostIdRoute
+  '/vivas/new': typeof AuthedVivasNewRoute
   '/posts': typeof AuthedPostsIndexRoute
 }
 export interface FileRoutesById {
@@ -100,8 +108,9 @@ export interface FileRoutesById {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/_authed/posts': typeof AuthedPostsRouteWithChildren
-  '/_authed/vivas': typeof AuthedVivasRoute
+  '/_authed/vivas': typeof AuthedVivasRouteWithChildren
   '/_authed/posts/$postId': typeof AuthedPostsPostIdRoute
+  '/_authed/vivas/new': typeof AuthedVivasNewRoute
   '/_authed/posts/': typeof AuthedPostsIndexRoute
 }
 export interface FileRouteTypes {
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/posts'
     | '/vivas'
     | '/posts/$postId'
+    | '/vivas/new'
     | '/posts/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/vivas'
     | '/posts/$postId'
+    | '/vivas/new'
     | '/posts'
   id:
     | '__root__'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/_authed/posts'
     | '/_authed/vivas'
     | '/_authed/posts/$postId'
+    | '/_authed/vivas/new'
     | '/_authed/posts/'
   fileRoutesById: FileRoutesById
 }
@@ -214,6 +226,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedPostsIndexRouteImport
       parentRoute: typeof AuthedPostsRoute
     }
+    '/_authed/vivas/new': {
+      id: '/_authed/vivas/new'
+      path: '/new'
+      fullPath: '/vivas/new'
+      preLoaderRoute: typeof AuthedVivasNewRouteImport
+      parentRoute: typeof AuthedVivasRoute
+    }
     '/_authed/posts/$postId': {
       id: '/_authed/posts/$postId'
       path: '/$postId'
@@ -238,14 +257,26 @@ const AuthedPostsRouteWithChildren = AuthedPostsRoute._addFileChildren(
   AuthedPostsRouteChildren,
 )
 
+interface AuthedVivasRouteChildren {
+  AuthedVivasNewRoute: typeof AuthedVivasNewRoute
+}
+
+const AuthedVivasRouteChildren: AuthedVivasRouteChildren = {
+  AuthedVivasNewRoute: AuthedVivasNewRoute,
+}
+
+const AuthedVivasRouteWithChildren = AuthedVivasRoute._addFileChildren(
+  AuthedVivasRouteChildren,
+)
+
 interface AuthedRouteChildren {
   AuthedPostsRoute: typeof AuthedPostsRouteWithChildren
-  AuthedVivasRoute: typeof AuthedVivasRoute
+  AuthedVivasRoute: typeof AuthedVivasRouteWithChildren
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedPostsRoute: AuthedPostsRouteWithChildren,
-  AuthedVivasRoute: AuthedVivasRoute,
+  AuthedVivasRoute: AuthedVivasRouteWithChildren,
 }
 
 const AuthedRouteWithChildren =

@@ -1,0 +1,118 @@
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from '@tanstack/react-table'
+
+export type VivaSubmissionRow = {
+  studentId: string
+  submissionTitle: string
+  dateSubmitted: string
+}
+
+type VivasTableProps = {
+  rows: VivaSubmissionRow[]
+}
+
+const columnHelper = createColumnHelper<VivaSubmissionRow>()
+
+const columns = [
+  columnHelper.accessor('studentId', {
+    header: 'Student ID',
+    cell: (info) => (
+      <span className="font-semibold uppercase tracking-[0.04em] text-on-surface [font-variant-numeric:tabular-nums]">
+        {info.getValue()}
+      </span>
+    ),
+  }),
+  columnHelper.accessor('submissionTitle', {
+    header: 'Submission Title',
+    cell: (info) => (
+      <span className="font-medium text-on-surface">{info.getValue()}</span>
+    ),
+  }),
+  columnHelper.accessor('dateSubmitted', {
+    header: 'Date Submitted',
+    cell: (info) => (
+      <span className="text-on-surface-variant [font-variant-numeric:tabular-nums]">
+        {info.getValue()}
+      </span>
+    ),
+  }),
+]
+
+export function VivasTable({ rows }: VivasTableProps) {
+  const table = useReactTable({
+    data: rows,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  })
+
+  if (rows.length === 0) {
+    return (
+      <div className="grid gap-3 border border-dashed border-outline bg-surface-container-low px-6 py-8 text-left">
+        <p className="text-base font-medium text-on-surface">
+          No viva submissions yet.
+        </p>
+        <p className="max-w-[52ch] text-sm leading-6 text-on-surface-variant">
+          Student submissions will appear here once coursework is ready for
+          review.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="overflow-hidden bg-surface-container-lowest">
+      <table aria-label="Viva submissions" className="w-full border-collapse">
+        <thead className="hidden md:table-header-group">
+          {table.getHeaderGroups().map((headerGroup) => {
+            return (
+              <tr key={headerGroup.id} className="bg-surface-container">
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <th
+                      key={header.id}
+                      scope="col"
+                      className="px-5 py-4 text-left text-[12px] font-bold uppercase tracking-[0.08em] text-on-surface-variant first:w-[22%] last:w-[22%]"
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                    </th>
+                  )
+                })}
+              </tr>
+            )
+          })}
+        </thead>
+        <tbody>
+          {table.getRowModel().rows.map((row) => {
+            return (
+              <tr
+                key={row.id}
+                className="grid gap-3 px-5 py-4 transition-colors duration-150 ease-out hover:bg-surface-container-low md:table-row md:px-0 md:py-0"
+              >
+                {row.getVisibleCells().map((cell) => {
+                  return (
+                    <td
+                      key={cell.id}
+                      data-label={String(cell.column.columnDef.header)}
+                      className="grid gap-1 text-sm leading-6 text-on-surface before:text-[12px] before:font-bold before:uppercase before:tracking-[0.08em] before:text-on-surface-variant before:content-[attr(data-label)] md:table-cell md:px-5 md:py-4 md:align-middle md:before:content-none"
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  )}
+                )}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
