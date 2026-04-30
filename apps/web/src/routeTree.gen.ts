@@ -15,11 +15,11 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DesignRouteImport } from './routes/design'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthedVivasRouteImport } from './routes/_authed/vivas'
+import { Route as AuthedSubmissionsRouteImport } from './routes/_authed/submissions'
 import { Route as AuthedStudentRecordsRouteImport } from './routes/_authed/student-records'
 import { Route as AuthedPostsRouteImport } from './routes/_authed/posts'
 import { Route as AuthedPostsIndexRouteImport } from './routes/_authed/posts.index'
-import { Route as AuthedVivasNewRouteImport } from './routes/_authed/vivas.new'
+import { Route as AuthedSubmissionsNewRouteImport } from './routes/_authed/submissions.new'
 import { Route as AuthedPostsPostIdRouteImport } from './routes/_authed/posts.$postId'
 
 const SignupRoute = SignupRouteImport.update({
@@ -51,9 +51,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedVivasRoute = AuthedVivasRouteImport.update({
-  id: '/vivas',
-  path: '/vivas',
+const AuthedSubmissionsRoute = AuthedSubmissionsRouteImport.update({
+  id: '/submissions',
+  path: '/submissions',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedStudentRecordsRoute = AuthedStudentRecordsRouteImport.update({
@@ -71,10 +71,10 @@ const AuthedPostsIndexRoute = AuthedPostsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedPostsRoute,
 } as any)
-const AuthedVivasNewRoute = AuthedVivasNewRouteImport.update({
+const AuthedSubmissionsNewRoute = AuthedSubmissionsNewRouteImport.update({
   id: '/new',
   path: '/new',
-  getParentRoute: () => AuthedVivasRoute,
+  getParentRoute: () => AuthedSubmissionsRoute,
 } as any)
 const AuthedPostsPostIdRoute = AuthedPostsPostIdRouteImport.update({
   id: '/$postId',
@@ -90,9 +90,9 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/posts': typeof AuthedPostsRouteWithChildren
   '/student-records': typeof AuthedStudentRecordsRoute
-  '/vivas': typeof AuthedVivasRouteWithChildren
+  '/submissions': typeof AuthedSubmissionsRouteWithChildren
   '/posts/$postId': typeof AuthedPostsPostIdRoute
-  '/vivas/new': typeof AuthedVivasNewRoute
+  '/submissions/new': typeof AuthedSubmissionsNewRoute
   '/posts/': typeof AuthedPostsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -102,9 +102,9 @@ export interface FileRoutesByTo {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/student-records': typeof AuthedStudentRecordsRoute
-  '/vivas': typeof AuthedVivasRouteWithChildren
+  '/submissions': typeof AuthedSubmissionsRouteWithChildren
   '/posts/$postId': typeof AuthedPostsPostIdRoute
-  '/vivas/new': typeof AuthedVivasNewRoute
+  '/submissions/new': typeof AuthedSubmissionsNewRoute
   '/posts': typeof AuthedPostsIndexRoute
 }
 export interface FileRoutesById {
@@ -117,9 +117,9 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_authed/posts': typeof AuthedPostsRouteWithChildren
   '/_authed/student-records': typeof AuthedStudentRecordsRoute
-  '/_authed/vivas': typeof AuthedVivasRouteWithChildren
+  '/_authed/submissions': typeof AuthedSubmissionsRouteWithChildren
   '/_authed/posts/$postId': typeof AuthedPostsPostIdRoute
-  '/_authed/vivas/new': typeof AuthedVivasNewRoute
+  '/_authed/submissions/new': typeof AuthedSubmissionsNewRoute
   '/_authed/posts/': typeof AuthedPostsIndexRoute
 }
 export interface FileRouteTypes {
@@ -132,9 +132,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/posts'
     | '/student-records'
-    | '/vivas'
+    | '/submissions'
     | '/posts/$postId'
-    | '/vivas/new'
+    | '/submissions/new'
     | '/posts/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -144,9 +144,9 @@ export interface FileRouteTypes {
     | '/logout'
     | '/signup'
     | '/student-records'
-    | '/vivas'
+    | '/submissions'
     | '/posts/$postId'
-    | '/vivas/new'
+    | '/submissions/new'
     | '/posts'
   id:
     | '__root__'
@@ -158,9 +158,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authed/posts'
     | '/_authed/student-records'
-    | '/_authed/vivas'
+    | '/_authed/submissions'
     | '/_authed/posts/$postId'
-    | '/_authed/vivas/new'
+    | '/_authed/submissions/new'
     | '/_authed/posts/'
   fileRoutesById: FileRoutesById
 }
@@ -217,11 +217,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/vivas': {
-      id: '/_authed/vivas'
-      path: '/vivas'
-      fullPath: '/vivas'
-      preLoaderRoute: typeof AuthedVivasRouteImport
+    '/_authed/submissions': {
+      id: '/_authed/submissions'
+      path: '/submissions'
+      fullPath: '/submissions'
+      preLoaderRoute: typeof AuthedSubmissionsRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/student-records': {
@@ -245,12 +245,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedPostsIndexRouteImport
       parentRoute: typeof AuthedPostsRoute
     }
-    '/_authed/vivas/new': {
-      id: '/_authed/vivas/new'
+    '/_authed/submissions/new': {
+      id: '/_authed/submissions/new'
       path: '/new'
-      fullPath: '/vivas/new'
-      preLoaderRoute: typeof AuthedVivasNewRouteImport
-      parentRoute: typeof AuthedVivasRoute
+      fullPath: '/submissions/new'
+      preLoaderRoute: typeof AuthedSubmissionsNewRouteImport
+      parentRoute: typeof AuthedSubmissionsRoute
     }
     '/_authed/posts/$postId': {
       id: '/_authed/posts/$postId'
@@ -276,28 +276,27 @@ const AuthedPostsRouteWithChildren = AuthedPostsRoute._addFileChildren(
   AuthedPostsRouteChildren,
 )
 
-interface AuthedVivasRouteChildren {
-  AuthedVivasNewRoute: typeof AuthedVivasNewRoute
+interface AuthedSubmissionsRouteChildren {
+  AuthedSubmissionsNewRoute: typeof AuthedSubmissionsNewRoute
 }
 
-const AuthedVivasRouteChildren: AuthedVivasRouteChildren = {
-  AuthedVivasNewRoute: AuthedVivasNewRoute,
+const AuthedSubmissionsRouteChildren: AuthedSubmissionsRouteChildren = {
+  AuthedSubmissionsNewRoute: AuthedSubmissionsNewRoute,
 }
 
-const AuthedVivasRouteWithChildren = AuthedVivasRoute._addFileChildren(
-  AuthedVivasRouteChildren,
-)
+const AuthedSubmissionsRouteWithChildren =
+  AuthedSubmissionsRoute._addFileChildren(AuthedSubmissionsRouteChildren)
 
 interface AuthedRouteChildren {
   AuthedPostsRoute: typeof AuthedPostsRouteWithChildren
   AuthedStudentRecordsRoute: typeof AuthedStudentRecordsRoute
-  AuthedVivasRoute: typeof AuthedVivasRouteWithChildren
+  AuthedSubmissionsRoute: typeof AuthedSubmissionsRouteWithChildren
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedPostsRoute: AuthedPostsRouteWithChildren,
   AuthedStudentRecordsRoute: AuthedStudentRecordsRoute,
-  AuthedVivasRoute: AuthedVivasRouteWithChildren,
+  AuthedSubmissionsRoute: AuthedSubmissionsRouteWithChildren,
 }
 
 const AuthedRouteWithChildren =

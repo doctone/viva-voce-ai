@@ -3,7 +3,7 @@ create table public.students (
   created_at timestamptz not null default now()
 );
 
-create table public.vivas (
+create table public.submissions (
   id uuid primary key default gen_random_uuid(),
   student_id uuid not null references public.students(id),
   submission_title text not null,
@@ -12,7 +12,7 @@ create table public.vivas (
 );
 
 alter table public.students enable row level security;
-alter table public.vivas enable row level security;
+alter table public.submissions enable row level security;
 
 create policy "authenticated users can read students"
 on public.students
@@ -20,10 +20,10 @@ for select
 to authenticated
 using (true);
 
-create policy "authenticated users can read vivas"
-on public.vivas
+create policy "authenticated users can read submissions"
+on public.submissions
 for select
 to authenticated
 using (true);
 
-create index vivas_student_id_idx on public.vivas(student_id);
+create index submissions_student_id_idx on public.submissions(student_id);

@@ -29,7 +29,7 @@ describe('AuthenticatedAppShell', () => {
       component: () => (
         <AuthenticatedAppShell
           items={[
-            { label: 'Vivas', to: '/vivas' },
+            { label: 'Submissions', to: '/submissions' },
             { label: 'Reports', to: '/reports' },
           ]}
           userEmail="teacher@example.com"
@@ -39,12 +39,12 @@ describe('AuthenticatedAppShell', () => {
       ),
     })
 
-    const vivasRoute = createRoute({
+    const submissionsRoute = createRoute({
       getParentRoute: () => rootRoute,
-      path: '/vivas',
+      path: '/submissions',
       component: () => (
         <section className={cn(paperPanelClassName, sectionCardClassName)}>
-          <h1 className={headingOneClassName}>Vivas</h1>
+          <h1 className={headingOneClassName}>Submissions</h1>
           <p className={mutedTextClassName}>Practice sessions will appear here soon.</p>
         </section>
       ),
@@ -62,15 +62,15 @@ describe('AuthenticatedAppShell', () => {
     })
 
     const router = createRouter({
-      routeTree: rootRoute.addChildren([vivasRoute, reportsRoute]),
-      history: createMemoryHistory({ initialEntries: ['/vivas'] }),
+      routeTree: rootRoute.addChildren([submissionsRoute, reportsRoute]),
+      history: createMemoryHistory({ initialEntries: ['/submissions'] }),
     })
 
     render(<RouterProvider router={router} />)
 
-    expect(await screen.findByRole('link', { name: 'Vivas' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Submissions' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Vivas' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Submissions' })).toBeInTheDocument()
     expect(screen.getByText('teacher@example.com')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Logout' })).toHaveAttribute(
       'href',
@@ -86,7 +86,7 @@ describe('AuthenticatedAppShell', () => {
     expect(router.state.location.pathname).toBe('/reports')
   })
 
-  it('returns false for the public topbar on authenticated vivas routes', () => {
-    expect(getShouldShowTopbar('/vivas', ['/__root__', '/_authed'])).toBe(false)
+  it('returns false for the public topbar on authenticated submissions routes', () => {
+    expect(getShouldShowTopbar('/submissions', ['/__root__', '/_authed'])).toBe(false)
   })
 })

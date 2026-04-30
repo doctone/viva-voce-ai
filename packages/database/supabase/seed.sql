@@ -94,7 +94,7 @@ begin
   );
 end $$;
 
-delete from public.vivas;
+delete from public.submissions;
 delete from public.students;
 
 insert into public.students (id, created_at)
@@ -105,7 +105,7 @@ values
   ('11840000-0000-0000-0000-000000000000', '2026-03-05T09:00:00Z'),
   ('12170000-0000-0000-0000-000000000000', '2026-03-03T09:00:00Z');
 
-insert into public.vivas (
+insert into public.submissions (
   id,
   student_id,
   submission_title,

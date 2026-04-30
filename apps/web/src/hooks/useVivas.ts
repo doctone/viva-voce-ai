@@ -20,7 +20,7 @@ function formatSubmittedDate(value: string) {
 async function fetchVivas(): Promise<VivaSubmissionRow[]> {
   const supabase = getSupabaseBrowserClient()
   const { data, error } = await supabase
-    .from('vivas')
+    .from('submissions')
     .select('student_id, submission_title, created_at')
     .order('created_at', { ascending: false })
 
@@ -38,7 +38,7 @@ async function fetchVivas(): Promise<VivaSubmissionRow[]> {
 export function useVivas() {
   const { data = [] } = useQuery({
     queryFn: fetchVivas,
-    queryKey: ['vivas'],
+    queryKey: ['submissions'],
   })
 
   return data

@@ -53,7 +53,7 @@ export function VivasTable({ rows }: VivasTableProps) {
     return (
       <div className="grid gap-3 border border-dashed border-outline bg-surface-container-low px-6 py-8 text-left">
         <p className="text-base font-medium text-on-surface">
-          No viva submissions yet.
+          No submissions yet.
         </p>
         <p className="max-w-[52ch] text-sm leading-6 text-on-surface-variant">
           Student submissions will appear here once coursework is ready for
@@ -65,7 +65,7 @@ export function VivasTable({ rows }: VivasTableProps) {
 
   return (
     <div className="overflow-hidden bg-surface-container-lowest">
-      <table aria-label="Viva submissions" className="w-full border-collapse">
+      <table aria-label="Submissions" className="w-full border-collapse">
         <thead className="hidden md:table-header-group">
           {table.getHeaderGroups().map((headerGroup) => {
             return (

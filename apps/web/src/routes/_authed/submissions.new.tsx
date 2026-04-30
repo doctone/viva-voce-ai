@@ -8,14 +8,14 @@ import {
   sectionCardClassName,
 } from '../../styles/classes'
 
-export const Route = createFileRoute('/_authed/vivas/new')({
+export const Route = createFileRoute('/_authed/submissions/new')({
   component: NewVivaSubmissionPage,
 })
 
 function NewVivaSubmissionPage() {
   return (
     <section className={cn(paperPanelClassName, sectionCardClassName)}>
-      <span className={eyebrowClassName}>Vivas</span>
+      <span className={eyebrowClassName}>Submissions</span>
       <h1 className={headingOneClassName}>New Submission</h1>
       <p className={cn(mutedTextClassName, 'max-w-[58ch] text-sm leading-6')}>
         Submission creation will live here next. This placeholder keeps the

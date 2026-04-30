@@ -10,20 +10,20 @@ describe('VivasPage', () => {
     expect(() => render(<VivasPage />)).toThrow(/No QueryClient set/i)
   })
 
-  it('requests vivas from the Supabase REST endpoint on load', async () => {
+  it('requests submissions from the Supabase REST endpoint on load', async () => {
     process.env.SUPABASE_URL = 'https://example-project.supabase.co'
     process.env.SUPABASE_ANON_KEY = 'test-anon-key'
 
     let requested = false
 
     server.use(
-      http.get('https://example-project.supabase.co/rest/v1/vivas', () => {
+      http.get('https://example-project.supabase.co/rest/v1/submissions', () => {
         requested = true
         return HttpResponse.json([])
       }),
     )
 
-    renderWithRouter(<VivasPage />, '/vivas')
+    renderWithRouter(<VivasPage />, '/submissions')
 
     await waitFor(() => {
       expect(requested).toBe(true)

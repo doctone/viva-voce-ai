@@ -19,7 +19,7 @@ describe('VivasTable', () => {
   it('renders the configured columns and submission rows', () => {
     render(<VivasTable rows={sampleRows} />)
 
-    expect(screen.getByRole('table', { name: 'Viva submissions' })).toBeInTheDocument()
+    expect(screen.getByRole('table', { name: 'Submissions' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Student ID' })).toBeInTheDocument()
     expect(
       screen.getByRole('columnheader', { name: 'Submission Title' }),
@@ -34,7 +34,7 @@ describe('VivasTable', () => {
   it('shows an intentional empty state when there are no rows', () => {
     render(<VivasTable rows={[]} />)
 
-    expect(screen.getByText('No viva submissions yet.')).toBeInTheDocument()
+    expect(screen.getByText('No submissions yet.')).toBeInTheDocument()
     expect(
       screen.getByText(
         'Student submissions will appear here once coursework is ready for review.',

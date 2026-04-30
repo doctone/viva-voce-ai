@@ -3,7 +3,7 @@ import { cn } from '../../styles/classes'
 import { AuthenticatedSidebar } from './AuthenticatedSidebar'
 
 const authenticatedAppShellItems = [
-  { label: 'Vivas', to: '/vivas' },
+  { label: 'Submissions', to: '/submissions' },
   { label: 'Student Records', to: '/student-records' },
 ] as const
 
