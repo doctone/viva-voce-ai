@@ -12,16 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as DesignRouteImport } from './routes/design'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedSubmissionsRouteImport } from './routes/_authed/submissions'
 import { Route as AuthedStudentRecordsRouteImport } from './routes/_authed/student-records'
-import { Route as AuthedPostsRouteImport } from './routes/_authed/posts'
 import { Route as AuthedSubmissionsIndexRouteImport } from './routes/_authed/submissions.index'
-import { Route as AuthedPostsIndexRouteImport } from './routes/_authed/posts.index'
 import { Route as AuthedSubmissionsNewRouteImport } from './routes/_authed/submissions.new'
-import { Route as AuthedPostsPostIdRouteImport } from './routes/_authed/posts.$postId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -36,11 +32,6 @@ const LogoutRoute = LogoutRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignRoute = DesignRouteImport.update({
-  id: '/design',
-  path: '/design',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedRoute = AuthedRouteImport.update({
@@ -62,122 +53,84 @@ const AuthedStudentRecordsRoute = AuthedStudentRecordsRouteImport.update({
   path: '/student-records',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedPostsRoute = AuthedPostsRouteImport.update({
-  id: '/posts',
-  path: '/posts',
-  getParentRoute: () => AuthedRoute,
-} as any)
 const AuthedSubmissionsIndexRoute = AuthedSubmissionsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedSubmissionsRoute,
-} as any)
-const AuthedPostsIndexRoute = AuthedPostsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthedPostsRoute,
 } as any)
 const AuthedSubmissionsNewRoute = AuthedSubmissionsNewRouteImport.update({
   id: '/new',
   path: '/new',
   getParentRoute: () => AuthedSubmissionsRoute,
 } as any)
-const AuthedPostsPostIdRoute = AuthedPostsPostIdRouteImport.update({
-  id: '/$postId',
-  path: '/$postId',
-  getParentRoute: () => AuthedPostsRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/design': typeof DesignRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
-  '/posts': typeof AuthedPostsRouteWithChildren
   '/student-records': typeof AuthedStudentRecordsRoute
   '/submissions': typeof AuthedSubmissionsRouteWithChildren
-  '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/submissions/new': typeof AuthedSubmissionsNewRoute
-  '/posts/': typeof AuthedPostsIndexRoute
   '/submissions/': typeof AuthedSubmissionsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/design': typeof DesignRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/student-records': typeof AuthedStudentRecordsRoute
-  '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/submissions/new': typeof AuthedSubmissionsNewRoute
-  '/posts': typeof AuthedPostsIndexRoute
   '/submissions': typeof AuthedSubmissionsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
-  '/design': typeof DesignRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
-  '/_authed/posts': typeof AuthedPostsRouteWithChildren
   '/_authed/student-records': typeof AuthedStudentRecordsRoute
   '/_authed/submissions': typeof AuthedSubmissionsRouteWithChildren
-  '/_authed/posts/$postId': typeof AuthedPostsPostIdRoute
   '/_authed/submissions/new': typeof AuthedSubmissionsNewRoute
-  '/_authed/posts/': typeof AuthedPostsIndexRoute
   '/_authed/submissions/': typeof AuthedSubmissionsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/design'
     | '/login'
     | '/logout'
     | '/signup'
-    | '/posts'
     | '/student-records'
     | '/submissions'
-    | '/posts/$postId'
     | '/submissions/new'
-    | '/posts/'
     | '/submissions/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/design'
     | '/login'
     | '/logout'
     | '/signup'
     | '/student-records'
-    | '/posts/$postId'
     | '/submissions/new'
-    | '/posts'
     | '/submissions'
   id:
     | '__root__'
     | '/'
     | '/_authed'
-    | '/design'
     | '/login'
     | '/logout'
     | '/signup'
-    | '/_authed/posts'
     | '/_authed/student-records'
     | '/_authed/submissions'
-    | '/_authed/posts/$postId'
     | '/_authed/submissions/new'
-    | '/_authed/posts/'
     | '/_authed/submissions/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
-  DesignRoute: typeof DesignRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
   SignupRoute: typeof SignupRoute
@@ -204,13 +157,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design': {
-      id: '/design'
-      path: '/design'
-      fullPath: '/design'
-      preLoaderRoute: typeof DesignRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed': {
@@ -241,26 +187,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedStudentRecordsRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/posts': {
-      id: '/_authed/posts'
-      path: '/posts'
-      fullPath: '/posts'
-      preLoaderRoute: typeof AuthedPostsRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/_authed/submissions/': {
       id: '/_authed/submissions/'
       path: '/'
       fullPath: '/submissions/'
       preLoaderRoute: typeof AuthedSubmissionsIndexRouteImport
       parentRoute: typeof AuthedSubmissionsRoute
-    }
-    '/_authed/posts/': {
-      id: '/_authed/posts/'
-      path: '/'
-      fullPath: '/posts/'
-      preLoaderRoute: typeof AuthedPostsIndexRouteImport
-      parentRoute: typeof AuthedPostsRoute
     }
     '/_authed/submissions/new': {
       id: '/_authed/submissions/new'
@@ -269,29 +201,8 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSubmissionsNewRouteImport
       parentRoute: typeof AuthedSubmissionsRoute
     }
-    '/_authed/posts/$postId': {
-      id: '/_authed/posts/$postId'
-      path: '/$postId'
-      fullPath: '/posts/$postId'
-      preLoaderRoute: typeof AuthedPostsPostIdRouteImport
-      parentRoute: typeof AuthedPostsRoute
-    }
   }
 }
-
-interface AuthedPostsRouteChildren {
-  AuthedPostsPostIdRoute: typeof AuthedPostsPostIdRoute
-  AuthedPostsIndexRoute: typeof AuthedPostsIndexRoute
-}
-
-const AuthedPostsRouteChildren: AuthedPostsRouteChildren = {
-  AuthedPostsPostIdRoute: AuthedPostsPostIdRoute,
-  AuthedPostsIndexRoute: AuthedPostsIndexRoute,
-}
-
-const AuthedPostsRouteWithChildren = AuthedPostsRoute._addFileChildren(
-  AuthedPostsRouteChildren,
-)
 
 interface AuthedSubmissionsRouteChildren {
   AuthedSubmissionsNewRoute: typeof AuthedSubmissionsNewRoute
@@ -307,13 +218,11 @@ const AuthedSubmissionsRouteWithChildren =
   AuthedSubmissionsRoute._addFileChildren(AuthedSubmissionsRouteChildren)
 
 interface AuthedRouteChildren {
-  AuthedPostsRoute: typeof AuthedPostsRouteWithChildren
   AuthedStudentRecordsRoute: typeof AuthedStudentRecordsRoute
   AuthedSubmissionsRoute: typeof AuthedSubmissionsRouteWithChildren
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedPostsRoute: AuthedPostsRouteWithChildren,
   AuthedStudentRecordsRoute: AuthedStudentRecordsRoute,
   AuthedSubmissionsRoute: AuthedSubmissionsRouteWithChildren,
 }
@@ -324,7 +233,6 @@ const AuthedRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
-  DesignRoute: DesignRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
   SignupRoute: SignupRoute,
