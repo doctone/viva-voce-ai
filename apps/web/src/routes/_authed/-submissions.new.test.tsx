@@ -72,6 +72,63 @@ describe("NewVivaSubmissionPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows and clears inline validation errors for required fields", async () => {
+    server.use(
+      http.get("https://example-project.supabase.co/rest/v1/students", () => {
+        return HttpResponse.json([
+          { id: "10420000-0000-0000-0000-000000000000" },
+        ]);
+      }),
+    );
+
+    const user = userEvent.setup();
+
+    renderWithRouter(<NewVivaSubmissionPage />, "/submissions/new");
+
+    await screen.findByRole("option", {
+      name: "10420000-0000-0000-0000-000000000000",
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: "Generate viva questions" }),
+    );
+
+    expect(await screen.findByText("Select a student.")).toBeInTheDocument();
+    expect(screen.getByText("Enter a title.")).toBeInTheDocument();
+    expect(screen.getByText("Enter the submission text.")).toBeInTheDocument();
+
+    expect(screen.getByLabelText("Student")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(screen.getByLabelText("Title")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(screen.getByLabelText("Submission text")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+
+    await user.selectOptions(
+      screen.getByLabelText("Student"),
+      "10420000-0000-0000-0000-000000000000",
+    );
+    await user.type(screen.getByLabelText("Title"), "Economic policy reflection");
+    await user.type(
+      screen.getByLabelText("Submission text"),
+      "This submission examines monetary policy and public argument.",
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText("Select a student.")).not.toBeInTheDocument();
+      expect(screen.queryByText("Enter a title.")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Enter the submission text."),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it("creates the submission and redirects back to the submissions list", async () => {
     let postedBody: Record<string, unknown> | undefined;
 

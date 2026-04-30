@@ -36,6 +36,8 @@ playwright/.cache/
 
 # Deployment / platform
 .vercel/
+.superpowers/
+.tanstack/
 
 # OS files
 .DS_Store

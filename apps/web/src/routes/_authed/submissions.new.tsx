@@ -1,13 +1,16 @@
 import * as React from 'react'
+import { revalidateLogic, useForm } from '@tanstack/react-form'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { createFileRoute } from '@tanstack/react-router'
+import {
+  FormSelectField,
+  FormTextAreaField,
+  FormTextField,
+} from '../../components/ui/TanStackFormField'
 import { useMutation } from '../../hooks/useMutation'
 import { getSupabaseBrowserClient } from '../../utils/supabase-browser'
 import { Button } from '../../components/ui/Button'
-import { SelectField } from '../../components/ui/SelectField'
-import { TextAreaField } from '../../components/ui/TextAreaField'
-import { TextField } from '../../components/ui/TextField'
 import {
   cn,
   eyebrowClassName,
@@ -29,6 +32,10 @@ type CreateSubmissionInput = {
   studentId: string
   submissionText: string
   title: string
+}
+
+function validateRequiredField(value: string, message: string) {
+  return value.trim().length === 0 ? message : undefined
 }
 
 function countWords(value: string) {
@@ -79,10 +86,6 @@ async function createSubmission({
 export function NewVivaSubmissionPage() {
   const queryClient = useQueryClient()
   const router = useRouter()
-  const [studentId, setStudentId] = React.useState('')
-  const [title, setTitle] = React.useState('')
-  const [submissionText, setSubmissionText] = React.useState('')
-  const wordCount = countWords(submissionText)
   const studentsQuery = useQuery({
     queryFn: fetchStudents,
     queryKey: ['students'],
@@ -92,6 +95,20 @@ export function NewVivaSubmissionPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['submissions'] })
       await router.navigate({ to: '/submissions' })
+    },
+  })
+  const form = useForm({
+    defaultValues: {
+      studentId: '',
+      submissionText: '',
+      title: '',
+    },
+    validationLogic: revalidateLogic({
+      mode: 'submit',
+      modeAfterSubmission: 'change',
+    }),
+    onSubmit: async ({ value }) => {
+      await createSubmissionMutation.mutate(value)
     },
   })
 
@@ -108,66 +125,71 @@ export function NewVivaSubmissionPage() {
 
       <form
         className={cn(paperPanelClassName, sectionCardClassName, 'gap-6')}
+        noValidate
         onSubmit={(event) => {
           event.preventDefault()
+          event.stopPropagation()
 
-          createSubmissionMutation.mutate({
-            studentId,
-            submissionText,
-            title,
-          })
+          void form.handleSubmit()
         }}
       >
-        <SelectField
-          id="studentId"
+        <form.Field
           name="studentId"
-          label="Student"
-          required
-          value={studentId}
-          onChange={(event) => {
-            setStudentId(event.target.value)
+          validators={{
+            onDynamic: ({ value }) => validateRequiredField(value, 'Select a student.'),
           }}
-        >
-          <option value="">
-            {studentsQuery.isLoading ? 'Loading students...' : 'Select a student'}
-          </option>
-          {(studentsQuery.data ?? []).map((student) => {
-            return (
-              <option key={student.id} value={student.id}>
-                {student.id}
+          children={(field) => (
+            <FormSelectField field={field} id="studentId" label="Student">
+              <option value="">
+                {studentsQuery.isLoading ? 'Loading students...' : 'Select a student'}
               </option>
-            )
-          })}
-        </SelectField>
+              {(studentsQuery.data ?? []).map((student) => {
+                return (
+                  <option key={student.id} value={student.id}>
+                    {student.id}
+                  </option>
+                )
+              })}
+            </FormSelectField>
+          )}
+        />
 
-        <TextField
-          id="title"
+        <form.Field
           name="title"
-          label="Title"
-          required
-          value={title}
-          onChange={(event) => {
-            setTitle(event.target.value)
+          validators={{
+            onDynamic: ({ value }) => validateRequiredField(value, 'Enter a title.'),
           }}
+          children={(field) => (
+            <FormTextField field={field} id="title" label="Title" />
+          )}
         />
 
         <div className="grid gap-3">
-          <TextAreaField
-            id="submissionText"
-            name="submissionText"
-            label="Submission text"
-            required
-            rows={14}
-            value={submissionText}
-            onChange={(event) => {
-              setSubmissionText(event.target.value)
-            }}
-            className="min-h-[22rem] resize-y leading-7"
+        <form.Field
+          name="submissionText"
+          validators={{
+            onDynamic: ({ value }) =>
+              validateRequiredField(value, 'Enter the submission text.'),
+          }}
+            children={(field) => (
+              <FormTextAreaField
+                field={field}
+                id="submissionText"
+                label="Submission text"
+                rows={14}
+                className="min-h-[22rem] resize-y leading-7"
+              />
+            )}
           />
 
-          <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
-            {wordCount} words, guidance: around 400.
-          </p>
+          <form.Subscribe
+            selector={(state) => countWords(state.values.submissionText)}
+            children={(wordCount) => (
+              <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
+                {wordCount} words, guidance: around 400.
+              </p>
+            )}
+          />
         </div>
 
         {studentsQuery.error instanceof Error ? (
@@ -180,16 +202,19 @@ export function NewVivaSubmissionPage() {
           </p>
         ) : null}
 
-        <div>
-          <Button
-            type="submit"
-            disabled={
-              studentsQuery.isLoading || createSubmissionMutation.status === 'pending'
-            }
-          >
-            Generate viva questions
-          </Button>
-        </div>
+        <form.Subscribe
+          selector={(state) => state.isSubmitting}
+          children={(isSubmitting) => (
+            <div>
+              <Button
+                type="submit"
+                disabled={studentsQuery.isLoading || isSubmitting}
+              >
+                Generate viva questions
+              </Button>
+            </div>
+          )}
+        />
       </form>
     </section>
   )

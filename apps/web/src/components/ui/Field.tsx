@@ -7,16 +7,22 @@ export const fieldControlClassName =
 type FieldShellProps = {
   children: React.ReactNode
   className?: string
+  error?: string
+  hint?: React.ReactNode
   id?: string
   label: string
+  messageId?: string
   name?: string
 }
 
 export function FieldShell({
   children,
   className,
+  error,
+  hint,
   id,
   label,
+  messageId,
   name,
 }: FieldShellProps) {
   const fieldId = id ?? name
@@ -27,6 +33,15 @@ export function FieldShell({
         {label}
       </label>
       {children}
+      {error ? (
+        <p id={messageId} className="text-sm leading-6 text-error" role="alert">
+          {error}
+        </p>
+      ) : hint ? (
+        <p id={messageId} className="text-sm leading-6 text-on-surface-variant">
+          {hint}
+        </p>
+      ) : null}
     </div>
   )
 }
