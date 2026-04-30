@@ -32,7 +32,7 @@ describe('SubmissionDetailPage', () => {
             category: 'comprehension',
             question_text: 'Why does the response describe Lord Mansfield as pivotal?',
             teacher_note: 'Listen for understanding of legal reform and why it mattered.',
-            display_order: 1,
+            created_at: '2026-04-30T20:05:00.000Z',
           },
           {
             id: '40420000-0000-0000-0000-000000000001',
@@ -40,7 +40,7 @@ describe('SubmissionDetailPage', () => {
             category: 'authenticity',
             question_text: 'Which sentence took the longest to shape, and what were you trying to achieve?',
             teacher_note: 'Listen for drafting choices tied to the actual wording.',
-            display_order: 2,
+            created_at: '2026-04-30T20:06:00.000Z',
           },
         ])
       }),

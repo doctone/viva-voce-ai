@@ -27,7 +27,6 @@ type SubmissionRecord = {
 
 type SubmissionQuestionRecord = {
   category: string
-  display_order: number
   id: string
   question_text: string
   submission_id: string
@@ -94,9 +93,9 @@ async function fetchSubmissionQuestions(
   const supabase = getSupabaseBrowserClient()
   const { data, error } = await supabase
     .from('submission_questions')
-    .select('id, submission_id, category, question_text, teacher_note, display_order')
+    .select('id, submission_id, category, question_text, teacher_note, created_at')
     .eq('submission_id', submissionId)
-    .order('display_order', { ascending: true })
+    .order('created_at', { ascending: true })
 
   if (error) {
     throw new Error('We could not load submission questions.')
