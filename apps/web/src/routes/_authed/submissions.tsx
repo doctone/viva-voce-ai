@@ -1,6 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { VivasPage } from '../../components/vivas/VivasPage'
+import { Outlet, createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_authed/submissions')({
-  component: VivasPage,
+  component: SubmissionsRouteLayout,
 })
+
+export function SubmissionsRouteLayout() {
+  return <Outlet />
+}

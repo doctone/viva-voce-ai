@@ -2,29 +2,30 @@ import * as React from 'react'
 import { cn } from '../../styles/classes'
 import { FieldShell, fieldControlClassName } from './Field'
 
-type TextFieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
+type SelectFieldProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
   label: string
 }
 
-export function TextField({
+export function SelectField({
+  children,
+  className = '',
   id,
   label,
   name,
-  type = 'text',
-  className = '',
   ...props
-}: TextFieldProps) {
+}: SelectFieldProps) {
   const fieldId = id ?? name
 
   return (
     <FieldShell id={fieldId} label={label} name={name}>
-      <input
+      <select
         id={fieldId}
         name={name}
-        type={type}
         className={cn(fieldControlClassName, className)}
         {...props}
-      />
+      >
+        {children}
+      </select>
     </FieldShell>
   )
 }

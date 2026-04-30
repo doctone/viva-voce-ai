@@ -2,26 +2,24 @@ import * as React from 'react'
 import { cn } from '../../styles/classes'
 import { FieldShell, fieldControlClassName } from './Field'
 
-type TextFieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
+type TextAreaFieldProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label: string
 }
 
-export function TextField({
+export function TextAreaField({
+  className = '',
   id,
   label,
   name,
-  type = 'text',
-  className = '',
   ...props
-}: TextFieldProps) {
+}: TextAreaFieldProps) {
   const fieldId = id ?? name
 
   return (
     <FieldShell id={fieldId} label={label} name={name}>
-      <input
+      <textarea
         id={fieldId}
         name={name}
-        type={type}
         className={cn(fieldControlClassName, className)}
         {...props}
       />
