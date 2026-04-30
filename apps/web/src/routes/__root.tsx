@@ -189,9 +189,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                   {user ? (
                     <>
                       <span className="border border-outline-variant bg-surface-container-low px-[14px] py-[10px] text-sm text-on-surface-variant">
-                        {user.email}
-                      </span>
+                        {user.email}{" "}
+                      </span>{" "}
                       <Link to="/logout" className={navLinkClassName}>
+                        {" "}
                         Logout
                       </Link>
                     </>
