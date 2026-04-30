@@ -16,6 +16,7 @@ import { Route as DesignRouteImport } from './routes/design'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedVivasRouteImport } from './routes/_authed/vivas'
+import { Route as AuthedStudentRecordsRouteImport } from './routes/_authed/student-records'
 import { Route as AuthedPostsRouteImport } from './routes/_authed/posts'
 import { Route as AuthedPostsIndexRouteImport } from './routes/_authed/posts.index'
 import { Route as AuthedVivasNewRouteImport } from './routes/_authed/vivas.new'
@@ -55,6 +56,11 @@ const AuthedVivasRoute = AuthedVivasRouteImport.update({
   path: '/vivas',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedStudentRecordsRoute = AuthedStudentRecordsRouteImport.update({
+  id: '/student-records',
+  path: '/student-records',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedPostsRoute = AuthedPostsRouteImport.update({
   id: '/posts',
   path: '/posts',
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/posts': typeof AuthedPostsRouteWithChildren
+  '/student-records': typeof AuthedStudentRecordsRoute
   '/vivas': typeof AuthedVivasRouteWithChildren
   '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/vivas/new': typeof AuthedVivasNewRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
+  '/student-records': typeof AuthedStudentRecordsRoute
   '/vivas': typeof AuthedVivasRouteWithChildren
   '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/vivas/new': typeof AuthedVivasNewRoute
@@ -108,6 +116,7 @@ export interface FileRoutesById {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/_authed/posts': typeof AuthedPostsRouteWithChildren
+  '/_authed/student-records': typeof AuthedStudentRecordsRoute
   '/_authed/vivas': typeof AuthedVivasRouteWithChildren
   '/_authed/posts/$postId': typeof AuthedPostsPostIdRoute
   '/_authed/vivas/new': typeof AuthedVivasNewRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/signup'
     | '/posts'
+    | '/student-records'
     | '/vivas'
     | '/posts/$postId'
     | '/vivas/new'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/signup'
+    | '/student-records'
     | '/vivas'
     | '/posts/$postId'
     | '/vivas/new'
@@ -146,6 +157,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/signup'
     | '/_authed/posts'
+    | '/_authed/student-records'
     | '/_authed/vivas'
     | '/_authed/posts/$postId'
     | '/_authed/vivas/new'
@@ -212,6 +224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedVivasRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/student-records': {
+      id: '/_authed/student-records'
+      path: '/student-records'
+      fullPath: '/student-records'
+      preLoaderRoute: typeof AuthedStudentRecordsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/posts': {
       id: '/_authed/posts'
       path: '/posts'
@@ -271,11 +290,13 @@ const AuthedVivasRouteWithChildren = AuthedVivasRoute._addFileChildren(
 
 interface AuthedRouteChildren {
   AuthedPostsRoute: typeof AuthedPostsRouteWithChildren
+  AuthedStudentRecordsRoute: typeof AuthedStudentRecordsRoute
   AuthedVivasRoute: typeof AuthedVivasRouteWithChildren
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedPostsRoute: AuthedPostsRouteWithChildren,
+  AuthedStudentRecordsRoute: AuthedStudentRecordsRoute,
   AuthedVivasRoute: AuthedVivasRouteWithChildren,
 }
 

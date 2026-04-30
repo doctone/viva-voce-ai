@@ -21,8 +21,9 @@ export function AuthenticatedSidebar({
   userEmail,
 }: AuthenticatedSidebarProps) {
   const navLinkClassName =
-    'border-y border-outline-variant bg-surface-container-lowest px-8 py-[10px] text-[13px] font-bold uppercase tracking-[0.05em] text-on-surface-variant'
-  const navLinkActiveClassName = 'border-primary bg-primary text-on-primary'
+    'border-r-4 border-r-transparent px-6 py-4 font-display text-sm font-medium uppercase tracking-[0.16em] text-on-surface-variant transition-[background-color,border-color,color] duration-150 ease-out hover:bg-[rgb(244_244_240_/_0.55)] hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]'
+  const navLinkActiveClassName =
+    'border-r-primary bg-surface-container-low text-primary hover:bg-surface-container-low hover:text-primary'
 
   return (
     <aside
@@ -35,7 +36,7 @@ export function AuthenticatedSidebar({
         <p className={brandTitleClassName}>Viva Voce AI</p>
       </div>
 
-      <nav className="-mx-8 grid content-start justify-items-stretch gap-2" aria-label="Primary">
+      <nav className="-mx-6 grid content-start justify-items-stretch gap-1 lg:-mx-8" aria-label="Primary">
         {items.map((item) => {
           return (
             <Link
@@ -43,7 +44,7 @@ export function AuthenticatedSidebar({
               to={item.to}
               className={navLinkClassName}
               activeProps={{
-                className: cn(navLinkClassName, navLinkActiveClassName),
+                className: navLinkActiveClassName,
               }}
               activeOptions={{ exact: true }}
             >

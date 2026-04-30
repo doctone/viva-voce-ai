@@ -2,7 +2,10 @@ import type { ReactNode } from 'react'
 import { cn } from '../../styles/classes'
 import { AuthenticatedSidebar } from './AuthenticatedSidebar'
 
-const authenticatedAppShellItems = [{ label: 'Vivas', to: '/vivas' }] as const
+const authenticatedAppShellItems = [
+  { label: 'Vivas', to: '/vivas' },
+  { label: 'Student Records', to: '/student-records' },
+] as const
 
 type AuthenticatedAppShellItem = {
   label: string
