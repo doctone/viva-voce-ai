@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { VivasTable } from './VivasTable'
+import { SubmissionsTable } from './-SubmissionsTable'
 
 const sampleRows = [
   {
@@ -15,9 +15,9 @@ const sampleRows = [
   },
 ]
 
-describe('VivasTable', () => {
+describe('SubmissionsTable', () => {
   it('renders the configured columns and submission rows', () => {
-    render(<VivasTable rows={sampleRows} />)
+    render(<SubmissionsTable rows={sampleRows} />)
 
     expect(screen.getByRole('table', { name: 'Submissions' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Student ID' })).toBeInTheDocument()
@@ -32,7 +32,7 @@ describe('VivasTable', () => {
   })
 
   it('shows an intentional empty state when there are no rows', () => {
-    render(<VivasTable rows={[]} />)
+    render(<SubmissionsTable rows={[]} />)
 
     expect(screen.getByText('No submissions yet.')).toBeInTheDocument()
     expect(

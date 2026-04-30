@@ -11,13 +11,11 @@ import {
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { AppProviders } from "../../components/AppProviders";
-import { VivasPage } from "../../components/vivas/VivasPage";
-import { NewVivaSubmissionPage } from "./submissions.new";
-import { SubmissionsRouteLayout } from "./submissions";
+import { NewSubmissionPage } from "./submissions.new";
 import { renderWithRouter } from "../../test/router";
 import { server } from "../../test/server";
 
-describe("NewVivaSubmissionPage", () => {
+describe("NewSubmissionPage", () => {
   it("requests students and renders the submission form fields", async () => {
     let requestedStudents = false;
 
@@ -31,7 +29,7 @@ describe("NewVivaSubmissionPage", () => {
       }),
     );
 
-    renderWithRouter(<NewVivaSubmissionPage />, "/submissions/new");
+    renderWithRouter(<NewSubmissionPage />, "/submissions/new");
 
     await waitFor(() => {
       expect(requestedStudents).toBe(true);
@@ -61,7 +59,7 @@ describe("NewVivaSubmissionPage", () => {
 
     const user = userEvent.setup();
 
-    renderWithRouter(<NewVivaSubmissionPage />, "/submissions/new");
+    renderWithRouter(<NewSubmissionPage />, "/submissions/new");
 
     const textArea = await screen.findByLabelText("Submission text");
 
@@ -83,7 +81,7 @@ describe("NewVivaSubmissionPage", () => {
 
     const user = userEvent.setup();
 
-    renderWithRouter(<NewVivaSubmissionPage />, "/submissions/new");
+    renderWithRouter(<NewSubmissionPage />, "/submissions/new");
 
     await screen.findByRole("option", {
       name: "10420000-0000-0000-0000-000000000000",
@@ -159,7 +157,7 @@ describe("NewVivaSubmissionPage", () => {
 
     const user = userEvent.setup();
 
-    renderWithRouter(<NewVivaSubmissionPage />, "/submissions/new", {
+    renderWithRouter(<NewSubmissionPage />, "/submissions/new", {
       "/submissions": <div>Submissions index</div>,
     });
 
@@ -215,7 +213,7 @@ describe("NewVivaSubmissionPage", () => {
 
     const user = userEvent.setup();
 
-    renderWithRouter(<NewVivaSubmissionPage />, "/submissions/new");
+    renderWithRouter(<NewSubmissionPage />, "/submissions/new");
 
     await screen.findByRole("option", {
       name: "10420000-0000-0000-0000-000000000000",

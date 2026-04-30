@@ -1,16 +1,16 @@
 import { Link } from '@tanstack/react-router'
-import { buttonClassName } from '../ui/Button'
-import { useVivas } from '../../hooks/useVivas'
-import { VivasTable } from './VivasTable'
+import { buttonClassName } from '../../../components/ui/Button'
+import { SubmissionsTable } from './-SubmissionsTable'
+import { useSubmissions } from './-useSubmissions'
 import {
   cn,
   eyebrowClassName,
   headingOneClassName,
   mutedTextClassName,
-} from '../../styles/classes'
+} from '../../../styles/classes'
 
-export function VivasPage() {
-  const rows = useVivas()
+export function SubmissionsPage() {
+  const rows = useSubmissions()
 
   return (
     <section className="-mx-6 -mt-8 -mb-16 grid min-h-screen grid-rows-[auto_1fr] bg-surface">
@@ -31,7 +31,7 @@ export function VivasPage() {
       </div>
 
       <section className="grid content-start pb-6 lg:pb-8">
-        <VivasTable rows={rows} />
+        <SubmissionsTable rows={rows} />
       </section>
     </section>
   )

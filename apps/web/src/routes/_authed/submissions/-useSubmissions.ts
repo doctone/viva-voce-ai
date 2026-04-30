@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import type { VivaSubmissionRow } from '../components/vivas/VivasTable'
-import { getSupabaseBrowserClient } from '../utils/supabase-browser'
+import { getSupabaseBrowserClient } from '../../../utils/supabase-browser'
+import type { SubmissionRow } from './-SubmissionsTable'
 
 type VivaRecord = {
   student_id: string
@@ -17,7 +17,7 @@ function formatSubmittedDate(value: string) {
   }).format(new Date(value))
 }
 
-async function fetchVivas(): Promise<VivaSubmissionRow[]> {
+async function fetchSubmissions(): Promise<SubmissionRow[]> {
   const supabase = getSupabaseBrowserClient()
   const { data, error } = await supabase
     .from('submissions')
@@ -35,9 +35,9 @@ async function fetchVivas(): Promise<VivaSubmissionRow[]> {
   }))
 }
 
-export function useVivas() {
+export function useSubmissions() {
   const { data = [] } = useQuery({
-    queryFn: fetchVivas,
+    queryFn: fetchSubmissions,
     queryKey: ['submissions'],
   })
 

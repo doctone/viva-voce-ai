@@ -5,17 +5,17 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 
-export type VivaSubmissionRow = {
+export type SubmissionRow = {
   studentId: string
   submissionTitle: string
   dateSubmitted: string
 }
 
-type VivasTableProps = {
-  rows: VivaSubmissionRow[]
+type SubmissionsTableProps = {
+  rows: SubmissionRow[]
 }
 
-const columnHelper = createColumnHelper<VivaSubmissionRow>()
+const columnHelper = createColumnHelper<SubmissionRow>()
 
 const columns = [
   columnHelper.accessor('studentId', {
@@ -42,7 +42,7 @@ const columns = [
   }),
 ]
 
-export function VivasTable({ rows }: VivasTableProps) {
+export function SubmissionsTable({ rows }: SubmissionsTableProps) {
   const table = useReactTable({
     data: rows,
     columns,

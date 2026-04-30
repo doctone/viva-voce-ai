@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { VivasPage } from '../../components/vivas/VivasPage'
+import { SubmissionsPage } from './submissions/-SubmissionsPage'
 
 export const Route = createFileRoute('/_authed/submissions/')({
-  component: VivasPage,
+  component: SubmissionsPage,
 })

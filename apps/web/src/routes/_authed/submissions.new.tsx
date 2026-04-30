@@ -21,7 +21,7 @@ import {
 } from '../../styles/classes'
 
 export const Route = createFileRoute('/_authed/submissions/new')({
-  component: NewVivaSubmissionPage,
+  component: NewSubmissionPage,
 })
 
 type StudentRecord = {
@@ -83,7 +83,7 @@ async function createSubmission({
   }
 }
 
-export function NewVivaSubmissionPage() {
+export function NewSubmissionPage() {
   const queryClient = useQueryClient()
   const router = useRouter()
   const studentsQuery = useQuery({
@@ -165,12 +165,12 @@ export function NewVivaSubmissionPage() {
         />
 
         <div className="grid gap-3">
-        <form.Field
-          name="submissionText"
-          validators={{
-            onDynamic: ({ value }) =>
-              validateRequiredField(value, 'Enter the submission text.'),
-          }}
+          <form.Field
+            name="submissionText"
+            validators={{
+              onDynamic: ({ value }) =>
+                validateRequiredField(value, 'Enter the submission text.'),
+            }}
             children={(field) => (
               <FormTextAreaField
                 field={field}
