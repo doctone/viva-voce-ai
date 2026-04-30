@@ -11,6 +11,7 @@ import {
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { createServerFn } from '@tanstack/react-start'
 import * as React from 'react'
+import { AppProviders } from '../components/AppProviders'
 import { DefaultCatchBoundary } from '../components/DefaultCatchBoundary'
 import { NotFound } from '../components/NotFound'
 import appCss from '../styles/app.css?url'
@@ -125,9 +126,11 @@ export function getShouldShowTopbar(
 
 function RootComponent() {
   return (
-    <RootDocument>
-      <Outlet />
-    </RootDocument>
+    <AppProviders>
+      <RootDocument>
+        <Outlet />
+      </RootDocument>
+    </AppProviders>
   )
 }
 

@@ -6,6 +6,7 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import type { ReactElement } from 'react'
+import { AppProviders } from '../components/AppProviders'
 
 export function renderWithRouter(ui: ReactElement, initialPath = '/') {
   const routeTree = createRootRoute({
@@ -17,7 +18,11 @@ export function renderWithRouter(ui: ReactElement, initialPath = '/') {
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   })
 
-  return render(<RouterProvider router={router} />)
+  return render(
+    <AppProviders>
+      <RouterProvider router={router} />
+    </AppProviders>,
+  )
 }
 
 export { render }

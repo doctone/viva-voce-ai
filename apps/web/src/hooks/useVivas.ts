@@ -1,4 +1,4 @@
-import * as React from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { VivaSubmissionRow } from '../components/vivas/VivasTable'
 import { getSupabaseBrowserClient } from '../utils/supabase-browser'
 
@@ -17,38 +17,29 @@ function formatSubmittedDate(value: string) {
   }).format(new Date(value))
 }
 
+async function fetchVivas(): Promise<VivaSubmissionRow[]> {
+  const supabase = getSupabaseBrowserClient()
+  const { data, error } = await supabase
+    .from('vivas')
+    .select('student_id, submission_title, created_at')
+    .order('created_at', { ascending: false })
+
+  if (error || !data) {
+    return []
+  }
+
+  return (data as VivaRecord[]).map((viva) => ({
+    studentId: viva.student_id,
+    submissionTitle: viva.submission_title,
+    dateSubmitted: formatSubmittedDate(viva.created_at),
+  }))
+}
+
 export function useVivas() {
-  const [rows, setRows] = React.useState<VivaSubmissionRow[]>([])
+  const { data = [] } = useQuery({
+    queryFn: fetchVivas,
+    queryKey: ['vivas'],
+  })
 
-  React.useEffect(() => {
-    let cancelled = false
-
-    async function loadVivas() {
-      const supabase = getSupabaseBrowserClient()
-      const { data, error } = await supabase
-        .from('vivas')
-        .select('student_id, submission_title, created_at')
-        .order('created_at', { ascending: false })
-
-      if (cancelled || error || !data) {
-        return
-      }
-
-      const nextRows = (data as VivaRecord[]).map((viva) => ({
-        studentId: viva.student_id,
-        submissionTitle: viva.submission_title,
-        dateSubmitted: formatSubmittedDate(viva.created_at),
-      }))
-
-      setRows(nextRows)
-    }
-
-    void loadVivas()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  return rows
+  return data
 }
