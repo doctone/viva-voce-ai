@@ -4,6 +4,7 @@ import type { SubmissionRow } from './-SubmissionsTable'
 
 type VivaRecord = {
   student_id: string
+  id: string
   submission_title: string
   created_at: string
 }
@@ -21,7 +22,7 @@ async function fetchSubmissions(): Promise<SubmissionRow[]> {
   const supabase = getSupabaseBrowserClient()
   const { data, error } = await supabase
     .from('submissions')
-    .select('student_id, submission_title, created_at')
+    .select('id, student_id, submission_title, created_at')
     .order('created_at', { ascending: false })
 
   if (error || !data) {
@@ -29,6 +30,7 @@ async function fetchSubmissions(): Promise<SubmissionRow[]> {
   }
 
   return (data as VivaRecord[]).map((viva) => ({
+    id: viva.id,
     studentId: viva.student_id,
     submissionTitle: viva.submission_title,
     dateSubmitted: formatSubmittedDate(viva.created_at),

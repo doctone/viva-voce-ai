@@ -18,6 +18,7 @@ import { Route as AuthedSubmissionsRouteImport } from './routes/_authed/submissi
 import { Route as AuthedStudentRecordsRouteImport } from './routes/_authed/student-records'
 import { Route as AuthedSubmissionsIndexRouteImport } from './routes/_authed/submissions.index'
 import { Route as AuthedSubmissionsNewRouteImport } from './routes/_authed/submissions.new'
+import { Route as AuthedSubmissionsSubmissionIdRouteImport } from './routes/_authed/submissions.$submissionId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -63,6 +64,12 @@ const AuthedSubmissionsNewRoute = AuthedSubmissionsNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AuthedSubmissionsRoute,
 } as any)
+const AuthedSubmissionsSubmissionIdRoute =
+  AuthedSubmissionsSubmissionIdRouteImport.update({
+    id: '/$submissionId',
+    path: '/$submissionId',
+    getParentRoute: () => AuthedSubmissionsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/student-records': typeof AuthedStudentRecordsRoute
   '/submissions': typeof AuthedSubmissionsRouteWithChildren
+  '/submissions/$submissionId': typeof AuthedSubmissionsSubmissionIdRoute
   '/submissions/new': typeof AuthedSubmissionsNewRoute
   '/submissions/': typeof AuthedSubmissionsIndexRoute
 }
@@ -80,6 +88,7 @@ export interface FileRoutesByTo {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/student-records': typeof AuthedStudentRecordsRoute
+  '/submissions/$submissionId': typeof AuthedSubmissionsSubmissionIdRoute
   '/submissions/new': typeof AuthedSubmissionsNewRoute
   '/submissions': typeof AuthedSubmissionsIndexRoute
 }
@@ -92,6 +101,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_authed/student-records': typeof AuthedStudentRecordsRoute
   '/_authed/submissions': typeof AuthedSubmissionsRouteWithChildren
+  '/_authed/submissions/$submissionId': typeof AuthedSubmissionsSubmissionIdRoute
   '/_authed/submissions/new': typeof AuthedSubmissionsNewRoute
   '/_authed/submissions/': typeof AuthedSubmissionsIndexRoute
 }
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/student-records'
     | '/submissions'
+    | '/submissions/$submissionId'
     | '/submissions/new'
     | '/submissions/'
   fileRoutesByTo: FileRoutesByTo
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/signup'
     | '/student-records'
+    | '/submissions/$submissionId'
     | '/submissions/new'
     | '/submissions'
   id:
@@ -124,6 +136,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authed/student-records'
     | '/_authed/submissions'
+    | '/_authed/submissions/$submissionId'
     | '/_authed/submissions/new'
     | '/_authed/submissions/'
   fileRoutesById: FileRoutesById
@@ -201,15 +214,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSubmissionsNewRouteImport
       parentRoute: typeof AuthedSubmissionsRoute
     }
+    '/_authed/submissions/$submissionId': {
+      id: '/_authed/submissions/$submissionId'
+      path: '/$submissionId'
+      fullPath: '/submissions/$submissionId'
+      preLoaderRoute: typeof AuthedSubmissionsSubmissionIdRouteImport
+      parentRoute: typeof AuthedSubmissionsRoute
+    }
   }
 }
 
 interface AuthedSubmissionsRouteChildren {
+  AuthedSubmissionsSubmissionIdRoute: typeof AuthedSubmissionsSubmissionIdRoute
   AuthedSubmissionsNewRoute: typeof AuthedSubmissionsNewRoute
   AuthedSubmissionsIndexRoute: typeof AuthedSubmissionsIndexRoute
 }
 
 const AuthedSubmissionsRouteChildren: AuthedSubmissionsRouteChildren = {
+  AuthedSubmissionsSubmissionIdRoute: AuthedSubmissionsSubmissionIdRoute,
   AuthedSubmissionsNewRoute: AuthedSubmissionsNewRoute,
   AuthedSubmissionsIndexRoute: AuthedSubmissionsIndexRoute,
 }

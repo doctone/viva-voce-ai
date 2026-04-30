@@ -1,3 +1,4 @@
+import { Link, useNavigate } from '@tanstack/react-router'
 import {
   createColumnHelper,
   flexRender,
@@ -6,6 +7,7 @@ import {
 } from '@tanstack/react-table'
 
 export type SubmissionRow = {
+  id: string
   studentId: string
   submissionTitle: string
   dateSubmitted: string
@@ -28,9 +30,19 @@ const columns = [
   }),
   columnHelper.accessor('submissionTitle', {
     header: 'Submission Title',
-    cell: (info) => (
-      <span className="font-medium text-on-surface">{info.getValue()}</span>
-    ),
+    cell: (info) => {
+      const submissionId = info.row.original.id
+
+      return (
+        <Link
+          to="/submissions/$submissionId"
+          params={{ submissionId }}
+          className="font-medium text-on-surface underline-offset-4 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]"
+        >
+          {info.getValue()}
+        </Link>
+      )
+    },
   }),
   columnHelper.accessor('dateSubmitted', {
     header: 'Date Submitted',
@@ -43,6 +55,7 @@ const columns = [
 ]
 
 export function SubmissionsTable({ rows }: SubmissionsTableProps) {
+  const navigate = useNavigate()
   const table = useReactTable({
     data: rows,
     columns,
@@ -92,10 +105,31 @@ export function SubmissionsTable({ rows }: SubmissionsTableProps) {
         </thead>
         <tbody>
           {table.getRowModel().rows.map((row) => {
+            const submissionId = row.original.id
+
             return (
               <tr
                 key={row.id}
-                className="grid gap-3 px-5 py-4 transition-colors duration-150 ease-out hover:bg-surface-container-low md:table-row md:px-0 md:py-0"
+                className="grid cursor-pointer gap-3 px-5 py-4 transition-colors duration-150 ease-out hover:bg-surface-container-low focus-within:bg-surface-container-low md:table-row md:px-0 md:py-0"
+                tabIndex={0}
+                role="link"
+                onClick={() => {
+                  void navigate({
+                    to: '/submissions/$submissionId',
+                    params: { submissionId },
+                  })
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') {
+                    return
+                  }
+
+                  event.preventDefault()
+                  void navigate({
+                    to: '/submissions/$submissionId',
+                    params: { submissionId },
+                  })
+                }}
               >
                 {row.getVisibleCells().map((cell) => {
                   return (

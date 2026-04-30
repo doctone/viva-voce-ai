@@ -9,7 +9,9 @@ import {
 import type { ReactElement } from 'react'
 import { AppProviders } from '../components/AppProviders'
 
-type RouteOverrides = Partial<Record<'/' | '/submissions' | '/submissions/new', ReactElement>>
+type RouteOverrides = Partial<
+  Record<'/' | '/submissions' | '/submissions/new' | '/submissions/$submissionId', ReactElement>
+>
 
 export function renderWithRouter(
   ui: ReactElement,
@@ -32,10 +34,16 @@ export function renderWithRouter(
     path: '/submissions/new',
     component: () => routeOverrides['/submissions/new'] ?? ui,
   })
+  const submissionDetailRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/submissions/$submissionId',
+    component: () => routeOverrides['/submissions/$submissionId'] ?? ui,
+  })
   const routeTree = rootRoute.addChildren([
     indexRoute,
     submissionsRoute,
     submissionsNewRoute,
+    submissionDetailRoute,
   ])
 
   const router = createRouter({

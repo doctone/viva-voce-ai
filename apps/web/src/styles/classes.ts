@@ -18,7 +18,7 @@ export const brandTitleClassName =
   'font-display text-[30px] font-medium leading-[1.2] tracking-[-0.02em] text-primary'
 
 export const headingOneClassName =
-  'font-display text-[48px] font-semibold leading-[1.2] tracking-[-0.02em] text-primary'
+  'font-display text-[40px] font-semibold leading-[1.2] tracking-[-0.02em] text-primary'
 
 export const headingTwoClassName =
   'font-display text-[32px] font-medium leading-[1.3] tracking-[-0.01em] text-primary'
