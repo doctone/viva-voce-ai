@@ -1,6 +1,5 @@
 import { Link } from '@tanstack/react-router'
 import {
-  brandTitleClassName,
   cn,
   eyebrowClassName,
   paperPanelClassName,
@@ -32,8 +31,12 @@ export function AuthenticatedSidebar({
         'grid content-start grid-rows-[auto_1fr_auto] gap-8 p-8',
       )}
     >
-      <div className="grid gap-1">
-        <p className={brandTitleClassName}>Viva Voce AI</p>
+      <div className="grid justify-items-center gap-1">
+        <img
+          src="/favicon.svg"
+          alt="Viva Voce AI"
+          className="h-28 w-28 rounded-[18px] object-contain"
+        />
       </div>
 
       <nav className="-mx-6 grid content-start justify-items-stretch gap-1 lg:-mx-8" aria-label="Primary">
