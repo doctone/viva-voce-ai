@@ -94,7 +94,7 @@ begin
   );
 end $$;
 
-delete from public.submission_questions;
+delete from public.viva_questions;
 delete from public.submissions;
 delete from public.students;
 
@@ -180,7 +180,7 @@ Ultimately, education is not simply about efficiency or access to information; i
     '2026-03-03T09:00:00Z'
   );
 
-insert into public.submission_questions (
+insert into public.viva_questions (
   id,
   submission_id,
   category,

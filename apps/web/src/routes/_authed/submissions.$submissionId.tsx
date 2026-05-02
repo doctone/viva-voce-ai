@@ -1,5 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
+import { Button } from '../../components/ui/Button'
 import {
   cn,
   eyebrowClassName,
@@ -9,9 +10,8 @@ import {
   paperPanelClassName,
   sectionCardClassName,
 } from '../../styles/classes'
-import { Button } from '../../components/ui/Button'
-import { AddManualQuestionCard, QuestionCard } from './submissions/-QuestionCard'
 import { getSupabaseBrowserClient } from '../../utils/supabase-browser'
+import { AddManualQuestionCard, QuestionCard } from './submissions/-QuestionCard'
 
 export const Route = createFileRoute('/_authed/submissions/$submissionId')({
   component: SubmissionDetailPage,
@@ -25,45 +25,51 @@ type SubmissionRecord = {
   submission_title: string
 }
 
-type SubmissionQuestionRecord = {
+type VivaQuestionRecord = {
   category: string
   id: string
+  is_recommended?: boolean
   question_text: string
+  sort_order?: number
   submission_id: string
   teacher_note: string
 }
 
 type SubmissionQuestion = {
-  category: string
   id: string
   isHighlighted?: boolean
   label: string
   questionText: string
+  sortOrder: number
   teacherNote: string
 }
 
 const fallbackQuestions: SubmissionQuestion[] = [
   {
     id: 'fallback-1',
-    category: 'Comprehension',
     label: 'Concept: Trade Governance',
-    questionText: 'What does the phrase "formalized system of international trade governance" mean in your own words?',
-    teacherNote: 'Listen for secure understanding of the student\'s own opening claim.',
+    questionText:
+      'What does the phrase "formalized system of international trade governance" mean in your own words?',
+    sortOrder: 1,
+    teacherNote: "Listen for secure understanding of the student's own opening claim.",
   },
   {
     id: 'fallback-2',
-    category: 'Reasoning',
     label: 'Argument: Atlantic Trade',
-    questionText: 'Why did you connect mercantile law to the growth of Atlantic trade?',
+    questionText:
+      'Why did you connect mercantile law to the growth of Atlantic trade?',
+    sortOrder: 2,
     teacherNote: 'Listen for cause-and-effect reasoning rather than recall only.',
   },
   {
     id: 'fallback-3',
-    category: 'Ownership',
     isHighlighted: true,
     label: 'Critical Analysis',
-    questionText: 'Which sentence best shows your own voice, and why did you phrase it that way?',
-    teacherNote: 'Listen for reflection on drafting choices and vocabulary decisions.',
+    questionText:
+      'Which sentence best shows your own voice, and why did you phrase it that way?',
+    sortOrder: 3,
+    teacherNote:
+      'Listen for reflection on drafting choices and vocabulary decisions.',
   },
 ]
 
@@ -92,29 +98,32 @@ async function fetchSubmissionQuestions(
 ): Promise<SubmissionQuestion[]> {
   const supabase = getSupabaseBrowserClient()
   const { data, error } = await supabase
-    .from('submission_questions')
-    .select('id, submission_id, category, question_text, teacher_note, created_at')
+    .from('viva_questions')
+    .select(
+      'id, submission_id, category, question_text, teacher_note, is_recommended, sort_order',
+    )
     .eq('submission_id', submissionId)
-    .order('created_at', { ascending: true })
 
   if (error) {
     throw new Error('We could not load submission questions.')
   }
 
-  const rows = (data as SubmissionQuestionRecord[] | null) ?? []
+  const rows = (data as VivaQuestionRecord[] | null) ?? []
 
   if (rows.length === 0) {
     return fallbackQuestions
   }
 
-  return rows.map((question) => ({
-    id: question.id,
-    category: formatQuestionCategory(question.category),
-    isHighlighted: question.category === 'critical_analysis',
-    label: formatQuestionCategory(question.category),
-    questionText: question.question_text,
-    teacherNote: question.teacher_note,
-  }))
+  return rows
+    .map((question) => ({
+      id: question.id,
+      isHighlighted: question.is_recommended ?? false,
+      label: formatQuestionCategory(question.category),
+      questionText: question.question_text,
+      sortOrder: question.sort_order ?? 0,
+      teacherNote: question.teacher_note,
+    }))
+    .sort((left, right) => left.sortOrder - right.sortOrder)
 }
 
 function formatQuestionCategory(category: string) {
@@ -163,13 +172,17 @@ export function SubmissionDetailPage() {
       <section className={cn(paperPanelClassName, sectionCardClassName)}>
         <span className={eyebrowClassName}>Submissions</span>
         <h1 className={headingOneClassName}>Submission unavailable</h1>
-        <p className="text-sm leading-6 text-error">{submissionQuery.error.message}</p>
+        <p className="text-sm leading-6 text-error">
+          {submissionQuery.error.message}
+        </p>
       </section>
     )
   }
 
   const submission = submissionQuery.data as SubmissionRecord
-  const submissionParagraphs = splitSubmissionTextIntoParagraphs(submission.submission_text)
+  const submissionParagraphs = splitSubmissionTextIntoParagraphs(
+    submission.submission_text,
+  )
   const questions = questionsQuery.data ?? fallbackQuestions
 
   return (
@@ -178,13 +191,16 @@ export function SubmissionDetailPage() {
         <span className={eyebrowClassName}>Submissions</span>
         <h1 className={headingOneClassName}>{submission.submission_title}</h1>
         <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
-          Student {submission.student_id} · Submitted {formatSubmissionDate(submission.created_at)}
+          Student {submission.student_id} · Submitted{' '}
+          {formatSubmissionDate(submission.created_at)}
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:items-start">
         <section className="space-y-8 xl:col-span-7">
-          <article className={cn(paperPanelClassName, 'relative overflow-hidden p-8')}>
+          <article
+            className={cn(paperPanelClassName, 'relative overflow-hidden p-8')}
+          >
             <div className="absolute inset-y-0 left-0 w-1 bg-primary-container" />
             <h2 className="mb-6 border-b border-stone-100 pb-4 font-display text-[32px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
               The Submission
@@ -201,7 +217,8 @@ export function SubmissionDetailPage() {
               Oral Examination (Audio)
             </h2>
             <p className={cn(mutedTextClassName, 'mb-6 text-sm leading-6')}>
-              Upload the recorded Viva Voce session to generate an automated transcription and analysis.
+              Upload the recorded Viva Voce session to generate an automated
+              transcription and analysis.
             </p>
             <div className="flex flex-wrap items-center gap-4">
               <Button type="button" variant="secondary" disabled>
@@ -217,12 +234,6 @@ export function SubmissionDetailPage() {
         <aside className="space-y-4 xl:col-span-5 xl:sticky xl:top-24">
           <div className="mb-4 flex items-center justify-between gap-4 px-2">
             <h2 className={headingTwoClassName}>AI Viva Strategy</h2>
-            <button
-              type="button"
-              className="text-sm font-bold uppercase tracking-[0.08em] text-primary transition-colors hover:text-primary-container"
-            >
-              Regenerate All
-            </button>
           </div>
 
           {questions.map((question) => (
@@ -231,6 +242,7 @@ export function SubmissionDetailPage() {
               isHighlighted={question.isHighlighted}
               label={question.label}
               questionText={question.questionText}
+              teacherNote={question.teacherNote}
             />
           ))}
 

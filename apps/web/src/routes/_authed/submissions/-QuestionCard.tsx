@@ -4,12 +4,14 @@ type QuestionCardProps = {
   isHighlighted?: boolean
   label: string
   questionText: string
+  teacherNote?: string
 }
 
 export function QuestionCard({
   isHighlighted = false,
   label,
   questionText,
+  teacherNote,
 }: QuestionCardProps) {
   return (
     <article
@@ -50,6 +52,11 @@ export function QuestionCard({
       <p className="font-sans text-base leading-7 font-medium text-primary">
         {questionText}
       </p>
+      {teacherNote ? (
+        <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
+          {teacherNote}
+        </p>
+      ) : null}
     </article>
   )
 }

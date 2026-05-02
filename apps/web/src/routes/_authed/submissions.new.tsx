@@ -11,6 +11,7 @@ import {
 import { useMutation } from '../../hooks/useMutation'
 import { getSupabaseBrowserClient } from '../../utils/supabase-browser'
 import { Button } from '../../components/ui/Button'
+import { useGenerateSubmissionViva } from '../../features/submissions/useGenerateSubmissionViva'
 import {
   cn,
   eyebrowClassName,
@@ -32,6 +33,10 @@ type CreateSubmissionInput = {
   studentId: string
   submissionText: string
   title: string
+}
+
+type CreateSubmissionResult = {
+  submissionId: string
 }
 
 function validateRequiredField(value: string, message: string) {
@@ -66,9 +71,9 @@ async function createSubmission({
   studentId,
   submissionText,
   title,
-}: CreateSubmissionInput) {
+}: CreateSubmissionInput): Promise<CreateSubmissionResult> {
   const supabase = getSupabaseBrowserClient()
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('submissions')
     .insert({
       student_id: studentId,
@@ -81,20 +86,51 @@ async function createSubmission({
   if (error) {
     throw new Error('We could not create the submission. Please try again.')
   }
+
+  const submission = data as { id: string } | null
+
+  if (!submission?.id) {
+    throw new Error('We could not create the submission. Please try again.')
+  }
+
+  return {
+    submissionId: submission.id,
+  }
 }
 
 export function NewSubmissionPage() {
   const queryClient = useQueryClient()
   const router = useRouter()
+  const generateSubmissionViva = useGenerateSubmissionViva()
   const studentsQuery = useQuery({
     queryFn: fetchStudents,
     queryKey: ['students'],
   })
-  const createSubmissionMutation = useMutation<CreateSubmissionInput, void>({
+  const createSubmissionMutation = useMutation<
+    CreateSubmissionInput,
+    CreateSubmissionResult
+  >({
     fn: createSubmission,
-    onSuccess: async () => {
+    onSuccess: async ({ data }) => {
+      const generationResult = await generateSubmissionViva(data.submissionId)
+
+      if (generationResult.status === 'failed') {
+        throw new Error(
+          generationResult.errorMessage ??
+            'We saved the submission, but could not generate viva questions.',
+        )
+      }
+
       await queryClient.invalidateQueries({ queryKey: ['submissions'] })
-      await router.navigate({ to: '/submissions' })
+      await queryClient.invalidateQueries({
+        queryKey: ['submission-questions', data.submissionId],
+      })
+      await router.navigate({
+        params: {
+          submissionId: data.submissionId,
+        },
+        to: '/submissions/$submissionId',
+      })
     },
   })
   const form = useForm({
@@ -118,8 +154,7 @@ export function NewSubmissionPage() {
         <span className={eyebrowClassName}>Submissions</span>
         <h1 className={headingOneClassName}>New submission</h1>
         <p className={cn(mutedTextClassName, 'max-w-[64ch] text-sm leading-6')}>
-          Save the submission now. Viva questions will be generated from this
-          work in the next step once that service is connected.
+          Save the submission and generate viva questions in one step.
         </p>
       </div>
 
@@ -205,13 +240,19 @@ export function NewSubmissionPage() {
         <form.Subscribe
           selector={(state) => state.isSubmitting}
           children={(isSubmitting) => (
-            <div>
+            <div className="grid gap-3">
               <Button
                 type="submit"
                 disabled={studentsQuery.isLoading || isSubmitting}
+                isLoading={isSubmitting}
               >
                 Generate viva questions
               </Button>
+              {isSubmitting ? (
+                <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
+                  Generating viva questions. This can take a few seconds.
+                </p>
+              ) : null}
             </div>
           )}
         />

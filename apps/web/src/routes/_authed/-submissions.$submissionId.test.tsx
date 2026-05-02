@@ -6,7 +6,7 @@ import { renderWithRouter } from '../../test/router'
 import { server } from '../../test/server'
 
 describe('SubmissionDetailPage', () => {
-  it('renders the submission, placeholder questions, and oral examination panel', async () => {
+  it('renders the saved viva questions alongside the submission', async () => {
     server.use(
       http.get('https://example-project.supabase.co/rest/v1/submissions', ({ request }) => {
         const url = new URL(request.url)
@@ -24,22 +24,26 @@ describe('SubmissionDetailPage', () => {
           },
         ])
       }),
-      http.get('https://example-project.supabase.co/rest/v1/submission_questions', () => {
+      http.get('https://example-project.supabase.co/rest/v1/viva_questions', () => {
         return HttpResponse.json([
           {
             id: '40420000-0000-0000-0000-000000000000',
             submission_id: '30420000-0000-0000-0000-000000000000',
-            category: 'comprehension',
+            category: 'comprehension_and_accuracy',
             question_text: 'Why does the response describe Lord Mansfield as pivotal?',
             teacher_note: 'Listen for understanding of legal reform and why it mattered.',
+            is_recommended: true,
+            sort_order: 1,
             created_at: '2026-04-30T20:05:00.000Z',
           },
           {
             id: '40420000-0000-0000-0000-000000000001',
             submission_id: '30420000-0000-0000-0000-000000000000',
-            category: 'authenticity',
+            category: 'authenticity_and_ownership',
             question_text: 'Which sentence took the longest to shape, and what were you trying to achieve?',
             teacher_note: 'Listen for drafting choices tied to the actual wording.',
+            is_recommended: false,
+            sort_order: 9,
             created_at: '2026-04-30T20:06:00.000Z',
           },
         ])
@@ -62,9 +66,6 @@ describe('SubmissionDetailPage', () => {
     ).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: 'AI Viva Strategy' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(/Upload the recorded Viva Voce session to generate an automated transcription and analysis\./),
     ).toBeInTheDocument()
 
     expect(screen.getByText('Why does the response describe Lord Mansfield as pivotal?')).toBeInTheDocument()
