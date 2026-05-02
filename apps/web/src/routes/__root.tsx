@@ -104,10 +104,10 @@ export const Route = createRootRoute({
         href: "/favicon.svg",
       },
       {
-        rel: "icon",
+        rel: "shortcut icon",
         href: "/favicon.svg",
       },
-      { rel: "manifest", href: "/site.webmanifest" },
+      { rel: "manifest", href: "/site.webmanifest", color: "#faf9f5" },
     ],
   }),
   errorComponent: (props) => {
