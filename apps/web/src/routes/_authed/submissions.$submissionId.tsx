@@ -1,8 +1,8 @@
-import * as React from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
-import { Button } from '../../components/ui/Button'
-import { useGenerateSubmissionViva } from '../../features/submissions/useGenerateSubmissionViva'
+import * as React from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { Button } from "../../components/ui/Button";
+import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
 import {
   cn,
   eyebrowClassName,
@@ -11,79 +11,82 @@ import {
   mutedTextClassName,
   paperPanelClassName,
   sectionCardClassName,
-} from '../../styles/classes'
-import { getSupabaseBrowserClient } from '../../utils/supabase-browser'
-import { AddManualQuestionCard, QuestionCard } from './submissions/-QuestionCard'
+} from "../../styles/classes";
+import { getSupabaseBrowserClient } from "../../utils/supabase-browser";
+import {
+  AddManualQuestionCard,
+  QuestionCard,
+} from "./submissions/-QuestionCard";
 
-export const Route = createFileRoute('/_authed/submissions/$submissionId')({
+export const Route = createFileRoute("/_authed/submissions/$submissionId")({
   component: SubmissionDetailPage,
-})
+});
 
 type SubmissionRecord = {
-  created_at: string
-  id: string
-  student_id: string
-  submission_text: string
-  submission_title: string
-}
+  created_at: string;
+  id: string;
+  student_id: string;
+  submission_text: string;
+  submission_title: string;
+};
 
 type VivaQuestionRecord = {
-  category: string
-  id: string
-  is_recommended?: boolean
-  question_text: string
-  sort_order?: number
-  submission_id: string
-  teacher_note: string
-}
+  category: string;
+  id: string;
+  is_recommended?: boolean;
+  question_text: string;
+  sort_order?: number;
+  submission_id: string;
+  teacher_note: string;
+};
 
 type SubmissionQuestion = {
-  id: string
-  isHighlighted?: boolean
-  label: string
-  questionText: string
-  sortOrder: number
-  teacherNote: string
-}
+  id: string;
+  isHighlighted?: boolean;
+  label: string;
+  questionText: string;
+  sortOrder: number;
+  teacherNote: string;
+};
 
-type GenerationState = 'idle' | 'running' | 'failed'
+type GenerationState = "idle" | "running" | "failed";
 
 async function fetchSubmission(submissionId: string) {
-  const supabase = getSupabaseBrowserClient()
+  const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
-    .from('submissions')
-    .select('id, student_id, submission_title, submission_text, created_at')
-    .eq('id', submissionId)
+    .from("submissions")
+    .select("id, student_id, submission_title, submission_text, created_at")
+    .eq("id", submissionId);
 
   if (error) {
-    throw new Error('We could not load the submission.')
+    throw new Error("We could not load the submission.");
   }
 
-  const submission = (data as SubmissionRecord[] | null)?.[0]
+  const submission = (data as SubmissionRecord[] | null)?.[0];
 
   if (!submission) {
-    throw new Error('Submission not found.')
+    throw new Error("Submission not found.");
   }
 
-  return submission
+  return submission;
 }
 
 async function fetchSubmissionQuestions(
   submissionId: string,
 ): Promise<SubmissionQuestion[]> {
-  const supabase = getSupabaseBrowserClient()
+  const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
-    .from('viva_questions')
+    .from("viva_questions")
     .select(
-      'id, submission_id, category, question_text, teacher_note, is_recommended, sort_order',
+      "id, submission_id, category, question_text, teacher_note, is_recommended, sort_order",
     )
-    .eq('submission_id', submissionId)
+    .eq("submission_id", submissionId);
 
   if (error) {
-    throw new Error('We could not load submission questions.')
+    throw new Error("We could not load submission questions.");
   }
 
-  const rows = (data as VivaQuestionRecord[] | null) ?? []
+  const rows = (data as VivaQuestionRecord[] | null) ?? [];
 
   return rows
     .map((question) => ({
@@ -94,56 +97,56 @@ async function fetchSubmissionQuestions(
       sortOrder: question.sort_order ?? 0,
       teacherNote: question.teacher_note,
     }))
-    .sort((left, right) => left.sortOrder - right.sortOrder)
+    .sort((left, right) => left.sortOrder - right.sortOrder);
 }
 
 function formatQuestionCategory(category: string) {
   return category
-    .split('_')
+    .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
+    .join(" ");
 }
 
 function formatSubmissionDate(value: string) {
-  return new Intl.DateTimeFormat('en-GB', {
-    dateStyle: 'medium',
-    timeZone: 'UTC',
-  }).format(new Date(value))
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(new Date(value));
 }
 
 function splitSubmissionTextIntoParagraphs(value: string) {
   return value
     .split(/\n\s*\n/)
     .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
+    .filter(Boolean);
 }
 
 function LoadingPulseLine({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'h-3 rounded-full bg-[color:rgb(0_32_70_/_0.08)] animate-pulse',
+        "h-3 rounded-full bg-[color:rgb(0_32_70_/_0.08)] animate-pulse",
         className,
       )}
     />
-  )
+  );
 }
 
 type SubmissionGenerationShellProps = {
-  studentId: string
-  submissionTitle: string
-}
+  studentId: string;
+  submissionTitle: string;
+};
 
 function SubmissionGenerationShell({
   studentId,
   submissionTitle,
 }: SubmissionGenerationShellProps) {
   return (
-    <section className="grid min-h-[calc(100vh-8rem)] w-full">
+    <section className="-mx-6 -mb-16 -mt-8 grid min-h-screen w-[calc(100%+3rem)]">
       <div
         className={cn(
           paperPanelClassName,
-          'grid min-h-full w-full grid-rows-[auto_1fr] overflow-hidden',
+          "grid min-h-full w-full grid-rows-[auto_1fr] overflow-hidden",
         )}
       >
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-outline-variant px-8 py-6">
@@ -151,8 +154,14 @@ function SubmissionGenerationShell({
             <span className={eyebrowClassName}>Submissions</span>
             <div className="grid gap-2">
               <h1 className={headingOneClassName}>Preparing viva questions</h1>
-              <p className={cn(mutedTextClassName, 'max-w-[68ch] text-sm leading-6')}>
-                The submission has been saved. Viva questions are being prepared now.
+              <p
+                className={cn(
+                  mutedTextClassName,
+                  "max-w-[68ch] text-sm leading-6",
+                )}
+              >
+                The submission has been saved. Viva questions are being prepared
+                now.
               </p>
             </div>
           </div>
@@ -178,7 +187,7 @@ function SubmissionGenerationShell({
                     {submissionTitle}
                   </h2>
                 </div>
-                <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
+                <p className={cn(mutedTextClassName, "text-sm leading-6")}>
                   Student {studentId}
                 </p>
               </div>
@@ -194,11 +203,18 @@ function SubmissionGenerationShell({
             </div>
 
             <div className="grid gap-3 border-t border-outline-variant pt-5">
-              <p className={cn(mutedTextClassName, 'max-w-[62ch] text-sm leading-6')}>
-                The system is drafting an examiner-ready set of prompts, ownership checks, and follow-up questions for this submission.
+              <p
+                className={cn(
+                  mutedTextClassName,
+                  "max-w-[62ch] text-sm leading-6",
+                )}
+              >
+                The system is drafting an examiner-ready set of prompts,
+                ownership checks, and follow-up questions for this submission.
               </p>
-              <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
-                This usually takes a few seconds. If it takes longer, you can stay on this page.
+              <p className={cn(mutedTextClassName, "text-sm leading-6")}>
+                This usually takes a few seconds. If it takes longer, you can
+                stay on this page.
               </p>
             </div>
           </div>
@@ -213,9 +229,9 @@ function SubmissionGenerationShell({
 
             <div className="grid gap-4">
               {[
-                'Scanning the submission for key claims and terms',
-                'Drafting oral follow-up questions for the strongest lines of inquiry',
-                'Preparing teacher notes for a live viva conversation',
+                "Scanning the submission for key claims and terms",
+                "Drafting oral follow-up questions for the strongest lines of inquiry",
+                "Preparing teacher notes for a live viva conversation",
               ].map((step, index) => (
                 <div
                   key={step}
@@ -228,7 +244,9 @@ function SubmissionGenerationShell({
                     >
                       {index + 1}
                     </span>
-                    <p className="font-sans text-sm leading-6 text-on-surface">{step}</p>
+                    <p className="font-sans text-sm leading-6 text-on-surface">
+                      {step}
+                    </p>
                   </div>
                   <LoadingPulseLine className="ml-11 w-[72%]" />
                 </div>
@@ -238,85 +256,98 @@ function SubmissionGenerationShell({
         </div>
       </div>
     </section>
-  )
+  );
 }
 
 type SubmissionGenerationFailureProps = {
-  errorMessage: string | null
-  onRetry: () => void
-}
+  errorMessage: string | null;
+  onRetry: () => void;
+};
 
 function SubmissionGenerationFailure({
   errorMessage,
   onRetry,
 }: SubmissionGenerationFailureProps) {
   return (
-    <section className={cn(paperPanelClassName, sectionCardClassName, 'gap-5')}>
+    <section className={cn(paperPanelClassName, sectionCardClassName, "gap-5")}>
       <span className={eyebrowClassName}>Submissions</span>
       <h1 className={headingOneClassName}>Viva questions unavailable</h1>
-      <p className={cn(mutedTextClassName, 'max-w-[60ch] text-sm leading-6')}>
+      <p className={cn(mutedTextClassName, "max-w-[60ch] text-sm leading-6")}>
         The submission was saved, but viva question generation did not complete.
       </p>
-      {errorMessage ? <p className="text-sm leading-6 text-error">{errorMessage}</p> : null}
+      {errorMessage ? (
+        <p className="text-sm leading-6 text-error">{errorMessage}</p>
+      ) : null}
       <div>
         <Button type="button" onClick={onRetry}>
           Try again
         </Button>
       </div>
     </section>
-  )
+  );
 }
 
 export function SubmissionDetailPage() {
-  const { submissionId } = Route.useParams()
-  const queryClient = useQueryClient()
-  const generateSubmissionViva = useGenerateSubmissionViva()
-  const [generationState, setGenerationState] = React.useState<GenerationState>('idle')
-  const [generationErrorMessage, setGenerationErrorMessage] = React.useState<string | null>(null)
-  const hasTriggeredGenerationRef = React.useRef(false)
+  const { submissionId } = Route.useParams();
+  const queryClient = useQueryClient();
+  const generateSubmissionViva = useGenerateSubmissionViva();
+  const [generationState, setGenerationState] =
+    React.useState<GenerationState>("idle");
+  const [generationErrorMessage, setGenerationErrorMessage] = React.useState<
+    string | null
+  >(null);
+  const hasTriggeredGenerationRef = React.useRef(false);
   const submissionQuery = useQuery({
     queryFn: () => fetchSubmission(submissionId),
-    queryKey: ['submission', submissionId],
-  })
+    queryKey: ["submission", submissionId],
+  });
   const questionsQuery = useQuery({
     queryFn: () => fetchSubmissionQuestions(submissionId),
-    queryKey: ['submission-questions', submissionId],
-  })
+    queryKey: ["submission-questions", submissionId],
+  });
 
-  const questions = questionsQuery.data ?? []
+  const questions = questionsQuery.data ?? [];
 
   const runGeneration = React.useCallback(async () => {
-    hasTriggeredGenerationRef.current = true
-    setGenerationState('running')
-    setGenerationErrorMessage(null)
+    hasTriggeredGenerationRef.current = true;
+    setGenerationState("running");
+    setGenerationErrorMessage(null);
 
-    const result = await generateSubmissionViva(submissionId)
+    const result = await generateSubmissionViva(submissionId);
 
-    if (result.status === 'failed') {
-      setGenerationState('failed')
+    if (result.status === "failed") {
+      setGenerationState("failed");
       setGenerationErrorMessage(
         result.errorMessage ??
-          'We saved the submission, but could not generate viva questions.',
-      )
-      return
+          "We saved the submission, but could not generate viva questions.",
+      );
+      return;
     }
 
-    setGenerationState('idle')
+    setGenerationState("idle");
     await queryClient.invalidateQueries({
-      queryKey: ['submission-questions', submissionId],
-    })
-  }, [generateSubmissionViva, queryClient, submissionId])
+      queryKey: ["submission-questions", submissionId],
+    });
+  }, [generateSubmissionViva, queryClient, submissionId]);
 
   React.useEffect(() => {
-    if (!submissionQuery.data || questionsQuery.isLoading || questionsQuery.error) {
-      return
+    if (
+      !submissionQuery.data ||
+      questionsQuery.isLoading ||
+      questionsQuery.error
+    ) {
+      return;
     }
 
-    if (questions.length > 0 || generationState !== 'idle' || hasTriggeredGenerationRef.current) {
-      return
+    if (
+      questions.length > 0 ||
+      generationState !== "idle" ||
+      hasTriggeredGenerationRef.current
+    ) {
+      return;
     }
 
-    void runGeneration()
+    void runGeneration();
   }, [
     generationState,
     questions.length,
@@ -324,7 +355,7 @@ export function SubmissionDetailPage() {
     questionsQuery.isLoading,
     runGeneration,
     submissionQuery.data,
-  ])
+  ]);
 
   if (submissionQuery.isLoading) {
     return (
@@ -332,7 +363,7 @@ export function SubmissionDetailPage() {
         <span className={eyebrowClassName}>Submissions</span>
         <h1 className={headingOneClassName}>Loading submission</h1>
       </section>
-    )
+    );
   }
 
   if (submissionQuery.error instanceof Error) {
@@ -344,7 +375,7 @@ export function SubmissionDetailPage() {
           {submissionQuery.error.message}
         </p>
       </section>
-    )
+    );
   }
 
   if (questionsQuery.error instanceof Error) {
@@ -352,23 +383,25 @@ export function SubmissionDetailPage() {
       <section className={cn(paperPanelClassName, sectionCardClassName)}>
         <span className={eyebrowClassName}>Submissions</span>
         <h1 className={headingOneClassName}>Submission unavailable</h1>
-        <p className="text-sm leading-6 text-error">{questionsQuery.error.message}</p>
+        <p className="text-sm leading-6 text-error">
+          {questionsQuery.error.message}
+        </p>
       </section>
-    )
+    );
   }
 
-  const submission = submissionQuery.data as SubmissionRecord
+  const submission = submissionQuery.data as SubmissionRecord;
 
   if (questions.length === 0) {
-    if (generationState === 'failed') {
+    if (generationState === "failed") {
       return (
         <SubmissionGenerationFailure
           errorMessage={generationErrorMessage}
           onRetry={() => {
-            void runGeneration()
+            void runGeneration();
           }}
         />
-      )
+      );
     }
 
     return (
@@ -376,20 +409,20 @@ export function SubmissionDetailPage() {
         studentId={submission.student_id}
         submissionTitle={submission.submission_title}
       />
-    )
+    );
   }
 
   const submissionParagraphs = splitSubmissionTextIntoParagraphs(
     submission.submission_text,
-  )
+  );
 
   return (
     <section className="grid gap-8">
       <div className="grid gap-3">
         <span className={eyebrowClassName}>Submissions</span>
         <h1 className={headingOneClassName}>{submission.submission_title}</h1>
-        <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
-          Student {submission.student_id} · Submitted{' '}
+        <p className={cn(mutedTextClassName, "text-sm leading-6")}>
+          Student {submission.student_id} · Submitted{" "}
           {formatSubmissionDate(submission.created_at)}
         </p>
       </div>
@@ -397,7 +430,7 @@ export function SubmissionDetailPage() {
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:items-start">
         <section className="space-y-8 xl:col-span-7">
           <article
-            className={cn(paperPanelClassName, 'relative overflow-hidden p-8')}
+            className={cn(paperPanelClassName, "relative overflow-hidden p-8")}
           >
             <div className="absolute inset-y-0 left-0 w-1 bg-primary-container" />
             <h2 className="mb-6 border-b border-stone-100 pb-4 font-display text-[32px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
@@ -410,11 +443,13 @@ export function SubmissionDetailPage() {
             </div>
           </article>
 
-          <section className={cn(paperPanelClassName, 'bg-surface-container-low p-8')}>
+          <section
+            className={cn(paperPanelClassName, "bg-surface-container-low p-8")}
+          >
             <h2 className="mb-4 font-display text-[32px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
               Oral Examination (Audio)
             </h2>
-            <p className={cn(mutedTextClassName, 'mb-6 text-sm leading-6')}>
+            <p className={cn(mutedTextClassName, "mb-6 text-sm leading-6")}>
               Upload the recorded Viva Voce session to generate an automated
               transcription and analysis.
             </p>
@@ -422,7 +457,7 @@ export function SubmissionDetailPage() {
               <Button type="button" variant="secondary" disabled>
                 Upload recording
               </Button>
-              <span className={cn(mutedTextClassName, 'text-sm')}>
+              <span className={cn(mutedTextClassName, "text-sm")}>
                 Audio upload will be connected in a later step.
               </span>
             </div>
@@ -448,5 +483,5 @@ export function SubmissionDetailPage() {
         </aside>
       </div>
     </section>
-  )
+  );
 }
