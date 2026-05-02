@@ -1,37 +1,10 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  Outlet,
-  RouterProvider,
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from "@tanstack/react-router";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it, vi } from "vitest";
-import { AppProviders } from "../../components/AppProviders";
+import { describe, expect, it } from "vitest";
 import { NewSubmissionPage } from "./submissions.new";
 import { renderWithRouter } from "../../test/router";
 import { server } from "../../test/server";
-
-const generateSubmissionVivaSpy = vi.fn();
-
-vi.mock("../../features/submissions/useGenerateSubmissionViva", () => ({
-  useGenerateSubmissionViva: () => generateSubmissionVivaSpy,
-}));
-
-function createDeferred<T>() {
-  let resolve!: (value: T | PromiseLike<T>) => void;
-  let reject!: (reason?: unknown) => void;
-
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-
-  return { promise, resolve, reject };
-}
 
 describe("NewSubmissionPage", () => {
   it("requests students and renders the submission form fields", async () => {
@@ -145,12 +118,8 @@ describe("NewSubmissionPage", () => {
     });
   });
 
-  it("creates the submission and redirects back to the submissions list", async () => {
+  it("creates the submission and navigates immediately to the submission detail page", async () => {
     let postedBody: Record<string, unknown> | undefined;
-    generateSubmissionVivaSpy.mockResolvedValue({
-      status: "completed",
-      submissionId: "30420000-0000-0000-0000-000000000000",
-    });
 
     server.use(
       http.get("https://example-project.supabase.co/rest/v1/students", () => {
@@ -205,15 +174,11 @@ describe("NewSubmissionPage", () => {
           "This submission examines monetary policy and public argument.",
       });
     });
-    expect(generateSubmissionVivaSpy).toHaveBeenCalledWith(
-      "30420000-0000-0000-0000-000000000000",
-    );
 
     expect(await screen.findByText("Submission detail")).toBeInTheDocument();
   });
 
   it("shows an inline error when submission creation fails", async () => {
-    generateSubmissionVivaSpy.mockReset();
     server.use(
       http.get("https://example-project.supabase.co/rest/v1/students", () => {
         return HttpResponse.json([
@@ -263,124 +228,5 @@ describe("NewSubmissionPage", () => {
     expect(
       screen.getByRole("heading", { name: "New submission" }),
     ).toBeInTheDocument();
-  });
-
-  it("shows an inline error when viva question generation fails", async () => {
-    generateSubmissionVivaSpy.mockResolvedValue({
-      errorMessage: "Question generation failed",
-      status: "failed",
-      submissionId: "30420000-0000-0000-0000-000000000000",
-    });
-
-    server.use(
-      http.get("https://example-project.supabase.co/rest/v1/students", () => {
-        return HttpResponse.json([
-          { id: "10420000-0000-0000-0000-000000000000" },
-        ]);
-      }),
-      http.post(
-        "https://example-project.supabase.co/rest/v1/submissions",
-        () => {
-          return HttpResponse.json(
-            { id: "30420000-0000-0000-0000-000000000000" },
-            { status: 201 },
-          );
-        },
-      ),
-    );
-
-    const user = userEvent.setup();
-
-    renderWithRouter(<NewSubmissionPage />, "/submissions/new");
-
-    await screen.findByRole("option", {
-      name: "10420000-0000-0000-0000-000000000000",
-    });
-
-    await user.selectOptions(
-      await screen.findByLabelText("Student"),
-      "10420000-0000-0000-0000-000000000000",
-    );
-    await user.type(
-      screen.getByLabelText("Title"),
-      "Economic policy reflection",
-    );
-    await user.type(
-      screen.getByLabelText("Submission text"),
-      "Short text for failure path.",
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Generate viva questions" }),
-    );
-
-    expect(
-      await screen.findByText("Question generation failed"),
-    ).toBeInTheDocument();
-  });
-
-  it("shows a loading message while viva questions are being generated", async () => {
-    const deferredGeneration = createDeferred<{
-      status: "completed";
-      submissionId: string;
-    }>();
-
-    generateSubmissionVivaSpy.mockReturnValue(deferredGeneration.promise);
-
-    server.use(
-      http.get("https://example-project.supabase.co/rest/v1/students", () => {
-        return HttpResponse.json([
-          { id: "10420000-0000-0000-0000-000000000000" },
-        ]);
-      }),
-      http.post(
-        "https://example-project.supabase.co/rest/v1/submissions",
-        () => {
-          return HttpResponse.json(
-            { id: "30420000-0000-0000-0000-000000000000" },
-            { status: 201 },
-          );
-        },
-      ),
-    );
-
-    const user = userEvent.setup();
-
-    renderWithRouter(<NewSubmissionPage />, "/submissions/new");
-
-    await screen.findByRole("option", {
-      name: "10420000-0000-0000-0000-000000000000",
-    });
-
-    await user.selectOptions(
-      await screen.findByLabelText("Student"),
-      "10420000-0000-0000-0000-000000000000",
-    );
-    await user.type(
-      screen.getByLabelText("Title"),
-      "Economic policy reflection",
-    );
-    await user.type(
-      screen.getByLabelText("Submission text"),
-      "This submission examines monetary policy and public argument.",
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Generate viva questions" }),
-    );
-
-    expect(
-      await screen.findByText("Generating viva questions. This can take a few seconds."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Working..." }),
-    ).toBeDisabled();
-
-    await act(async () => {
-      deferredGeneration.resolve({
-        status: "completed",
-        submissionId: "30420000-0000-0000-0000-000000000000",
-      });
-
-      await deferredGeneration.promise;
-    });
   });
 });

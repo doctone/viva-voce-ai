@@ -1,6 +1,8 @@
-import { useQuery } from '@tanstack/react-query'
+import * as React from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '../../components/ui/Button'
+import { useGenerateSubmissionViva } from '../../features/submissions/useGenerateSubmissionViva'
 import {
   cn,
   eyebrowClassName,
@@ -44,34 +46,7 @@ type SubmissionQuestion = {
   teacherNote: string
 }
 
-const fallbackQuestions: SubmissionQuestion[] = [
-  {
-    id: 'fallback-1',
-    label: 'Concept: Trade Governance',
-    questionText:
-      'What does the phrase "formalized system of international trade governance" mean in your own words?',
-    sortOrder: 1,
-    teacherNote: "Listen for secure understanding of the student's own opening claim.",
-  },
-  {
-    id: 'fallback-2',
-    label: 'Argument: Atlantic Trade',
-    questionText:
-      'Why did you connect mercantile law to the growth of Atlantic trade?',
-    sortOrder: 2,
-    teacherNote: 'Listen for cause-and-effect reasoning rather than recall only.',
-  },
-  {
-    id: 'fallback-3',
-    isHighlighted: true,
-    label: 'Critical Analysis',
-    questionText:
-      'Which sentence best shows your own voice, and why did you phrase it that way?',
-    sortOrder: 3,
-    teacherNote:
-      'Listen for reflection on drafting choices and vocabulary decisions.',
-  },
-]
+type GenerationState = 'idle' | 'running' | 'failed'
 
 async function fetchSubmission(submissionId: string) {
   const supabase = getSupabaseBrowserClient()
@@ -110,10 +85,6 @@ async function fetchSubmissionQuestions(
 
   const rows = (data as VivaQuestionRecord[] | null) ?? []
 
-  if (rows.length === 0) {
-    return fallbackQuestions
-  }
-
   return rows
     .map((question) => ({
       id: question.id,
@@ -147,8 +118,162 @@ function splitSubmissionTextIntoParagraphs(value: string) {
     .filter(Boolean)
 }
 
+function LoadingPulseLine({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        'h-3 rounded-full bg-[color:rgb(0_32_70_/_0.08)] animate-pulse',
+        className,
+      )}
+    />
+  )
+}
+
+type SubmissionGenerationShellProps = {
+  studentId: string
+  submissionTitle: string
+}
+
+function SubmissionGenerationShell({
+  studentId,
+  submissionTitle,
+}: SubmissionGenerationShellProps) {
+  return (
+    <section className="grid min-h-[calc(100vh-8rem)] w-full">
+      <div
+        className={cn(
+          paperPanelClassName,
+          'grid min-h-full w-full grid-rows-[auto_1fr] overflow-hidden',
+        )}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-outline-variant px-8 py-6">
+          <div className="grid gap-3">
+            <span className={eyebrowClassName}>Submissions</span>
+            <div className="grid gap-2">
+              <h1 className={headingOneClassName}>Preparing viva questions</h1>
+              <p className={cn(mutedTextClassName, 'max-w-[68ch] text-sm leading-6')}>
+                The submission has been saved. Viva questions are being prepared now.
+              </p>
+            </div>
+          </div>
+
+          <div className="inline-flex items-center gap-3 border border-outline-variant bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+              <span className="relative rounded-full bg-primary px-[5px] py-[5px]" />
+            </span>
+            <span className="font-sans font-bold uppercase tracking-[0.08em] text-primary">
+              In progress
+            </span>
+          </div>
+        </div>
+
+        <div className="grid gap-10 bg-[linear-gradient(180deg,rgba(244,244,240,0.45),rgba(255,255,255,0.96))] px-8 py-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)] lg:items-stretch lg:gap-12">
+          <div className="grid content-start gap-6">
+            <div className="grid gap-4 border border-outline-variant bg-surface-container-lowest p-6 shadow-technical">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant pb-4">
+                <div className="grid gap-2">
+                  <span className={eyebrowClassName}>Current submission</span>
+                  <h2 className="font-display text-[30px] font-medium leading-[1.2] tracking-[-0.02em] text-primary">
+                    {submissionTitle}
+                  </h2>
+                </div>
+                <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
+                  Student {studentId}
+                </p>
+              </div>
+
+              <div className="grid gap-3 pt-2">
+                <LoadingPulseLine className="w-full" />
+                <LoadingPulseLine className="w-[92%]" />
+                <LoadingPulseLine className="w-[96%]" />
+                <LoadingPulseLine className="w-[84%]" />
+                <LoadingPulseLine className="w-[90%]" />
+                <LoadingPulseLine className="w-[78%]" />
+              </div>
+            </div>
+
+            <div className="grid gap-3 border-t border-outline-variant pt-5">
+              <p className={cn(mutedTextClassName, 'max-w-[62ch] text-sm leading-6')}>
+                The system is drafting an examiner-ready set of prompts, ownership checks, and follow-up questions for this submission.
+              </p>
+              <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
+                This usually takes a few seconds. If it takes longer, you can stay on this page.
+              </p>
+            </div>
+          </div>
+
+          <aside className="grid content-start gap-4 border border-outline-variant bg-[rgb(244_244_240_/_0.82)] p-6">
+            <div className="grid gap-2 border-b border-outline-variant pb-4">
+              <span className={eyebrowClassName}>Viva assembly</span>
+              <h2 className="font-display text-[28px] font-medium leading-[1.25] tracking-[-0.02em] text-primary">
+                Building the question set
+              </h2>
+            </div>
+
+            <div className="grid gap-4">
+              {[
+                'Scanning the submission for key claims and terms',
+                'Drafting oral follow-up questions for the strongest lines of inquiry',
+                'Preparing teacher notes for a live viva conversation',
+              ].map((step, index) => (
+                <div
+                  key={step}
+                  className="grid gap-2 border border-outline-variant bg-surface-container-lowest px-4 py-4 shadow-technical"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-outline-variant bg-surface-container text-sm font-bold text-primary animate-pulse"
+                      style={{ animationDelay: `${index * 180}ms` }}
+                    >
+                      {index + 1}
+                    </span>
+                    <p className="font-sans text-sm leading-6 text-on-surface">{step}</p>
+                  </div>
+                  <LoadingPulseLine className="ml-11 w-[72%]" />
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+type SubmissionGenerationFailureProps = {
+  errorMessage: string | null
+  onRetry: () => void
+}
+
+function SubmissionGenerationFailure({
+  errorMessage,
+  onRetry,
+}: SubmissionGenerationFailureProps) {
+  return (
+    <section className={cn(paperPanelClassName, sectionCardClassName, 'gap-5')}>
+      <span className={eyebrowClassName}>Submissions</span>
+      <h1 className={headingOneClassName}>Viva questions unavailable</h1>
+      <p className={cn(mutedTextClassName, 'max-w-[60ch] text-sm leading-6')}>
+        The submission was saved, but viva question generation did not complete.
+      </p>
+      {errorMessage ? <p className="text-sm leading-6 text-error">{errorMessage}</p> : null}
+      <div>
+        <Button type="button" onClick={onRetry}>
+          Try again
+        </Button>
+      </div>
+    </section>
+  )
+}
+
 export function SubmissionDetailPage() {
   const { submissionId } = Route.useParams()
+  const queryClient = useQueryClient()
+  const generateSubmissionViva = useGenerateSubmissionViva()
+  const [generationState, setGenerationState] = React.useState<GenerationState>('idle')
+  const [generationErrorMessage, setGenerationErrorMessage] = React.useState<string | null>(null)
+  const hasTriggeredGenerationRef = React.useRef(false)
   const submissionQuery = useQuery({
     queryFn: () => fetchSubmission(submissionId),
     queryKey: ['submission', submissionId],
@@ -157,6 +282,49 @@ export function SubmissionDetailPage() {
     queryFn: () => fetchSubmissionQuestions(submissionId),
     queryKey: ['submission-questions', submissionId],
   })
+
+  const questions = questionsQuery.data ?? []
+
+  const runGeneration = React.useCallback(async () => {
+    hasTriggeredGenerationRef.current = true
+    setGenerationState('running')
+    setGenerationErrorMessage(null)
+
+    const result = await generateSubmissionViva(submissionId)
+
+    if (result.status === 'failed') {
+      setGenerationState('failed')
+      setGenerationErrorMessage(
+        result.errorMessage ??
+          'We saved the submission, but could not generate viva questions.',
+      )
+      return
+    }
+
+    setGenerationState('idle')
+    await queryClient.invalidateQueries({
+      queryKey: ['submission-questions', submissionId],
+    })
+  }, [generateSubmissionViva, queryClient, submissionId])
+
+  React.useEffect(() => {
+    if (!submissionQuery.data || questionsQuery.isLoading || questionsQuery.error) {
+      return
+    }
+
+    if (questions.length > 0 || generationState !== 'idle' || hasTriggeredGenerationRef.current) {
+      return
+    }
+
+    void runGeneration()
+  }, [
+    generationState,
+    questions.length,
+    questionsQuery.error,
+    questionsQuery.isLoading,
+    runGeneration,
+    submissionQuery.data,
+  ])
 
   if (submissionQuery.isLoading) {
     return (
@@ -179,11 +347,41 @@ export function SubmissionDetailPage() {
     )
   }
 
+  if (questionsQuery.error instanceof Error) {
+    return (
+      <section className={cn(paperPanelClassName, sectionCardClassName)}>
+        <span className={eyebrowClassName}>Submissions</span>
+        <h1 className={headingOneClassName}>Submission unavailable</h1>
+        <p className="text-sm leading-6 text-error">{questionsQuery.error.message}</p>
+      </section>
+    )
+  }
+
   const submission = submissionQuery.data as SubmissionRecord
+
+  if (questions.length === 0) {
+    if (generationState === 'failed') {
+      return (
+        <SubmissionGenerationFailure
+          errorMessage={generationErrorMessage}
+          onRetry={() => {
+            void runGeneration()
+          }}
+        />
+      )
+    }
+
+    return (
+      <SubmissionGenerationShell
+        studentId={submission.student_id}
+        submissionTitle={submission.submission_title}
+      />
+    )
+  }
+
   const submissionParagraphs = splitSubmissionTextIntoParagraphs(
     submission.submission_text,
   )
-  const questions = questionsQuery.data ?? fallbackQuestions
 
   return (
     <section className="grid gap-8">

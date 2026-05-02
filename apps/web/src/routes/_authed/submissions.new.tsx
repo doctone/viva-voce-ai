@@ -11,7 +11,6 @@ import {
 import { useMutation } from '../../hooks/useMutation'
 import { getSupabaseBrowserClient } from '../../utils/supabase-browser'
 import { Button } from '../../components/ui/Button'
-import { useGenerateSubmissionViva } from '../../features/submissions/useGenerateSubmissionViva'
 import {
   cn,
   eyebrowClassName,
@@ -101,7 +100,6 @@ async function createSubmission({
 export function NewSubmissionPage() {
   const queryClient = useQueryClient()
   const router = useRouter()
-  const generateSubmissionViva = useGenerateSubmissionViva()
   const studentsQuery = useQuery({
     queryFn: fetchStudents,
     queryKey: ['students'],
@@ -112,19 +110,7 @@ export function NewSubmissionPage() {
   >({
     fn: createSubmission,
     onSuccess: async ({ data }) => {
-      const generationResult = await generateSubmissionViva(data.submissionId)
-
-      if (generationResult.status === 'failed') {
-        throw new Error(
-          generationResult.errorMessage ??
-            'We saved the submission, but could not generate viva questions.',
-        )
-      }
-
       await queryClient.invalidateQueries({ queryKey: ['submissions'] })
-      await queryClient.invalidateQueries({
-        queryKey: ['submission-questions', data.submissionId],
-      })
       await router.navigate({
         params: {
           submissionId: data.submissionId,
@@ -250,7 +236,7 @@ export function NewSubmissionPage() {
               </Button>
               {isSubmitting ? (
                 <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
-                  Generating viva questions. This can take a few seconds.
+                  Saving the submission.
                 </p>
               ) : null}
             </div>

@@ -1,12 +1,33 @@
-import { screen } from '@testing-library/react'
+import { act, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { SubmissionDetailPage } from './submissions.$submissionId'
 import { renderWithRouter } from '../../test/router'
 import { server } from '../../test/server'
 
+const generateSubmissionVivaSpy = vi.fn()
+
+vi.mock('../../features/submissions/useGenerateSubmissionViva', () => ({
+  useGenerateSubmissionViva: () => generateSubmissionVivaSpy,
+}))
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+
+  return { promise, resolve, reject }
+}
+
 describe('SubmissionDetailPage', () => {
   it('renders the saved viva questions alongside the submission', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
     server.use(
       http.get('https://example-project.supabase.co/rest/v1/submissions', ({ request }) => {
         const url = new URL(request.url)
@@ -55,6 +76,8 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
+    expect(screen.queryByRole('heading', { name: 'Preparing viva questions' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Viva questions unavailable' })).not.toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'The Submission' })).toBeInTheDocument()
     expect(screen.getByText('Mercantile law response')).toBeInTheDocument()
     expect(
@@ -72,5 +95,154 @@ describe('SubmissionDetailPage', () => {
     expect(
       screen.getByText('Which sentence took the longest to shape, and what were you trying to achieve?'),
     ).toBeInTheDocument()
+  })
+
+  it('shows a calm generation shell while viva questions are being prepared', async () => {
+    const deferredGeneration = createDeferred<{
+      status: 'completed'
+      submissionId: string
+    }>()
+
+    generateSubmissionVivaSpy.mockReturnValue(deferredGeneration.promise)
+
+    server.use(
+      http.get('https://example-project.supabase.co/rest/v1/submissions', () => {
+        return HttpResponse.json([
+          {
+            id: '30420000-0000-0000-0000-000000000000',
+            student_id: '10420000-0000-0000-0000-000000000000',
+            submission_title: 'Mercantile law response',
+            submission_text: 'Body text.',
+            created_at: '2026-04-30T20:00:00.000Z',
+          },
+        ])
+      }),
+      http.get('https://example-project.supabase.co/rest/v1/viva_questions', () => {
+        return HttpResponse.json([])
+      }),
+    )
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Preparing viva questions' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('The submission has been saved. Viva questions are being prepared now.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('This usually takes a few seconds. If it takes longer, you can stay on this page.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'The Submission' })).not.toBeInTheDocument()
+
+    await act(async () => {
+      deferredGeneration.resolve({
+        status: 'completed',
+        submissionId: '30420000-0000-0000-0000-000000000000',
+      })
+
+      await deferredGeneration.promise
+    })
+  })
+
+  it('shows an in-place retry state when viva question generation fails', async () => {
+    generateSubmissionVivaSpy.mockResolvedValue({
+      status: 'failed',
+      submissionId: '30420000-0000-0000-0000-000000000000',
+      errorMessage: 'Question generation failed',
+    })
+
+    server.use(
+      http.get('https://example-project.supabase.co/rest/v1/submissions', () => {
+        return HttpResponse.json([
+          {
+            id: '30420000-0000-0000-0000-000000000000',
+            student_id: '10420000-0000-0000-0000-000000000000',
+            submission_title: 'Mercantile law response',
+            submission_text: 'Body text.',
+            created_at: '2026-04-30T20:00:00.000Z',
+          },
+        ])
+      }),
+      http.get('https://example-project.supabase.co/rest/v1/viva_questions', () => {
+        return HttpResponse.json([])
+      }),
+    )
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Viva questions unavailable' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('The submission was saved, but viva question generation did not complete.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Question generation failed')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+
+  it('retries generation from the detail page and then shows the full submission view', async () => {
+    generateSubmissionVivaSpy
+      .mockResolvedValueOnce({
+        status: 'failed',
+        submissionId: '30420000-0000-0000-0000-000000000000',
+        errorMessage: 'Question generation failed',
+      })
+      .mockResolvedValueOnce({
+        status: 'completed',
+        submissionId: '30420000-0000-0000-0000-000000000000',
+      })
+
+    let questionRequestCount = 0
+
+    server.use(
+      http.get('https://example-project.supabase.co/rest/v1/submissions', () => {
+        return HttpResponse.json([
+          {
+            id: '30420000-0000-0000-0000-000000000000',
+            student_id: '10420000-0000-0000-0000-000000000000',
+            submission_title: 'Mercantile law response',
+            submission_text: 'Body text.',
+            created_at: '2026-04-30T20:00:00.000Z',
+          },
+        ])
+      }),
+      http.get('https://example-project.supabase.co/rest/v1/viva_questions', () => {
+        questionRequestCount += 1
+
+        if (questionRequestCount === 1) {
+          return HttpResponse.json([])
+        }
+
+        return HttpResponse.json([
+          {
+            id: '40420000-0000-0000-0000-000000000000',
+            submission_id: '30420000-0000-0000-0000-000000000000',
+            category: 'comprehension_and_accuracy',
+            question_text: 'Why does the response describe Lord Mansfield as pivotal?',
+            teacher_note: 'Listen for understanding of legal reform and why it mattered.',
+            is_recommended: true,
+            sort_order: 1,
+          },
+        ])
+      }),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByRole('heading', { name: 'The Submission' })).toBeInTheDocument()
   })
 })
