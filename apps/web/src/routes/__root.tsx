@@ -74,6 +74,18 @@ export const Route = createRootRoute({
         name: "viewport",
         content: "width=device-width, initial-scale=1",
       },
+      {
+        name: "theme-color",
+        content: "#1f4d45",
+      },
+      {
+        name: "apple-mobile-web-app-capable",
+        content: "yes",
+      },
+      {
+        name: "apple-mobile-web-app-status-bar-style",
+        content: "default",
+      },
       ...seo({
         title: "Viva Voce AI | Academic Assessment Workspace",
         description:
@@ -84,23 +96,18 @@ export const Route = createRootRoute({
       { rel: "stylesheet", href: appCss },
       {
         rel: "apple-touch-icon",
-        sizes: "180x180",
-        href: "/apple-touch-icon.png",
+        href: "/icon.svg",
       },
       {
         rel: "icon",
-        type: "image/png",
-        sizes: "32x32",
-        href: "/favicon-32x32.png",
+        type: "image/svg+xml",
+        href: "/favicon.svg",
       },
       {
         rel: "icon",
-        type: "image/png",
-        sizes: "16x16",
-        href: "/favicon-16x16.png",
+        href: "/favicon.svg",
       },
-      { rel: "manifest", href: "/site.webmanifest", color: "#fffff" },
-      { rel: "icon", href: "/favicon.ico" },
+      { rel: "manifest", href: "/site.webmanifest" },
     ],
   }),
   errorComponent: (props) => {
@@ -147,6 +154,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         state.matches.map((match) => match.routeId),
       ),
   });
+
+  React.useEffect(() => {
+    if (import.meta.env.PROD && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch((error) => {
+        console.error("Service worker registration failed", error);
+      });
+    }
+  }, []);
 
   return (
     <html>

@@ -1,0 +1,18 @@
+{
+  "name": "Viva Voce AI",
+  "short_name": "VivaVoce",
+  "description": "Quiet software for grading, transcripts, and oral assessment workflows.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8f5ee",
+  "theme_color": "#1f4d45",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
