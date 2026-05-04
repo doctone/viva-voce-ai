@@ -94,6 +94,44 @@ begin
   );
 end $$;
 
+do $$
+begin
+  insert into storage.buckets (id, name, public)
+  values ('submission-viva-audio', 'submission-viva-audio', true)
+  on conflict (id) do update
+  set public = excluded.public,
+      name = excluded.name;
+
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and policyname = 'authenticated users can upload submission viva audio'
+  ) then
+    create policy "authenticated users can upload submission viva audio"
+      on storage.objects
+      for insert
+      to authenticated
+      with check (bucket_id = 'submission-viva-audio');
+  end if;
+
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and policyname = 'authenticated users can read submission viva audio'
+  ) then
+    create policy "authenticated users can read submission viva audio"
+      on storage.objects
+      for select
+      to authenticated
+      using (bucket_id = 'submission-viva-audio');
+  end if;
+end $$;
+
+delete from public.submission_viva;
 delete from public.viva_questions;
 delete from public.submissions;
 delete from public.students;
