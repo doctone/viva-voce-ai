@@ -13,6 +13,20 @@ describe('Button', () => {
     expect(secondaryClassName).toContain('px-[18px]')
   })
 
+  it('supports the app legacy props on top of the shared button API', () => {
+    render(
+      <Button fullWidth isLoading variant="primary">
+        Save
+      </Button>,
+    )
+
+    const button = screen.getByRole('button', { name: 'Working...' })
+
+    expect(button).toBeDisabled()
+    expect(button.className).toContain('w-full')
+    expect(buttonClassName({ variant: 'ghost' })).toContain('bg-transparent')
+  })
+
   it('keeps disabled buttons present with their own structural styling', () => {
     render(
       <Button disabled variant="primary">

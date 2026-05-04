@@ -2,6 +2,12 @@ import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "../../components/ui/Button";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/Tabs";
 import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
 import {
   cn,
@@ -100,6 +106,54 @@ async function fetchSubmissionQuestions(
     .sort((left, right) => left.sortOrder - right.sortOrder);
 }
 
+type SubmissionVivaRecord = {
+  id: string;
+  submission_id: string;
+  audio_url: string;
+  file_name: string;
+  created_at: string;
+};
+
+async function fetchSubmissionViva(submissionId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("submission_viva")
+    .select("id, submission_id, audio_url, file_name, created_at")
+    .eq("submission_id", submissionId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error("We could not load viva audio.");
+  }
+
+  return (data as SubmissionVivaRecord[] | null) ?? [];
+}
+
+async function uploadSubmissionVivaAudio(submissionId: string, file: File) {
+  const supabase = getSupabaseBrowserClient();
+  const filePath = `${submissionId}/${crypto.randomUUID()}-${file.name}`;
+  const uploadResult = await supabase.storage
+    .from("submission-viva-audio")
+    .upload(filePath, file, { upsert: false });
+
+  if (uploadResult.error) {
+    throw new Error("We could not upload viva audio.");
+  }
+
+  const publicUrlResult = supabase.storage
+    .from("submission-viva-audio")
+    .getPublicUrl(filePath);
+
+  const { error } = await supabase.from("submission_viva").insert({
+    submission_id: submissionId,
+    audio_url: publicUrlResult.data.publicUrl,
+    file_name: file.name,
+  });
+
+  if (error) {
+    throw new Error("We could not save viva audio.");
+  }
+}
 function formatQuestionCategory(category: string) {
   return category
     .split("_")
@@ -119,6 +173,10 @@ function splitSubmissionTextIntoParagraphs(value: string) {
     .split(/\n\s*\n/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean);
+}
+
+function countSubmissionWords(value: string) {
+  return value.trim().split(/\s+/).filter(Boolean).length;
 }
 
 function LoadingPulseLine({ className }: { className?: string }) {
@@ -293,6 +351,10 @@ export function SubmissionDetailPage() {
   const generateSubmissionViva = useGenerateSubmissionViva();
   const [generationState, setGenerationState] =
     React.useState<GenerationState>("idle");
+  const [isUploadingViva, setIsUploadingViva] = React.useState(false);
+  const [vivaUploadErrorMessage, setVivaUploadErrorMessage] = React.useState<
+    string | null
+  >(null);
   const [generationErrorMessage, setGenerationErrorMessage] = React.useState<
     string | null
   >(null);
@@ -307,6 +369,11 @@ export function SubmissionDetailPage() {
   });
 
   const questions = questionsQuery.data ?? [];
+  const vivaAudioQuery = useQuery({
+    queryFn: () => fetchSubmissionViva(submissionId),
+    queryKey: ["submission-viva", submissionId],
+  });
+  const vivaAudioRecords = vivaAudioQuery.data ?? [];
 
   const runGeneration = React.useCallback(async () => {
     hasTriggeredGenerationRef.current = true;
@@ -415,73 +482,205 @@ export function SubmissionDetailPage() {
   const submissionParagraphs = splitSubmissionTextIntoParagraphs(
     submission.submission_text,
   );
+  const submissionWordCount = countSubmissionWords(submission.submission_text);
 
   return (
     <section className="grid gap-8">
       <div className="grid gap-3">
         <span className={eyebrowClassName}>Submissions</span>
-        <h1 className={headingOneClassName}>{submission.submission_title}</h1>
+        {/* <h1 className={headingOneClassName}>{submission.submission_title}</h1> */}
         <p className={cn(mutedTextClassName, "text-sm leading-6")}>
           Student {submission.student_id} · Submitted{" "}
           {formatSubmissionDate(submission.created_at)}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:items-start">
-        <section className="space-y-8 xl:col-span-7">
-          <article
-            className={cn(paperPanelClassName, "relative overflow-hidden p-8")}
+      <Tabs defaultValue="submission" className="gap-6">
+        <TabsList
+          variant="line"
+          aria-label="Submission detail views"
+          className="max-w-[24rem] justify-start self-start gap-6 border-b border-outline-variant px-0 pb-0"
+        >
+          <TabsTrigger
+            value="submission"
+            className="rounded-none border-x-0 border-t-0 px-0 pb-4 pt-0 font-sans text-[12px] font-bold uppercase tracking-[0.12em] text-on-surface-variant data-active:text-primary group-data-[variant=line]/tabs-list:after:bg-primary"
           >
-            <div className="absolute inset-y-0 left-0 w-1 bg-primary-container" />
-            <h2 className="mb-6 border-b border-stone-100 pb-4 font-display text-[32px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
-              The Submission
-            </h2>
-            <div className="max-w-2xl space-y-4 font-serif text-lg leading-relaxed text-on-surface-variant">
-              {submissionParagraphs.map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
-              ))}
-            </div>
-          </article>
-
-          <section
-            className={cn(paperPanelClassName, "bg-surface-container-low p-8")}
+            Submission
+          </TabsTrigger>
+          <TabsTrigger
+            value="viva-questions"
+            className="rounded-none border-x-0 border-t-0 px-0 pb-4 pt-0 font-sans text-[12px] font-bold uppercase tracking-[0.12em] text-on-surface-variant data-active:text-primary group-data-[variant=line]/tabs-list:after:bg-primary"
           >
-            <h2 className="mb-4 font-display text-[32px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
-              Oral Examination (Audio)
-            </h2>
-            <p className={cn(mutedTextClassName, "mb-6 text-sm leading-6")}>
-              Upload the recorded Viva Voce session to generate an automated
-              transcription and analysis.
-            </p>
-            <div className="flex flex-wrap items-center gap-4">
-              <Button type="button" variant="secondary" disabled>
-                Upload recording
-              </Button>
-              <span className={cn(mutedTextClassName, "text-sm")}>
-                Audio upload will be connected in a later step.
-              </span>
-            </div>
-          </section>
-        </section>
+            Viva Questions
+          </TabsTrigger>
+        </TabsList>
 
-        <aside className="space-y-4 xl:col-span-5 xl:sticky xl:top-24">
-          <div className="mb-4 flex items-center justify-between gap-4 px-2">
-            <h2 className={headingTwoClassName}>AI Viva Strategy</h2>
+        <TabsContent value="submission" className="mt-0">
+          <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:items-start">
+            <section className="xl:col-span-8">
+              <article
+                className={cn(
+                  paperPanelClassName,
+                  "relative overflow-hidden p-8",
+                )}
+              >
+                <div className="absolute inset-y-0 left-0 w-1 bg-primary-container" />
+                <h2 className="mb-6 border-b border-stone-100 pb-4 font-display text-[32px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
+                  {submission.submission_title}
+                </h2>
+                <div className="max-w-2xl space-y-4 font-serif text-lg leading-relaxed text-on-surface-variant">
+                  {submissionParagraphs.map((paragraph) => (
+                    <p key={paragraph}>{paragraph}</p>
+                  ))}
+                </div>
+              </article>
+            </section>
+
+            <aside className="grid content-start gap-4 xl:col-span-4 xl:sticky xl:top-24">
+              <section
+                className={cn(
+                  paperPanelClassName,
+                  "bg-surface-container-low p-6",
+                )}
+              >
+                <h2 className="mb-4 font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-primary">
+                  Document Statistics
+                </h2>
+                <div className="grid gap-3">
+                  <div className="flex justify-between border-b border-stone-100 pb-1">
+                    <span className={cn(mutedTextClassName, "text-sm")}>
+                      Word Count
+                    </span>
+                    <span className="text-sm font-bold text-on-surface">
+                      {submissionWordCount}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-b border-stone-100 pb-1">
+                    <span className={cn(mutedTextClassName, "text-sm")}>
+                      Student
+                    </span>
+                    <span className="text-sm font-bold text-on-surface">
+                      {submission.student_id}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-b border-stone-100 pb-1">
+                    <span className={cn(mutedTextClassName, "text-sm")}>
+                      Questions Generated
+                    </span>
+                    <span className="text-sm font-bold text-on-surface">
+                      {questions.length}
+                    </span>
+                  </div>
+                </div>
+              </section>
+            </aside>
           </div>
+        </TabsContent>
 
-          {questions.map((question) => (
-            <QuestionCard
-              key={question.id}
-              isHighlighted={question.isHighlighted}
-              label={question.label}
-              questionText={question.questionText}
-              teacherNote={question.teacherNote}
-            />
-          ))}
+        <TabsContent value="viva-questions" className="mt-0">
+          <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:items-start">
+            <section className="space-y-4 xl:col-span-7">
+              <div className="mb-4 flex items-center justify-between gap-4 px-2">
+                <h2 className={headingTwoClassName}>
+                  Viva Questions for this Submission
+                </h2>
+              </div>
 
-          <AddManualQuestionCard />
-        </aside>
-      </div>
+              {questions.map((question) => (
+                <QuestionCard
+                  key={question.id}
+                  isHighlighted={question.isHighlighted}
+                  label={question.label}
+                  questionText={question.questionText}
+                  teacherNote={question.teacherNote}
+                />
+              ))}
+
+              <AddManualQuestionCard />
+            </section>
+
+            <aside className="grid content-start gap-4 xl:col-span-5 xl:sticky xl:top-24">
+              <section
+                className={cn(
+                  paperPanelClassName,
+                  "bg-surface-container-low p-8",
+                )}
+              >
+                <div className="grid gap-4">
+                  <h2 className="font-display text-[28px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
+                    Oral Examination Audio
+                  </h2>
+                  <p className={cn(mutedTextClassName, "text-sm leading-6")}>
+                    Upload a recorded viva for this submission.
+                  </p>
+                  <label
+                    className="grid gap-2 text-sm"
+                    htmlFor="submissionVivaUpload"
+                  >
+                    Upload viva audio
+                    <input
+                      id="submissionVivaUpload"
+                      type="file"
+                      accept="audio/*"
+                      disabled={isUploadingViva}
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0];
+
+                        if (!file) {
+                          return;
+                        }
+
+                        setIsUploadingViva(true);
+                        setVivaUploadErrorMessage(null);
+
+                        try {
+                          await uploadSubmissionVivaAudio(submissionId, file);
+                          await queryClient.invalidateQueries({
+                            queryKey: ["submission-viva", submissionId],
+                          });
+                        } catch (error) {
+                          setVivaUploadErrorMessage(
+                            error instanceof Error
+                              ? error.message
+                              : "We could not upload viva audio.",
+                          );
+                        } finally {
+                          setIsUploadingViva(false);
+                        }
+                      }}
+                    />
+                  </label>
+                  {vivaUploadErrorMessage ? (
+                    <p className="text-sm text-error">
+                      {vivaUploadErrorMessage}
+                    </p>
+                  ) : null}
+                  {vivaAudioRecords.map((record) => (
+                    <article
+                      key={record.id}
+                      className="grid gap-2 border border-outline-variant bg-surface-container-lowest p-4"
+                    >
+                      <p className="text-sm font-medium">{record.file_name}</p>
+                      <audio
+                        data-testid="submission-viva-player"
+                        controls
+                        src={record.audio_url}
+                      >
+                        <track kind="captions" />
+                      </audio>
+                    </article>
+                  ))}
+                  {vivaAudioQuery.isLoading ? (
+                    <p className={cn(mutedTextClassName, "text-sm")}>
+                      Loading viva audio…
+                    </p>
+                  ) : null}
+                </div>
+              </section>
+            </aside>
+          </div>
+        </TabsContent>
+      </Tabs>
     </section>
   );
 }

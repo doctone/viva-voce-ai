@@ -69,6 +69,10 @@ describe('SubmissionDetailPage', () => {
           },
         ])
       }),
+      http.get('https://example-project.supabase.co/rest/v1/submission_viva', () => {
+        return HttpResponse.json([])
+      }),
+      http.get('https://example-project.supabase.co/rest/v1/submission_viva', () => HttpResponse.json([])),
     )
 
     renderWithRouter(
@@ -83,18 +87,135 @@ describe('SubmissionDetailPage', () => {
     expect(
       screen.getByText(/The evolution of mercantile law in the 18th century/),
     ).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Submission' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Viva Questions' })).toBeInTheDocument()
 
-    expect(
-      screen.getByRole('heading', { name: 'Oral Examination \(Audio\)' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('heading', { name: 'AI Viva Strategy' }),
-    ).toBeInTheDocument()
+    expect(screen.getByText('The Submission')).toBeInTheDocument()
+    expect(screen.queryByText('Viva Questions for this Submission')).not.toBeInTheDocument()
+  })
 
+  it('switches the main panel from the submission to viva questions', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    server.use(
+      http.get('https://example-project.supabase.co/rest/v1/submissions', () =>
+        HttpResponse.json([
+          {
+            id: '30420000-0000-0000-0000-000000000000',
+            student_id: '10420000-0000-0000-0000-000000000000',
+            submission_title: 'Mercantile law response',
+            submission_text: 'Body paragraph one.\n\nBody paragraph two.',
+            created_at: '2026-04-30T20:00:00.000Z',
+          },
+        ]),
+      ),
+      http.get('https://example-project.supabase.co/rest/v1/viva_questions', () =>
+        HttpResponse.json([
+          {
+            id: '40420000-0000-0000-0000-000000000000',
+            submission_id: '30420000-0000-0000-0000-000000000000',
+            category: 'comprehension_and_accuracy',
+            question_text: 'Why does the response describe Lord Mansfield as pivotal?',
+            teacher_note: 'Listen for understanding of legal reform and why it mattered.',
+            is_recommended: true,
+            sort_order: 1,
+          },
+        ]),
+      ),
+      http.get('https://example-project.supabase.co/rest/v1/submission_viva', () => HttpResponse.json([])),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    expect(await screen.findByText('The Submission')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'Viva Questions' }))
+
+    expect(screen.queryByText('The Submission')).not.toBeInTheDocument()
+    expect(screen.getByText('Viva Questions for this Submission')).toBeInTheDocument()
     expect(screen.getByText('Why does the response describe Lord Mansfield as pivotal?')).toBeInTheDocument()
-    expect(
-      screen.getByText('Which sentence took the longest to shape, and what were you trying to achieve?'),
-    ).toBeInTheDocument()
+  })
+
+  it('uploads and displays a viva audio recording', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    let vivaRequestCount = 0
+
+    server.use(
+      http.get('https://example-project.supabase.co/rest/v1/submissions', () =>
+        HttpResponse.json([
+          {
+            id: '30420000-0000-0000-0000-000000000000',
+            student_id: '10420000-0000-0000-0000-000000000000',
+            submission_title: 'Mercantile law response',
+            submission_text: 'Body text.',
+            created_at: '2026-04-30T20:00:00.000Z',
+          },
+        ]),
+      ),
+      http.get('https://example-project.supabase.co/rest/v1/viva_questions', () =>
+        HttpResponse.json([
+          {
+            id: '40420000-0000-0000-0000-000000000000',
+            submission_id: '30420000-0000-0000-0000-000000000000',
+            category: 'comprehension_and_accuracy',
+            question_text: 'Test question',
+            teacher_note: 'Test note',
+            is_recommended: true,
+            sort_order: 1,
+          },
+        ]),
+      ),
+
+      http.post('https://example-project.supabase.co/storage/v1/object/submission-viva-audio/*', () =>
+        HttpResponse.json({ Key: 'submission-viva-audio/test.webm' }),
+      ),
+      http.post('https://example-project.supabase.co/rest/v1/submission_viva', () =>
+        HttpResponse.json([
+          {
+            id: '50420000-0000-0000-0000-000000000000',
+            submission_id: '30420000-0000-0000-0000-000000000000',
+            audio_url:
+              'https://example-project.supabase.co/storage/v1/object/public/submission-viva-audio/30420000-0000-0000-0000-000000000000/test.webm',
+            file_name: 'test.webm',
+            created_at: '2026-04-30T20:10:00.000Z',
+          },
+        ]),
+      ),
+      http.get('https://example-project.supabase.co/rest/v1/submission_viva', () =>
+        HttpResponse.json(vivaRequestCount++ === 0 ? [] : [
+          {
+            id: '50420000-0000-0000-0000-000000000000',
+            submission_id: '30420000-0000-0000-0000-000000000000',
+            audio_url:
+              'https://example-project.supabase.co/storage/v1/object/public/submission-viva-audio/30420000-0000-0000-0000-000000000000/test.webm',
+            file_name: 'test.webm',
+            created_at: '2026-04-30T20:10:00.000Z',
+          },
+        ]),
+      ),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
+
+    const fileInput = screen.getByLabelText('Upload viva audio')
+    const file = new File(['audio-data'], 'test.webm', { type: 'audio/webm' })
+    await user.upload(fileInput, file)
+
+    expect(await screen.findByText('test.webm')).toBeInTheDocument()
+    expect(screen.getByTestId('submission-viva-player')).toBeInTheDocument()
   })
 
   it('shows a calm generation shell while viva questions are being prepared', async () => {
@@ -120,6 +241,7 @@ describe('SubmissionDetailPage', () => {
       http.get('https://example-project.supabase.co/rest/v1/viva_questions', () => {
         return HttpResponse.json([])
       }),
+      http.get('https://example-project.supabase.co/rest/v1/submission_viva', () => HttpResponse.json([])),
     )
 
     renderWithRouter(
@@ -170,6 +292,7 @@ describe('SubmissionDetailPage', () => {
       http.get('https://example-project.supabase.co/rest/v1/viva_questions', () => {
         return HttpResponse.json([])
       }),
+      http.get('https://example-project.supabase.co/rest/v1/submission_viva', () => HttpResponse.json([])),
     )
 
     renderWithRouter(
