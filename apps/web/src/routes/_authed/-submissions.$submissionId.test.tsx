@@ -82,7 +82,9 @@ describe('SubmissionDetailPage', () => {
 
     expect(screen.queryByRole('heading', { name: 'Preparing viva questions' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Viva questions unavailable' })).not.toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'The Submission' })).toBeInTheDocument()
+    expect(
+      await screen.findByText(/The evolution of mercantile law in the 18th century/),
+    ).toBeInTheDocument()
     expect(screen.getByText('Mercantile law response')).toBeInTheDocument()
     expect(
       screen.getByText(/The evolution of mercantile law in the 18th century/),
@@ -90,7 +92,6 @@ describe('SubmissionDetailPage', () => {
     expect(screen.getByRole('tab', { name: 'Submission' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Viva Questions' })).toBeInTheDocument()
 
-    expect(screen.getByText('The Submission')).toBeInTheDocument()
     expect(screen.queryByText('Viva Questions for this Submission')).not.toBeInTheDocument()
   })
 
@@ -132,11 +133,11 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
-    expect(await screen.findByText('The Submission')).toBeInTheDocument()
+    expect(await screen.findByText('Body paragraph one.')).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: 'Viva Questions' }))
 
-    expect(screen.queryByText('The Submission')).not.toBeInTheDocument()
+    expect(screen.queryByText('Body paragraph one.')).not.toBeInTheDocument()
     expect(screen.getByText('Viva Questions for this Submission')).toBeInTheDocument()
     expect(screen.getByText('Why does the response describe Lord Mansfield as pivotal?')).toBeInTheDocument()
   })
@@ -210,7 +211,7 @@ describe('SubmissionDetailPage', () => {
 
     await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
 
-    const fileInput = screen.getByLabelText('Upload viva audio')
+    const fileInput = await screen.findByLabelText('Upload viva audio')
     const file = new File(['audio-data'], 'test.webm', { type: 'audio/webm' })
     await user.upload(fileInput, file)
 
@@ -355,6 +356,9 @@ describe('SubmissionDetailPage', () => {
           },
         ])
       }),
+      http.get('https://example-project.supabase.co/rest/v1/submission_viva', () =>
+        HttpResponse.json([]),
+      ),
     )
 
     const user = userEvent.setup()
@@ -366,6 +370,6 @@ describe('SubmissionDetailPage', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Try again' }))
 
-    expect(await screen.findByRole('heading', { name: 'The Submission' })).toBeInTheDocument()
+    expect(await screen.findByText('Body text.')).toBeInTheDocument()
   })
 })

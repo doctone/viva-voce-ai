@@ -579,12 +579,13 @@ export function SubmissionDetailPage() {
 
         <TabsContent value="viva-questions" className="mt-0">
           <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:items-start">
-            <section className="space-y-4 xl:col-span-7">
-              <div className="mb-4 flex items-center justify-between gap-4 px-2">
-                <h2 className={headingTwoClassName}>
-                  Viva Questions for this Submission
-                </h2>
-              </div>
+            <div className="xl:col-span-7">
+              <h2 className={headingTwoClassName}>
+                Viva Questions for this Submission
+              </h2>
+            </div>
+
+            <section className="space-y-4 xl:col-span-7 xl:row-start-2">
 
               {questions.map((question) => (
                 <QuestionCard
@@ -599,7 +600,7 @@ export function SubmissionDetailPage() {
               <AddManualQuestionCard />
             </section>
 
-            <aside className="grid content-start gap-4 xl:col-span-5 xl:sticky xl:top-24">
+            <aside className="grid content-start gap-4 xl:col-span-5 xl:row-start-2 xl:sticky xl:top-24">
               <section
                 className={cn(
                   paperPanelClassName,
@@ -619,6 +620,7 @@ export function SubmissionDetailPage() {
                   >
                     Upload viva audio
                     <input
+                      aria-label="Upload viva audio"
                       id="submissionVivaUpload"
                       type="file"
                       accept="audio/*"
