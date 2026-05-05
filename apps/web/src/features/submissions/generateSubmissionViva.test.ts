@@ -139,6 +139,8 @@ describe('generateSubmissionVivaAnalysis', () => {
           category: 'comprehension_and_accuracy',
           isRecommended: true,
           sortOrder: 1,
+          teacherNote:
+            'Listen for accurate explanation of the phrase from the student response.',
         }),
         expect.objectContaining({
           category: 'argumentation_and_reasoning',
@@ -165,6 +167,37 @@ describe('generateSubmissionVivaAnalysis', () => {
             (question, index) => ({
               ...question,
               recommendedForLimitedTime: index < 2,
+            }),
+          ),
+      },
+    })
+
+    const result = await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result).toEqual({
+      errorMessage:
+        'Expected exactly 3 recommended questions in comprehension_and_accuracy.',
+      status: 'failed',
+      submissionId: submission.id,
+    })
+    expect(repository.replaceQuestions).not.toHaveBeenCalled()
+  })
+
+  it('stores a failed analysis when a category has too many recommended questions', async () => {
+    const repository = createRepository()
+    const generateStructuredViva = vi.fn().mockResolvedValue({
+      ...structuredAnalysis,
+      questions: {
+        ...structuredAnalysis.questions,
+        comprehensionAndAccuracy:
+          structuredAnalysis.questions.comprehensionAndAccuracy.map(
+            (question) => ({
+              ...question,
+              recommendedForLimitedTime: true,
             }),
           ),
       },
