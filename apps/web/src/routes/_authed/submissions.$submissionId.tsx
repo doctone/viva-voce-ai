@@ -9,6 +9,7 @@ import {
   TabsTrigger,
 } from "../../components/ui/Tabs";
 import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
+import { useTranscribeSubmissionViva } from "../../features/submissions/useTranscribeSubmissionViva";
 import {
   cn,
   eyebrowClassName,
@@ -112,13 +113,14 @@ type SubmissionVivaRecord = {
   audio_url: string;
   file_name: string;
   created_at: string;
+  transcript: string | null;
 };
 
 async function fetchSubmissionViva(submissionId: string) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from("submission_viva")
-    .select("id, submission_id, audio_url, file_name, created_at")
+    .select("id, submission_id, audio_url, file_name, created_at, transcript")
     .eq("submission_id", submissionId)
     .order("created_at", { ascending: false });
 
@@ -144,15 +146,21 @@ async function uploadSubmissionVivaAudio(submissionId: string, file: File) {
     .from("submission-viva-audio")
     .getPublicUrl(filePath);
 
-  const { error } = await supabase.from("submission_viva").insert({
-    submission_id: submissionId,
-    audio_url: publicUrlResult.data.publicUrl,
-    file_name: file.name,
-  });
+  const { data, error } = await supabase
+    .from("submission_viva")
+    .insert({
+      submission_id: submissionId,
+      audio_url: publicUrlResult.data.publicUrl,
+      file_name: file.name,
+    })
+    .select("id, audio_url")
+    .single();
 
-  if (error) {
+  if (error || !data) {
     throw new Error("We could not save viva audio.");
   }
+
+  return data as { id: string; audio_url: string };
 }
 function formatQuestionCategory(category: string) {
   return category
@@ -349,6 +357,7 @@ export function SubmissionDetailPage() {
   const { submissionId } = Route.useParams();
   const queryClient = useQueryClient();
   const generateSubmissionViva = useGenerateSubmissionViva();
+  const transcribeSubmissionViva = useTranscribeSubmissionViva();
   const [generationState, setGenerationState] =
     React.useState<GenerationState>("idle");
   const [isUploadingViva, setIsUploadingViva] = React.useState(false);
@@ -636,7 +645,11 @@ export function SubmissionDetailPage() {
                         setVivaUploadErrorMessage(null);
 
                         try {
-                          await uploadSubmissionVivaAudio(submissionId, file);
+                          const savedViva = await uploadSubmissionVivaAudio(submissionId, file);
+                          await transcribeSubmissionViva({
+                            submissionVivaId: savedViva.id,
+                            audioUrl: savedViva.audio_url,
+                          });
                           await queryClient.invalidateQueries({
                             queryKey: ["submission-viva", submissionId],
                           });
@@ -670,6 +683,13 @@ export function SubmissionDetailPage() {
                       >
                         <track kind="captions" />
                       </audio>
+                      {record.transcript ? (
+                        <p className="text-sm text-on-surface">{record.transcript}</p>
+                      ) : (
+                        <p className={cn(mutedTextClassName, "text-sm")}>
+                          Transcript is being prepared…
+                        </p>
+                      )}
                     </article>
                   ))}
                   {vivaAudioQuery.isLoading ? (

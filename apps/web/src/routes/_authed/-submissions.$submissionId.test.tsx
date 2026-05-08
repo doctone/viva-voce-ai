@@ -7,9 +7,14 @@ import { renderWithRouter } from '../../test/router'
 import { server } from '../../test/server'
 
 const generateSubmissionVivaSpy = vi.fn()
+const transcribeSubmissionVivaSpy = vi.fn()
 
 vi.mock('../../features/submissions/useGenerateSubmissionViva', () => ({
   useGenerateSubmissionViva: () => generateSubmissionVivaSpy,
+}))
+
+vi.mock('../../features/submissions/useTranscribeSubmissionViva', () => ({
+  useTranscribeSubmissionViva: () => transcribeSubmissionVivaSpy,
 }))
 
 function createDeferred<T>() {
@@ -27,6 +32,7 @@ function createDeferred<T>() {
 describe('SubmissionDetailPage', () => {
   it('renders the saved viva questions alongside the submission', async () => {
     generateSubmissionVivaSpy.mockReset()
+    transcribeSubmissionVivaSpy.mockReset()
 
     server.use(
       http.get('https://example-project.supabase.co/rest/v1/submissions', ({ request }) => {
@@ -97,6 +103,7 @@ describe('SubmissionDetailPage', () => {
 
   it('switches the main panel from the submission to viva questions', async () => {
     generateSubmissionVivaSpy.mockReset()
+    transcribeSubmissionVivaSpy.mockReset()
 
     server.use(
       http.get('https://example-project.supabase.co/rest/v1/submissions', () =>
@@ -144,6 +151,7 @@ describe('SubmissionDetailPage', () => {
 
   it('uploads and displays a viva audio recording', async () => {
     generateSubmissionVivaSpy.mockReset()
+    transcribeSubmissionVivaSpy.mockReset()
 
     let vivaRequestCount = 0
 
@@ -184,6 +192,7 @@ describe('SubmissionDetailPage', () => {
             audio_url:
               'https://example-project.supabase.co/storage/v1/object/public/submission-viva-audio/30420000-0000-0000-0000-000000000000/test.webm',
             file_name: 'test.webm',
+            transcript: 'Test transcript',
             created_at: '2026-04-30T20:10:00.000Z',
           },
         ]),
@@ -196,6 +205,7 @@ describe('SubmissionDetailPage', () => {
             audio_url:
               'https://example-project.supabase.co/storage/v1/object/public/submission-viva-audio/30420000-0000-0000-0000-000000000000/test.webm',
             file_name: 'test.webm',
+            transcript: 'Test transcript',
             created_at: '2026-04-30T20:10:00.000Z',
           },
         ]),
@@ -217,6 +227,8 @@ describe('SubmissionDetailPage', () => {
 
     expect(await screen.findByText('test.webm')).toBeInTheDocument()
     expect(screen.getByTestId('submission-viva-player')).toBeInTheDocument()
+    expect(await screen.findByText('Test transcript')).toBeInTheDocument()
+    expect(transcribeSubmissionVivaSpy).toHaveBeenCalledTimes(1)
   })
 
   it('shows a calm generation shell while viva questions are being prepared', async () => {
