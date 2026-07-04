@@ -1,4 +1,4 @@
-import { useRouter } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
 import { useMutation } from '../hooks/useMutation'
 import { loginFn } from '../routes/_authed'
@@ -27,7 +27,7 @@ export function Login() {
 
   return (
     <Auth
-      actionText="Login"
+      actionText="Log in"
       status={loginMutation.status}
       onSubmit={(e) => {
         const formData = new FormData(e.target as HTMLFormElement)
@@ -70,6 +70,14 @@ export function Login() {
             ) : null}
           </>
         ) : null
+      }
+      footer={
+        <p className={cn(mutedTextClassName, 'text-sm')}>
+          Don&apos;t have an account?{' '}
+          <Link to="/signup" className="font-bold text-on-surface underline">
+            Sign up
+          </Link>
+        </p>
       }
     />
   )
