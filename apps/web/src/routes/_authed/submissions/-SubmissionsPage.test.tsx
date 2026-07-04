@@ -3,23 +3,20 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse, delay } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { SubmissionsPage } from './-SubmissionsPage'
+import { createTestSubmission } from '../../../test/factories'
+import { submissionsListHandler } from '../../../test/handlers'
 import { renderWithRouter } from '../../../test/router'
 import { server } from '../../../test/server'
 
+const testSubmission = createTestSubmission({
+  student_id: 'STU-1042',
+  submission_title: 'Modernist Poetry Oral Defence',
+  created_at: '2026-03-12T09:00:00.000Z',
+})
+
 describe('SubmissionsPage', () => {
   it('renders a table of submissions with student ID, title, and a human-readable date', async () => {
-    server.use(
-      http.get('https://example-project.supabase.co/rest/v1/submissions', () => {
-        return HttpResponse.json([
-          {
-            id: '30420000-0000-0000-0000-000000000000',
-            student_id: 'STU-1042',
-            submission_title: 'Modernist Poetry Oral Defence',
-            created_at: '2026-03-12T09:00:00.000Z',
-          },
-        ])
-      }),
-    )
+    server.use(submissionsListHandler([testSubmission]))
 
     renderWithRouter(<SubmissionsPage />, '/submissions')
 
@@ -30,11 +27,7 @@ describe('SubmissionsPage', () => {
   })
 
   it('shows a helpful empty state when there are no submissions', async () => {
-    server.use(
-      http.get('https://example-project.supabase.co/rest/v1/submissions', () => {
-        return HttpResponse.json([])
-      }),
-    )
+    server.use(submissionsListHandler([]))
 
     renderWithRouter(<SubmissionsPage />, '/submissions')
 
@@ -42,11 +35,7 @@ describe('SubmissionsPage', () => {
   })
 
   it('shows a New Submission link that navigates to the new submission form', async () => {
-    server.use(
-      http.get('https://example-project.supabase.co/rest/v1/submissions', () => {
-        return HttpResponse.json([])
-      }),
-    )
+    server.use(submissionsListHandler([]))
 
     const user = userEvent.setup()
 
@@ -60,18 +49,7 @@ describe('SubmissionsPage', () => {
   })
 
   it('navigates to the detail page when a submission row is clicked', async () => {
-    server.use(
-      http.get('https://example-project.supabase.co/rest/v1/submissions', () => {
-        return HttpResponse.json([
-          {
-            id: '30420000-0000-0000-0000-000000000000',
-            student_id: 'STU-1042',
-            submission_title: 'Modernist Poetry Oral Defence',
-            created_at: '2026-03-12T09:00:00.000Z',
-          },
-        ])
-      }),
-    )
+    server.use(submissionsListHandler([testSubmission]))
 
     const user = userEvent.setup()
 

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { NewSubmissionPage } from "./submissions.new";
+import { submissionCreateHandler } from "../../test/handlers";
 import { renderWithRouter } from "../../test/router";
 import { server } from "../../test/server";
 
@@ -127,17 +128,11 @@ describe("NewSubmissionPage", () => {
           { id: "10420000-0000-0000-0000-000000000000" },
         ]);
       }),
-      http.post(
-        "https://example-project.supabase.co/rest/v1/submissions",
-        async ({ request }) => {
-          postedBody = (await request.json()) as Record<string, unknown>;
-
-          return HttpResponse.json(
-            { id: "30420000-0000-0000-0000-000000000000" },
-            { status: 201 },
-          );
+      submissionCreateHandler({
+        onRequest: (body) => {
+          postedBody = body;
         },
-      ),
+      }),
     );
 
     const user = userEvent.setup();

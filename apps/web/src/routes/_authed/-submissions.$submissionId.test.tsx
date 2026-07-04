@@ -3,8 +3,17 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import { SubmissionDetailPage } from './submissions.$submissionId'
+import { createTestQuestion, createTestSubmission, createTestSubmissionViva } from '../../test/factories'
+import { storageUploadHandler, submissionVivaHandler, submissionWithQuestionsHandlers } from '../../test/handlers'
 import { renderWithRouter } from '../../test/router'
 import { server } from '../../test/server'
+
+const testSubmission = createTestSubmission({
+  submission_title: 'Mercantile law response',
+  submission_text:
+    'The evolution of mercantile law in the 18th century represents a pivotal shift from localized guild regulations to a more formalized system of international trade governance.',
+  created_at: '2026-04-30T20:00:00.000Z',
+})
 
 const generateSubmissionVivaSpy = vi.fn()
 
@@ -29,50 +38,26 @@ describe('SubmissionDetailPage', () => {
     generateSubmissionVivaSpy.mockReset()
 
     server.use(
-      http.get('https://example-project.supabase.co/rest/v1/submissions', ({ request }) => {
-        const url = new URL(request.url)
-
-        expect(url.searchParams.get('id')).toBe('eq.30420000-0000-0000-0000-000000000000')
-
-        return HttpResponse.json([
-          {
-            id: '30420000-0000-0000-0000-000000000000',
-            student_id: '10420000-0000-0000-0000-000000000000',
-            submission_title: 'Mercantile law response',
-            submission_text:
-              'The evolution of mercantile law in the 18th century represents a pivotal shift from localized guild regulations to a more formalized system of international trade governance.',
-            created_at: '2026-04-30T20:00:00.000Z',
-          },
-        ])
-      }),
-      http.get('https://example-project.supabase.co/rest/v1/viva_questions', () => {
-        return HttpResponse.json([
-          {
-            id: '40420000-0000-0000-0000-000000000000',
-            submission_id: '30420000-0000-0000-0000-000000000000',
-            category: 'comprehension_and_accuracy',
-            question_text: 'Why does the response describe Lord Mansfield as pivotal?',
-            teacher_note: 'Listen for understanding of legal reform and why it mattered.',
-            is_recommended: true,
-            sort_order: 1,
-            created_at: '2026-04-30T20:05:00.000Z',
-          },
-          {
-            id: '40420000-0000-0000-0000-000000000001',
-            submission_id: '30420000-0000-0000-0000-000000000000',
-            category: 'authenticity_and_ownership',
-            question_text: 'Which sentence took the longest to shape, and what were you trying to achieve?',
-            teacher_note: 'Listen for drafting choices tied to the actual wording.',
-            is_recommended: false,
-            sort_order: 9,
-            created_at: '2026-04-30T20:06:00.000Z',
-          },
-        ])
-      }),
-      http.get('https://example-project.supabase.co/rest/v1/submission_viva', () => {
-        return HttpResponse.json([])
-      }),
-      http.get('https://example-project.supabase.co/rest/v1/submission_viva', () => HttpResponse.json([])),
+      ...submissionWithQuestionsHandlers(testSubmission, [
+        createTestQuestion({
+          category: 'comprehension_and_accuracy',
+          question_text: 'Why does the response describe Lord Mansfield as pivotal?',
+          teacher_note: 'Listen for understanding of legal reform and why it mattered.',
+          is_recommended: true,
+          sort_order: 1,
+        }),
+        createTestQuestion({
+          id: '40420000-0000-0000-0000-000000000001',
+          category: 'authenticity_and_ownership',
+          question_text:
+            'Which sentence took the longest to shape, and what were you trying to achieve?',
+          teacher_note: 'Listen for drafting choices tied to the actual wording.',
+          is_recommended: false,
+          sort_order: 9,
+          created_at: '2026-04-30T20:06:00.000Z',
+        }),
+      ]),
+      submissionVivaHandler([]),
     )
 
     renderWithRouter(
@@ -99,31 +84,16 @@ describe('SubmissionDetailPage', () => {
     generateSubmissionVivaSpy.mockReset()
 
     server.use(
-      http.get('https://example-project.supabase.co/rest/v1/submissions', () =>
-        HttpResponse.json([
-          {
-            id: '30420000-0000-0000-0000-000000000000',
-            student_id: '10420000-0000-0000-0000-000000000000',
-            submission_title: 'Mercantile law response',
-            submission_text: 'Body paragraph one.\n\nBody paragraph two.',
-            created_at: '2026-04-30T20:00:00.000Z',
-          },
-        ]),
-      ),
-      http.get('https://example-project.supabase.co/rest/v1/viva_questions', () =>
-        HttpResponse.json([
-          {
-            id: '40420000-0000-0000-0000-000000000000',
-            submission_id: '30420000-0000-0000-0000-000000000000',
-            category: 'comprehension_and_accuracy',
+      ...submissionWithQuestionsHandlers(
+        createTestSubmission({ submission_text: 'Body paragraph one.\n\nBody paragraph two.' }),
+        [
+          createTestQuestion({
             question_text: 'Why does the response describe Lord Mansfield as pivotal?',
             teacher_note: 'Listen for understanding of legal reform and why it mattered.',
-            is_recommended: true,
-            sort_order: 1,
-          },
-        ]),
+          }),
+        ],
       ),
-      http.get('https://example-project.supabase.co/rest/v1/submission_viva', () => HttpResponse.json([])),
+      submissionVivaHandler([]),
     )
 
     const user = userEvent.setup()
@@ -146,59 +116,19 @@ describe('SubmissionDetailPage', () => {
     generateSubmissionVivaSpy.mockReset()
 
     let vivaRequestCount = 0
+    const testSubmissionViva = createTestSubmissionViva()
 
     server.use(
-      http.get('https://example-project.supabase.co/rest/v1/submissions', () =>
-        HttpResponse.json([
-          {
-            id: '30420000-0000-0000-0000-000000000000',
-            student_id: '10420000-0000-0000-0000-000000000000',
-            submission_title: 'Mercantile law response',
-            submission_text: 'Body text.',
-            created_at: '2026-04-30T20:00:00.000Z',
-          },
-        ]),
+      ...submissionWithQuestionsHandlers(
+        createTestSubmission({ submission_text: 'Body text.' }),
+        [createTestQuestion({ question_text: 'Test question', teacher_note: 'Test note' })],
       ),
-      http.get('https://example-project.supabase.co/rest/v1/viva_questions', () =>
-        HttpResponse.json([
-          {
-            id: '40420000-0000-0000-0000-000000000000',
-            submission_id: '30420000-0000-0000-0000-000000000000',
-            category: 'comprehension_and_accuracy',
-            question_text: 'Test question',
-            teacher_note: 'Test note',
-            is_recommended: true,
-            sort_order: 1,
-          },
-        ]),
-      ),
-
-      http.post('https://example-project.supabase.co/storage/v1/object/submission-viva-audio/*', () =>
-        HttpResponse.json({ Key: 'submission-viva-audio/test.webm' }),
-      ),
+      storageUploadHandler(),
       http.post('https://example-project.supabase.co/rest/v1/submission_viva', () =>
-        HttpResponse.json([
-          {
-            id: '50420000-0000-0000-0000-000000000000',
-            submission_id: '30420000-0000-0000-0000-000000000000',
-            audio_url:
-              'https://example-project.supabase.co/storage/v1/object/public/submission-viva-audio/30420000-0000-0000-0000-000000000000/test.webm',
-            file_name: 'test.webm',
-            created_at: '2026-04-30T20:10:00.000Z',
-          },
-        ]),
+        HttpResponse.json([testSubmissionViva]),
       ),
       http.get('https://example-project.supabase.co/rest/v1/submission_viva', () =>
-        HttpResponse.json(vivaRequestCount++ === 0 ? [] : [
-          {
-            id: '50420000-0000-0000-0000-000000000000',
-            submission_id: '30420000-0000-0000-0000-000000000000',
-            audio_url:
-              'https://example-project.supabase.co/storage/v1/object/public/submission-viva-audio/30420000-0000-0000-0000-000000000000/test.webm',
-            file_name: 'test.webm',
-            created_at: '2026-04-30T20:10:00.000Z',
-          },
-        ]),
+        HttpResponse.json(vivaRequestCount++ === 0 ? [] : [testSubmissionViva]),
       ),
     )
 
@@ -228,21 +158,8 @@ describe('SubmissionDetailPage', () => {
     generateSubmissionVivaSpy.mockReturnValue(deferredGeneration.promise)
 
     server.use(
-      http.get('https://example-project.supabase.co/rest/v1/submissions', () => {
-        return HttpResponse.json([
-          {
-            id: '30420000-0000-0000-0000-000000000000',
-            student_id: '10420000-0000-0000-0000-000000000000',
-            submission_title: 'Mercantile law response',
-            submission_text: 'Body text.',
-            created_at: '2026-04-30T20:00:00.000Z',
-          },
-        ])
-      }),
-      http.get('https://example-project.supabase.co/rest/v1/viva_questions', () => {
-        return HttpResponse.json([])
-      }),
-      http.get('https://example-project.supabase.co/rest/v1/submission_viva', () => HttpResponse.json([])),
+      ...submissionWithQuestionsHandlers(createTestSubmission({ submission_text: 'Body text.' }), []),
+      submissionVivaHandler([]),
     )
 
     renderWithRouter(
@@ -279,21 +196,8 @@ describe('SubmissionDetailPage', () => {
     })
 
     server.use(
-      http.get('https://example-project.supabase.co/rest/v1/submissions', () => {
-        return HttpResponse.json([
-          {
-            id: '30420000-0000-0000-0000-000000000000',
-            student_id: '10420000-0000-0000-0000-000000000000',
-            submission_title: 'Mercantile law response',
-            submission_text: 'Body text.',
-            created_at: '2026-04-30T20:00:00.000Z',
-          },
-        ])
-      }),
-      http.get('https://example-project.supabase.co/rest/v1/viva_questions', () => {
-        return HttpResponse.json([])
-      }),
-      http.get('https://example-project.supabase.co/rest/v1/submission_viva', () => HttpResponse.json([])),
+      ...submissionWithQuestionsHandlers(createTestSubmission({ submission_text: 'Body text.' }), []),
+      submissionVivaHandler([]),
     )
 
     renderWithRouter(
@@ -326,17 +230,9 @@ describe('SubmissionDetailPage', () => {
     let questionRequestCount = 0
 
     server.use(
-      http.get('https://example-project.supabase.co/rest/v1/submissions', () => {
-        return HttpResponse.json([
-          {
-            id: '30420000-0000-0000-0000-000000000000',
-            student_id: '10420000-0000-0000-0000-000000000000',
-            submission_title: 'Mercantile law response',
-            submission_text: 'Body text.',
-            created_at: '2026-04-30T20:00:00.000Z',
-          },
-        ])
-      }),
+      http.get('https://example-project.supabase.co/rest/v1/submissions', () =>
+        HttpResponse.json([createTestSubmission({ submission_text: 'Body text.' })]),
+      ),
       http.get('https://example-project.supabase.co/rest/v1/viva_questions', () => {
         questionRequestCount += 1
 
@@ -345,20 +241,13 @@ describe('SubmissionDetailPage', () => {
         }
 
         return HttpResponse.json([
-          {
-            id: '40420000-0000-0000-0000-000000000000',
-            submission_id: '30420000-0000-0000-0000-000000000000',
-            category: 'comprehension_and_accuracy',
+          createTestQuestion({
             question_text: 'Why does the response describe Lord Mansfield as pivotal?',
             teacher_note: 'Listen for understanding of legal reform and why it mattered.',
-            is_recommended: true,
-            sort_order: 1,
-          },
+          }),
         ])
       }),
-      http.get('https://example-project.supabase.co/rest/v1/submission_viva', () =>
-        HttpResponse.json([]),
-      ),
+      submissionVivaHandler([]),
     )
 
     const user = userEvent.setup()
