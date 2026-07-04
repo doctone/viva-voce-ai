@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   generateSubmissionVivaAnalysis,
   type StoredSubmissionQuestion,
@@ -6,6 +6,16 @@ import {
   type SubmissionForGeneration,
   type SubmissionVivaGenerationRepository,
 } from './generateSubmissionViva'
+
+const generateObjectMock = vi.fn()
+
+vi.mock('ai', () => ({
+  generateObject: (...args: unknown[]) => generateObjectMock(...args),
+}))
+
+vi.mock('@ai-sdk/openai', () => ({
+  openai: (modelName: string) => ({ modelName }),
+}))
 
 const submission: SubmissionForGeneration = {
   id: '30420000-0000-0000-0000-000000000000',
@@ -117,6 +127,10 @@ function createRepository() {
 }
 
 describe('generateSubmissionVivaAnalysis', () => {
+  beforeEach(() => {
+    generateObjectMock.mockReset()
+  })
+
   it('replaces all viva questions for the submission', async () => {
     const repository = createRepository()
     const generateStructuredViva = vi.fn().mockResolvedValue(structuredAnalysis)
@@ -216,5 +230,263 @@ describe('generateSubmissionVivaAnalysis', () => {
       submissionId: submission.id,
     })
     expect(repository.replaceQuestions).not.toHaveBeenCalled()
+  })
+
+  it('maps every category to its stored category and preserves question text verbatim', async () => {
+    const repository = createRepository()
+    const generateStructuredViva = vi.fn().mockResolvedValue(structuredAnalysis)
+
+    await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    const storedQuestions = repository.replaceQuestions.mock
+      .calls[0][1] as StoredSubmissionQuestion[]
+
+    const byCategory = (
+      category: StoredSubmissionQuestion['category'],
+    ) => storedQuestions.filter((question) => question.category === category)
+
+    expect(byCategory('comprehension_and_accuracy')).toHaveLength(4)
+    expect(byCategory('argumentation_and_reasoning')).toHaveLength(4)
+    expect(byCategory('authenticity_and_ownership')).toHaveLength(4)
+
+    expect(
+      byCategory('comprehension_and_accuracy').map(
+        (question) => question.questionText,
+      ),
+    ).toEqual(
+      structuredAnalysis.questions.comprehensionAndAccuracy.map(
+        (question) => question.question,
+      ),
+    )
+
+    for (const category of [
+      'comprehension_and_accuracy',
+      'argumentation_and_reasoning',
+      'authenticity_and_ownership',
+    ] as const) {
+      const questions = byCategory(category)
+      expect(questions.filter((question) => question.isRecommended)).toHaveLength(3)
+      expect(questions[3].isRecommended).toBe(false)
+    }
+  })
+
+  it('assigns sort order sequentially across categories, comprehension first then argumentation then authenticity', async () => {
+    const repository = createRepository()
+    const generateStructuredViva = vi.fn().mockResolvedValue(structuredAnalysis)
+
+    await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    const storedQuestions = repository.replaceQuestions.mock
+      .calls[0][1] as StoredSubmissionQuestion[]
+
+    expect(storedQuestions.map((question) => question.sortOrder)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+    ])
+    expect(
+      storedQuestions.slice(0, 4).every(
+        (question) => question.category === 'comprehension_and_accuracy',
+      ),
+    ).toBe(true)
+    expect(
+      storedQuestions.slice(4, 8).every(
+        (question) => question.category === 'argumentation_and_reasoning',
+      ),
+    ).toBe(true)
+    expect(
+      storedQuestions.slice(8, 12).every(
+        (question) => question.category === 'authenticity_and_ownership',
+      ),
+    ).toBe(true)
+  })
+
+  it('rejects AI output that is missing a category', async () => {
+    const repository = createRepository()
+    const { authenticityAndOwnership: _omitted, ...remainingCategories } =
+      structuredAnalysis.questions
+    const generateStructuredViva = vi.fn().mockResolvedValue({
+      questions: remainingCategories,
+    } as unknown as StructuredVivaQuestions)
+
+    const result = await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result.status).toBe('failed')
+    expect(result.errorMessage).toBeTruthy()
+    expect(repository.replaceQuestions).not.toHaveBeenCalled()
+  })
+
+  it('rejects AI output with the wrong number of questions in a category', async () => {
+    const repository = createRepository()
+    const generateStructuredViva = vi.fn().mockResolvedValue({
+      ...structuredAnalysis,
+      questions: {
+        ...structuredAnalysis.questions,
+        argumentationAndReasoning:
+          structuredAnalysis.questions.argumentationAndReasoning.slice(0, 3),
+      },
+    })
+
+    const result = await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result.status).toBe('failed')
+    expect(result.errorMessage).toBeTruthy()
+    expect(repository.replaceQuestions).not.toHaveBeenCalled()
+  })
+
+  it('strips unexpected extra fields from AI output instead of failing', async () => {
+    const repository = createRepository()
+    const generateStructuredViva = vi.fn().mockResolvedValue({
+      ...structuredAnalysis,
+      questions: {
+        ...structuredAnalysis.questions,
+        comprehensionAndAccuracy:
+          structuredAnalysis.questions.comprehensionAndAccuracy.map(
+            (question) => ({
+              ...question,
+              unexpectedField: 'should be stripped',
+            }),
+          ),
+      },
+    } as unknown as StructuredVivaQuestions)
+
+    const result = await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result.status).toBe('completed')
+    const storedQuestions = repository.replaceQuestions.mock
+      .calls[0][1] as StoredSubmissionQuestion[]
+    for (const question of storedQuestions) {
+      expect(question).not.toHaveProperty('unexpectedField')
+    }
+  })
+
+  it('propagates a meaningful error message when the AI call fails', async () => {
+    const repository = createRepository()
+    const generateStructuredViva = vi
+      .fn()
+      .mockRejectedValue(new Error('AI provider request timed out.'))
+
+    const result = await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result).toEqual({
+      errorMessage: 'AI provider request timed out.',
+      status: 'failed',
+      submissionId: submission.id,
+    })
+    expect(repository.replaceQuestions).not.toHaveBeenCalled()
+  })
+
+  it('propagates a meaningful error message when the Supabase upsert fails', async () => {
+    const repository = {
+      getSubmission: vi.fn().mockResolvedValue(submission),
+      replaceQuestions: vi
+        .fn()
+        .mockRejectedValue(new Error('We could not save the generated viva questions.')),
+    } satisfies SubmissionVivaGenerationRepository
+    const generateStructuredViva = vi.fn().mockResolvedValue(structuredAnalysis)
+
+    const result = await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result).toEqual({
+      errorMessage: 'We could not save the generated viva questions.',
+      status: 'failed',
+      submissionId: submission.id,
+    })
+  })
+
+  it('stores a failed analysis when the submission cannot be found', async () => {
+    const repository = {
+      getSubmission: vi.fn().mockResolvedValue(null),
+      replaceQuestions: vi.fn().mockResolvedValue(undefined),
+    } satisfies SubmissionVivaGenerationRepository
+    const generateStructuredViva = vi.fn()
+
+    const result = await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result).toEqual({
+      errorMessage: 'Submission not found.',
+      status: 'failed',
+      submissionId: submission.id,
+    })
+    expect(generateStructuredViva).not.toHaveBeenCalled()
+  })
+})
+
+describe('generateSubmissionVivaAnalysis prompt construction (default AI call)', () => {
+  beforeEach(() => {
+    generateObjectMock.mockReset()
+    generateObjectMock.mockResolvedValue({ object: structuredAnalysis })
+    vi.stubEnv('OPENAI_API_KEY', 'test-api-key')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('sends a prompt containing the submission text and the per-category question requirements', async () => {
+    const repository = createRepository()
+
+    const result = await generateSubmissionVivaAnalysis({
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result.status).toBe('completed')
+    expect(generateObjectMock).toHaveBeenCalledTimes(1)
+
+    const call = generateObjectMock.mock.calls[0][0] as { prompt: string }
+    expect(call.prompt).toContain(submission.submissionText)
+    expect(call.prompt).toContain(submission.title)
+    expect(call.prompt).toContain('Return exactly 2 questions for each category.')
+    expect(call.prompt).toContain(
+      'Mark exactly 3 questions in each category as recommended for limited time.',
+    )
+  })
+
+  it('fails with a meaningful error when OPENAI_API_KEY is not configured', async () => {
+    vi.stubEnv('OPENAI_API_KEY', '')
+    const repository = createRepository()
+
+    const result = await generateSubmissionVivaAnalysis({
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result).toEqual({
+      errorMessage: 'OPENAI_API_KEY is not configured.',
+      status: 'failed',
+      submissionId: submission.id,
+    })
+    expect(generateObjectMock).not.toHaveBeenCalled()
   })
 })
