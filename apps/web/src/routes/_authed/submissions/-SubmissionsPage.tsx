@@ -10,7 +10,7 @@ import {
 } from '../../../styles/classes'
 
 export function SubmissionsPage() {
-  const rows = useSubmissions()
+  const submissionsQuery = useSubmissions()
 
   return (
     <section className="-mx-6 -mt-8 -mb-16 grid min-h-screen grid-rows-[auto_1fr] bg-surface">
@@ -31,7 +31,17 @@ export function SubmissionsPage() {
       </div>
 
       <section className="grid content-start pb-6 lg:pb-8">
-        <SubmissionsTable rows={rows} />
+        {submissionsQuery.isLoading ? (
+          <p className={cn(mutedTextClassName, 'px-6 text-sm leading-6 lg:px-8')}>
+            Loading submissions...
+          </p>
+        ) : submissionsQuery.error instanceof Error ? (
+          <p className="px-6 text-sm leading-6 text-error lg:px-8">
+            {submissionsQuery.error.message}
+          </p>
+        ) : (
+          <SubmissionsTable rows={submissionsQuery.data ?? []} />
+        )}
       </section>
     </section>
   )
