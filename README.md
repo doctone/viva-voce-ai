@@ -1,3 +1,5 @@
+<!-- Test repo change: this comment was added to verify the claude.ai routine GitHub trigger (issue #16). -->
+
 # Viva Voce AI Monorepo
 
 This repository now uses Turborepo with PNPM workspaces.
