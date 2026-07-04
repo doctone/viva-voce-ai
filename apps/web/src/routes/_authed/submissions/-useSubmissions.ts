@@ -25,8 +25,8 @@ async function fetchSubmissions(): Promise<SubmissionRow[]> {
     .select('id, student_id, submission_title, created_at')
     .order('created_at', { ascending: false })
 
-  if (error || !data) {
-    return []
+  if (error) {
+    throw new Error('We could not load submissions.')
   }
 
   return (data as VivaRecord[]).map((viva) => ({
@@ -38,10 +38,8 @@ async function fetchSubmissions(): Promise<SubmissionRow[]> {
 }
 
 export function useSubmissions() {
-  const { data = [] } = useQuery({
+  return useQuery({
     queryFn: fetchSubmissions,
     queryKey: ['submissions'],
   })
-
-  return data
 }
