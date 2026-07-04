@@ -107,7 +107,7 @@ function createPrompt(submission: SubmissionForGeneration) {
     "- Do not claim that AI use can be detected with certainty.",
     "- Authenticity questions must explore whether the student can explain, defend, and reflect on their own writing choices.",
     "- Make each question specific to the student text rather than generic.",
-    "- Return exactly 2 questions for each category.",
+    "- Return exactly 4 questions for each category.",
     "- Mark exactly 3 questions in each category as recommended for limited time.",
     "",
     `Submission title: ${submission.title}`,
