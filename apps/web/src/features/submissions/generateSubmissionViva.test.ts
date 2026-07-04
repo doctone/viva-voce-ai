@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  createPrompt,
   generateSubmissionVivaAnalysis,
   type StoredSubmissionQuestion,
   type StructuredVivaQuestions,
@@ -216,5 +217,191 @@ describe('generateSubmissionVivaAnalysis', () => {
       submissionId: submission.id,
     })
     expect(repository.replaceQuestions).not.toHaveBeenCalled()
+  })
+
+  it('normalizes every category into the stored format, in category order, preserving text and notes verbatim', async () => {
+    const repository = createRepository()
+    const generateStructuredViva = vi.fn().mockResolvedValue(structuredAnalysis)
+
+    await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    const expectedQuestions: StoredSubmissionQuestion[] = [
+      ...structuredAnalysis.questions.comprehensionAndAccuracy.map(
+        (question, index) => ({
+          category: 'comprehension_and_accuracy' as const,
+          isRecommended: question.recommendedForLimitedTime,
+          questionText: question.question,
+          sortOrder: index + 1,
+          teacherNote: question.teacherNote,
+        }),
+      ),
+      ...structuredAnalysis.questions.argumentationAndReasoning.map(
+        (question, index) => ({
+          category: 'argumentation_and_reasoning' as const,
+          isRecommended: question.recommendedForLimitedTime,
+          questionText: question.question,
+          sortOrder: index + 5,
+          teacherNote: question.teacherNote,
+        }),
+      ),
+      ...structuredAnalysis.questions.authenticityAndOwnership.map(
+        (question, index) => ({
+          category: 'authenticity_and_ownership' as const,
+          isRecommended: question.recommendedForLimitedTime,
+          questionText: question.question,
+          sortOrder: index + 9,
+          teacherNote: question.teacherNote,
+        }),
+      ),
+    ]
+
+    expect(repository.replaceQuestions).toHaveBeenCalledWith(
+      submission.id,
+      expectedQuestions,
+    )
+    expect(
+      expectedQuestions.filter(
+        (question) =>
+          question.category === 'comprehension_and_accuracy' &&
+          question.isRecommended,
+      ),
+    ).toHaveLength(3)
+    expect(
+      expectedQuestions.filter(
+        (question) =>
+          question.category === 'comprehension_and_accuracy' &&
+          !question.isRecommended,
+      ),
+    ).toHaveLength(1)
+  })
+
+  it('rejects AI output that is missing a category', async () => {
+    const repository = createRepository()
+    const { authenticityAndOwnership: _omitted, ...remainingCategories } =
+      structuredAnalysis.questions
+    const generateStructuredViva = vi.fn().mockResolvedValue({
+      questions: remainingCategories,
+    })
+
+    const result = await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result.status).toBe('failed')
+    expect(result.errorMessage).toBeTruthy()
+    expect(repository.replaceQuestions).not.toHaveBeenCalled()
+  })
+
+  it('rejects AI output with the wrong number of questions in a category', async () => {
+    const repository = createRepository()
+    const generateStructuredViva = vi.fn().mockResolvedValue({
+      ...structuredAnalysis,
+      questions: {
+        ...structuredAnalysis.questions,
+        comprehensionAndAccuracy:
+          structuredAnalysis.questions.comprehensionAndAccuracy.slice(0, 3),
+      },
+    })
+
+    const result = await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result.status).toBe('failed')
+    expect(result.errorMessage).toBeTruthy()
+    expect(repository.replaceQuestions).not.toHaveBeenCalled()
+  })
+
+  it('strips unexpected extra fields from AI output instead of failing', async () => {
+    const repository = createRepository()
+    const generateStructuredViva = vi.fn().mockResolvedValue({
+      ...structuredAnalysis,
+      extraTopLevelField: 'unexpected',
+      questions: {
+        ...structuredAnalysis.questions,
+        comprehensionAndAccuracy:
+          structuredAnalysis.questions.comprehensionAndAccuracy.map(
+            (question) => ({ ...question, extraQuestionField: 'unexpected' }),
+          ),
+      },
+    })
+
+    const result = await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result).toEqual({
+      status: 'completed',
+      submissionId: submission.id,
+    })
+    const [, storedQuestions] = repository.replaceQuestions.mock.calls[0]
+    for (const question of storedQuestions) {
+      expect(question).not.toHaveProperty('extraQuestionField')
+    }
+  })
+
+  it('propagates a meaningful error message when the AI call fails', async () => {
+    const repository = createRepository()
+    const generateStructuredViva = vi
+      .fn()
+      .mockRejectedValue(new Error('The AI provider timed out.'))
+
+    const result = await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result).toEqual({
+      errorMessage: 'The AI provider timed out.',
+      status: 'failed',
+      submissionId: submission.id,
+    })
+    expect(repository.replaceQuestions).not.toHaveBeenCalled()
+  })
+
+  it('propagates a meaningful error message when saving questions fails, instead of swallowing it', async () => {
+    const repository = createRepository()
+    repository.replaceQuestions.mockRejectedValue(
+      new Error('We could not save the generated viva questions.'),
+    )
+    const generateStructuredViva = vi.fn().mockResolvedValue(structuredAnalysis)
+
+    const result = await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result).toEqual({
+      errorMessage: 'We could not save the generated viva questions.',
+      status: 'failed',
+      submissionId: submission.id,
+    })
+  })
+})
+
+describe('createPrompt', () => {
+  it("includes the student's submission text and title", () => {
+    const prompt = createPrompt(submission)
+
+    expect(prompt).toContain(submission.submissionText)
+    expect(prompt).toContain(submission.title)
+  })
+
+  it('requests exactly 4 questions per category, matching the structured schema', () => {
+    const prompt = createPrompt(submission)
+
+    expect(prompt).toContain('Return exactly 4 questions for each category.')
   })
 })
