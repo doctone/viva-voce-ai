@@ -77,6 +77,10 @@ pnpm --filter web test:mutate   # equivalent, run directly against the web app
 - After a run, open `apps/web/reports/mutation/mutation.html` to see surviving
   mutants. CI uploads this report as a workflow artifact on PRs that touch
   `apps/web/src/features/**` (see `.github/workflows/mutation-testing.yml`).
+- The CI job currently reports the score without failing the build
+  (`continue-on-error: true`) — the break threshold isn't a merge gate yet
+  since some existing files (e.g. untested Supabase repository wiring) score
+  below it. Tighten this once business-logic coverage catches up.
 
 ## Architecture Overview
 
