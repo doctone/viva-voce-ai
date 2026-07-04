@@ -85,7 +85,7 @@ describe("protected route access and redirects", () => {
       const router = renderApp("/submissions");
 
       expect(
-        await screen.findByRole("heading", { name: "Login" }),
+        await screen.findByRole("heading", { name: "Log in" }),
       ).toBeInTheDocument();
       expect(router.state.location.pathname).toBe("/login");
     });
@@ -96,7 +96,7 @@ describe("protected route access and redirects", () => {
       const router = renderApp("/submissions/new");
 
       expect(
-        await screen.findByRole("heading", { name: "Login" }),
+        await screen.findByRole("heading", { name: "Log in" }),
       ).toBeInTheDocument();
       expect(router.state.location.pathname).toBe("/login");
     });
@@ -109,7 +109,7 @@ describe("protected route access and redirects", () => {
       );
 
       expect(
-        await screen.findByRole("heading", { name: "Login" }),
+        await screen.findByRole("heading", { name: "Log in" }),
       ).toBeInTheDocument();
       expect(router.state.location.pathname).toBe("/login");
     });
@@ -162,7 +162,7 @@ describe("protected route access and redirects", () => {
 
       renderApp("/login");
 
-      await screen.findByRole("heading", { name: "Login" });
+      await screen.findByRole("heading", { name: "Log in" });
 
       expect(screen.queryByRole("banner")).not.toBeInTheDocument();
     });
@@ -172,7 +172,7 @@ describe("protected route access and redirects", () => {
 
       renderApp("/signup");
 
-      await screen.findByRole("heading", { name: "Sign Up" });
+      await screen.findByRole("heading", { name: "Sign up" });
 
       expect(screen.queryByRole("banner")).not.toBeInTheDocument();
     });
