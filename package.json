@@ -14,7 +14,8 @@
     "preview": "turbo run preview --filter=web",
     "start": "turbo run start --filter=web",
     "test": "turbo run test",
-    "test:web": "pnpm --filter web test"
+    "test:web": "pnpm --filter web test",
+    "test:mutate": "pnpm --filter web test:mutate"
   },
   "devDependencies": {
     "supabase": "^2.89.1",
