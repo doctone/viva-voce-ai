@@ -52,13 +52,31 @@ bd close <id>         # Complete work
 
 ## Build & Test
 
-_Add your build and test commands here_
+```bash
+pnpm install
+pnpm test          # run the full test suite (turbo run test)
+pnpm test:web      # run only the web app's Vitest suite
+```
+
+### Mutation testing
+
+Mutation testing (via [Stryker](https://stryker-mutator.io/)) checks whether the test
+suite actually catches regressions, not just whether lines are executed.
 
 ```bash
-# Example:
-# npm install
-# npm test
+pnpm test:mutate           # from the repo root
+pnpm --filter web test:mutate   # equivalent, run directly against the web app
 ```
+
+- Config lives at `apps/web/stryker.config.mjs`.
+- Initial scope is limited to business logic in `apps/web/src/features/**/*.ts`
+  (excluding tests, thin server-function wrappers, and hooks that have no
+  branching logic of their own yet).
+- Thresholds: `break: 60`, `high: 80`, `low: 70` — a run scoring below the
+  break threshold exits non-zero.
+- After a run, open `apps/web/reports/mutation/mutation.html` to see surviving
+  mutants. CI uploads this report as a workflow artifact on PRs that touch
+  `apps/web/src/features/**` (see `.github/workflows/mutation-testing.yml`).
 
 ## Architecture Overview
 

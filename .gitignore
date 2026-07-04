@@ -34,6 +34,11 @@ playwright-report/
 blob-report/
 playwright/.cache/
 
+# Stryker mutation testing
+reports/
+stryker-tmp/
+.stryker-tmp/
+
 # Deployment / platform
 .vercel/
 .superpowers/
