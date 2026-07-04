@@ -15,6 +15,7 @@
     "start": "turbo run start --filter=web",
     "test": "turbo run test",
     "test:web": "pnpm --filter web test",
+    "test:coverage": "pnpm --filter web test:coverage",
     "test:mutate": "pnpm --filter web test:mutate"
   },
   "devDependencies": {
