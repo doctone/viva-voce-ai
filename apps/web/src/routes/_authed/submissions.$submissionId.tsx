@@ -21,6 +21,7 @@ import {
 import { getSupabaseBrowserClient } from "../../utils/supabase-browser";
 import {
   AddManualQuestionCard,
+  type ManualQuestionInput,
   QuestionCard,
 } from "./submissions/-QuestionCard";
 
@@ -154,6 +155,42 @@ async function uploadSubmissionVivaAudio(submissionId: string, file: File) {
     throw new Error("We could not save viva audio.");
   }
 }
+
+async function updateSubmissionQuestionText(
+  questionId: string,
+  questionText: string,
+) {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase
+    .from("viva_questions")
+    .update({ question_text: questionText })
+    .eq("id", questionId);
+
+  if (error) {
+    throw new Error("We could not save the question.");
+  }
+}
+
+async function addManualSubmissionQuestion(
+  submissionId: string,
+  input: ManualQuestionInput,
+  nextSortOrder: number,
+) {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.from("viva_questions").insert({
+    submission_id: submissionId,
+    category: input.category,
+    question_text: input.questionText,
+    teacher_note: input.teacherNote,
+    is_recommended: false,
+    sort_order: nextSortOrder,
+  });
+
+  if (error) {
+    throw new Error("We could not add the question.");
+  }
+}
+
 function formatQuestionCategory(category: string) {
   return category
     .split("_")
@@ -375,6 +412,31 @@ export function SubmissionDetailPage() {
   });
   const vivaAudioRecords = vivaAudioQuery.data ?? [];
 
+  const saveQuestionText = React.useCallback(
+    async (questionId: string, questionText: string) => {
+      await updateSubmissionQuestionText(questionId, questionText);
+      await queryClient.invalidateQueries({
+        queryKey: ["submission-questions", submissionId],
+      });
+    },
+    [queryClient, submissionId],
+  );
+
+  const addManualQuestion = React.useCallback(
+    async (input: ManualQuestionInput) => {
+      const nextSortOrder =
+        questions.length > 0
+          ? Math.max(...questions.map((question) => question.sortOrder)) + 1
+          : 0;
+
+      await addManualSubmissionQuestion(submissionId, input, nextSortOrder);
+      await queryClient.invalidateQueries({
+        queryKey: ["submission-questions", submissionId],
+      });
+    },
+    [questions, queryClient, submissionId],
+  );
+
   const runGeneration = React.useCallback(async () => {
     hasTriggeredGenerationRef.current = true;
     setGenerationState("running");
@@ -590,14 +652,18 @@ export function SubmissionDetailPage() {
               {questions.map((question) => (
                 <QuestionCard
                   key={question.id}
+                  id={question.id}
                   isHighlighted={question.isHighlighted}
                   label={question.label}
                   questionText={question.questionText}
                   teacherNote={question.teacherNote}
+                  onSave={(questionText) =>
+                    saveQuestionText(question.id, questionText)
+                  }
                 />
               ))}
 
-              <AddManualQuestionCard />
+              <AddManualQuestionCard onAdd={addManualQuestion} />
             </section>
 
             <aside className="grid content-start gap-4 xl:col-span-5 xl:row-start-2 xl:sticky xl:top-24">
@@ -652,6 +718,11 @@ export function SubmissionDetailPage() {
                       }}
                     />
                   </label>
+                  {isUploadingViva ? (
+                    <p className={cn(mutedTextClassName, "text-sm")}>
+                      Uploading viva audio…
+                    </p>
+                  ) : null}
                   {vivaUploadErrorMessage ? (
                     <p className="text-sm text-error">
                       {vivaUploadErrorMessage}
