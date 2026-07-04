@@ -14,11 +14,13 @@ export function Auth({
   onSubmit,
   status,
   afterSubmit,
+  footer,
 }: {
   actionText: string
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
   status: 'pending' | 'idle' | 'success' | 'error'
   afterSubmit?: React.ReactNode
+  footer?: React.ReactNode
 }) {
   return (
     <div className="min-h-screen">
@@ -65,6 +67,7 @@ export function Auth({
               </Button>
               {afterSubmit ? afterSubmit : null}
             </form>
+            {footer ? <div className="mt-6">{footer}</div> : null}
           </div>
         </section>
         <aside
