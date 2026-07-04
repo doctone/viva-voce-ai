@@ -16,7 +16,8 @@
     "test": "turbo run test",
     "test:web": "pnpm --filter web test",
     "test:coverage": "pnpm --filter web test:coverage",
-    "test:mutate": "pnpm --filter web test:mutate"
+    "test:mutate": "pnpm --filter web test:mutate",
+    "typecheck": "pnpm --filter web typecheck"
   },
   "devDependencies": {
     "supabase": "^2.89.1",
