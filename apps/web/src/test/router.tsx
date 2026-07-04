@@ -10,7 +10,15 @@ import type { ReactElement } from 'react'
 import { AppProviders } from '../components/AppProviders'
 
 type RouteOverrides = Partial<
-  Record<'/' | '/submissions' | '/submissions/new' | '/submissions/$submissionId', ReactElement>
+  Record<
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/submissions'
+    | '/submissions/new'
+    | '/submissions/$submissionId',
+    ReactElement
+  >
 >
 
 export function renderWithRouter(
@@ -23,6 +31,16 @@ export function renderWithRouter(
     getParentRoute: () => rootRoute,
     path: '/',
     component: () => routeOverrides['/'] ?? ui,
+  })
+  const loginRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/login',
+    component: () => routeOverrides['/login'] ?? ui,
+  })
+  const signupRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/signup',
+    component: () => routeOverrides['/signup'] ?? ui,
   })
   const submissionsRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -41,6 +59,8 @@ export function renderWithRouter(
   })
   const routeTree = rootRoute.addChildren([
     indexRoute,
+    loginRoute,
+    signupRoute,
     submissionsRoute,
     submissionsNewRoute,
     submissionDetailRoute,

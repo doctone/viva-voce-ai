@@ -1,4 +1,4 @@
-import { redirect, createFileRoute } from '@tanstack/react-router'
+import { Link, redirect, createFileRoute } from '@tanstack/react-router'
 import { createServerFn, useServerFn } from '@tanstack/react-start'
 import { useMutation } from '../hooks/useMutation'
 import { Auth } from '../components/Auth'
@@ -32,7 +32,7 @@ export const Route = createFileRoute('/signup')({
   component: SignupComp,
 })
 
-function SignupComp() {
+export function SignupComp() {
   const signupMutation = useMutation({
     fn: useServerFn(signupFn),
   })
@@ -41,6 +41,14 @@ function SignupComp() {
     <Auth
       actionText="Sign Up"
       status={signupMutation.status}
+      footer={
+        <p className={mutedTextClassName}>
+          Already have an account?{' '}
+          <Link to="/login" className="font-bold text-primary">
+            Log in
+          </Link>
+        </p>
+      }
       onSubmit={(e) => {
         const formData = new FormData(e.target as HTMLFormElement)
 
