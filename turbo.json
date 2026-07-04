@@ -22,6 +22,10 @@
       "dependsOn": ["^test"],
       "outputs": []
     },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
     "start": {
       "dependsOn": ["build"],
       "cache": false,

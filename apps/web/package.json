@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:mutate": "stryker run"
+    "test:mutate": "stryker run",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
