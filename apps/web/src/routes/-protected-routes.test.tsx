@@ -78,6 +78,30 @@ describe("protected route access and redirects", () => {
     );
   });
 
+  describe("landing page access", () => {
+    it("shows the landing page to unauthenticated visitors at /", async () => {
+      mockUnauthenticated();
+
+      const router = renderApp("/");
+
+      expect(
+        await screen.findByRole("heading", {
+          name: /prepare viva questions in seconds, not hours/i,
+        }),
+      ).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe("/");
+    });
+
+    it("redirects authenticated visitors from / to /submissions", async () => {
+      mockAuthenticated();
+
+      const router = renderApp("/");
+
+      await screen.findByRole("heading", { name: "Submissions" });
+      expect(router.state.location.pathname).toBe("/submissions");
+    });
+  });
+
   describe("unauthenticated access", () => {
     it("redirects /submissions to /login", async () => {
       mockUnauthenticated();

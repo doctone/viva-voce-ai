@@ -54,7 +54,7 @@ export const Route = createRootRoute({
 
     if (user && isAuthPage) {
       throw redirect({
-        to: "/",
+        to: "/submissions",
       });
     }
 
