@@ -370,6 +370,27 @@ describe('generateSubmissionVivaAnalysis', () => {
     expect(repository.replaceQuestions).not.toHaveBeenCalled()
   })
 
+  it('stores a failed analysis when the submission cannot be found', async () => {
+    const repository = {
+      getSubmission: vi.fn().mockResolvedValue(null),
+      replaceQuestions: vi.fn().mockResolvedValue(undefined),
+    } satisfies SubmissionVivaGenerationRepository
+    const generateStructuredViva = vi.fn()
+
+    const result = await generateSubmissionVivaAnalysis({
+      generateStructuredViva,
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result).toEqual({
+      errorMessage: 'Submission not found.',
+      status: 'failed',
+      submissionId: submission.id,
+    })
+    expect(generateStructuredViva).not.toHaveBeenCalled()
+  })
+
   it('propagates a meaningful error message when saving questions fails, instead of swallowing it', async () => {
     const repository = createRepository()
     repository.replaceQuestions.mockRejectedValue(
@@ -403,5 +424,26 @@ describe('createPrompt', () => {
     const prompt = createPrompt(submission)
 
     expect(prompt).toContain('Return exactly 4 questions for each category.')
+  })
+})
+
+describe('default AI SDK path', () => {
+  it('fails with a meaningful error when OPENAI_API_KEY is not configured', async () => {
+    const originalKey = process.env.OPENAI_API_KEY
+    delete process.env.OPENAI_API_KEY
+    const repository = createRepository()
+
+    const result = await generateSubmissionVivaAnalysis({
+      repository,
+      submissionId: submission.id,
+    })
+
+    expect(result).toEqual({
+      errorMessage: 'OPENAI_API_KEY is not configured.',
+      status: 'failed',
+      submissionId: submission.id,
+    })
+
+    process.env.OPENAI_API_KEY = originalKey
   })
 })
