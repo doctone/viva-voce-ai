@@ -115,6 +115,34 @@ describe("protected route access and redirects", () => {
     });
   });
 
+  describe("landing page at /", () => {
+    it("shows the landing page to an unauthenticated visitor", async () => {
+      mockUnauthenticated();
+
+      const router = renderApp("/");
+
+      expect(
+        await screen.findByRole("heading", {
+          name: "Prepare viva questions in seconds, not hours",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: "Get started" }),
+      ).toHaveAttribute("href", "/signup");
+      expect(router.state.location.pathname).toBe("/");
+    });
+
+    it("redirects an authenticated visitor from / to /submissions", async () => {
+      mockAuthenticated();
+
+      const router = renderApp("/");
+
+      await screen.findByRole("heading", { name: "Submissions" });
+
+      expect(router.state.location.pathname).toBe("/submissions");
+    });
+  });
+
   describe("authenticated access", () => {
     it("renders the submissions page content for /submissions", async () => {
       mockAuthenticated();
