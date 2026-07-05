@@ -38,4 +38,81 @@ describe('LandingPage', () => {
 
     expect(await screen.findByAltText(/viva voce ai/i)).toBeInTheDocument()
   })
+
+  describe('"How it works" section', () => {
+    const stepHeadings = [
+      'Submit student work',
+      'AI generates tailored questions',
+      'Review, edit, and record',
+    ]
+
+    it('renders all 3 steps with headings', async () => {
+      renderWithRouter(<LandingPage />, '/')
+
+      await screen.findByRole('heading', { name: 'How it works' })
+
+      for (const heading of stepHeadings) {
+        expect(
+          screen.getByRole('heading', { name: heading }),
+        ).toBeInTheDocument()
+      }
+    })
+
+    it('gives each step a description and an image placeholder', async () => {
+      renderWithRouter(<LandingPage />, '/')
+
+      await screen.findByRole('heading', { name: 'How it works' })
+
+      expect(
+        screen.getByText(/paste or upload a student.s coursework/i),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/comprehension, argumentation, and authenticity/i),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/edit the questions, add your own, and record/i),
+      ).toBeInTheDocument()
+
+      for (const heading of stepHeadings) {
+        expect(screen.getByAltText(new RegExp(heading, 'i'))).toBeInTheDocument()
+      }
+    })
+  })
+
+  describe('"Built for teachers" section', () => {
+    const features = [
+      'AI question generation mapped to real marking criteria',
+      'Per-question teacher notes for what to listen for',
+      'Recommended questions for time-limited vivas',
+      'Audio recording and playback built in',
+      'Teacher edits and adds their own questions — AI is a starting point',
+    ]
+
+    it('renders all feature bullet points', async () => {
+      renderWithRouter(<LandingPage />, '/')
+
+      await screen.findByRole('heading', { name: 'Built for teachers' })
+
+      for (const feature of features) {
+        expect(screen.getByText(feature)).toBeInTheDocument()
+      }
+    })
+  })
+
+  it('renders sections in order: hero, how it works, features', async () => {
+    renderWithRouter(<LandingPage />, '/')
+
+    await screen.findByRole('heading', { name: 'Built for teachers' })
+
+    const sectionHeadings = screen
+      .getAllByRole('heading')
+      .filter((heading) => heading.tagName !== 'H3')
+      .map((heading) => heading.textContent)
+
+    expect(sectionHeadings).toEqual([
+      'Prepare viva questions in seconds, not hours',
+      'How it works',
+      'Built for teachers',
+    ])
+  })
 })
