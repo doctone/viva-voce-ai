@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { useRouterState } from '@tanstack/react-router'
-import { cn } from '../../styles/classes'
+import { Link, useRouterState } from '@tanstack/react-router'
+import { cn, eyebrowClassName, mobileNavFooterLinkClassName } from '../../styles/classes'
 import { AuthenticatedSidebar, type AuthenticatedNavItem } from './AuthenticatedSidebar'
 import { MobileNavDrawer } from './MobileNavDrawer'
 import { MobileNavHeader } from './MobileNavHeader'
@@ -47,9 +47,19 @@ export function AuthenticatedAppShell({
 
       <MobileNavDrawer
         items={items}
-        userEmail={userEmail}
         open={isMobileNavOpen}
         onOpenChange={setIsMobileNavOpen}
+        footer={
+          <>
+            <p className={eyebrowClassName}>Signed in as</p>
+            <p className="text-sm text-on-surface [overflow-wrap:anywhere]">
+              {userEmail}
+            </p>
+            <Link to="/logout" className={mobileNavFooterLinkClassName}>
+              Logout
+            </Link>
+          </>
+        }
       />
 
       <main className="min-w-0 px-6 pb-16 pt-8">{children}</main>

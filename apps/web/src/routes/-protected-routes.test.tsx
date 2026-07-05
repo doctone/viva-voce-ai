@@ -3,7 +3,7 @@ import {
   createMemoryHistory,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { routeTree } from "../routeTree.gen";
@@ -199,6 +199,62 @@ describe("protected route access and redirects", () => {
       await screen.findByRole("heading", { name: "Sign up" });
 
       expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("mobile navigation on the landing page", () => {
+    it("opens the drawer with route, anchor, login, and sign up links, then closes it", async () => {
+      mockUnauthenticated();
+
+      renderApp("/");
+
+      await screen.findByRole("heading", {
+        name: /prepare viva questions in seconds, not hours/i,
+      });
+
+      const menuButton = await screen.findByRole("button", {
+        name: "Open navigation menu",
+      });
+      expect(menuButton).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(menuButton);
+      });
+
+      expect(menuButton).toHaveAttribute("aria-expanded", "true");
+      const dialog = await screen.findByRole("dialog");
+
+      expect(within(dialog).getByRole("link", { name: "Home" })).toHaveAttribute(
+        "href",
+        "/",
+      );
+      expect(
+        within(dialog).getByRole("link", { name: "How it works" }),
+      ).toHaveAttribute("href", "#how-it-works");
+      expect(
+        within(dialog).getByRole("link", { name: "Built for teachers" }),
+      ).toHaveAttribute("href", "#built-for-teachers");
+      expect(
+        within(dialog).getByRole("link", { name: "Why it matters" }),
+      ).toHaveAttribute("href", "#why-it-matters");
+      expect(within(dialog).getByRole("link", { name: "Login" })).toHaveAttribute(
+        "href",
+        "/login",
+      );
+      expect(
+        within(dialog).getByRole("link", { name: "Sign Up" }),
+      ).toHaveAttribute("href", "/signup");
+
+      await act(async () => {
+        fireEvent.click(
+          within(dialog).getByRole("button", { name: "Close navigation menu" }),
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      });
     });
   });
 });

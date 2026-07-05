@@ -33,3 +33,6 @@ export const editorialListClassName =
   "m-0 grid list-none divide-y divide-outline-variant p-0";
 
 export const editorialRowClassName = "block py-[18px] font-sans";
+
+export const mobileNavFooterLinkClassName =
+  "inline-flex min-h-11 items-center justify-center border border-outline-variant px-[18px] text-sm font-bold uppercase tracking-[0.08em] text-on-surface transition-[background-color,border-color] duration-150 ease-out hover:border-on-surface-variant hover:bg-surface-container-low";

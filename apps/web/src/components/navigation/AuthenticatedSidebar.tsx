@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import {
   cn,
   eyebrowClassName,
+  mobileNavFooterLinkClassName,
   paperPanelClassName,
 } from '../../styles/classes'
 
@@ -63,10 +64,7 @@ export function AuthenticatedSidebar({
       <div className="grid gap-2 border-t border-outline-variant pt-4">
         <p className={eyebrowClassName}>Signed in as</p>
         <p className="text-sm text-on-surface [overflow-wrap:anywhere]">{userEmail}</p>
-        <Link
-          to="/logout"
-          className="inline-flex min-h-11 items-center justify-center border border-outline-variant px-[18px] text-sm font-bold uppercase tracking-[0.08em] text-on-surface transition-[background-color,border-color] duration-150 ease-out hover:border-on-surface-variant hover:bg-surface-container-low"
-        >
+        <Link to="/logout" className={mobileNavFooterLinkClassName}>
           Logout
         </Link>
       </div>

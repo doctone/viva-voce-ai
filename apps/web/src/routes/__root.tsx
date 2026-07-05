@@ -14,17 +14,27 @@ import * as React from "react";
 import { AppProviders } from "../components/AppProviders";
 import { DefaultCatchBoundary } from "../components/DefaultCatchBoundary";
 import { NotFound } from "../components/NotFound";
+import { MobileNavDrawer } from "../components/navigation/MobileNavDrawer";
+import { MobileNavHeader } from "../components/navigation/MobileNavHeader";
 import appCss from "../styles/app.css?url";
 import {
   brandTitleClassName,
   cn,
   eyebrowClassName,
+  mobileNavFooterLinkClassName,
   mutedTextClassName,
   pageFrameClassName,
   pageShellClassName,
 } from "../styles/classes";
 import { seo } from "../utils/seo";
 import { getSupabaseServerClient } from "../utils/supabase-server";
+
+const publicMobileNavItems = [
+  { label: "Home", to: "/" },
+  { label: "How it works", href: "#how-it-works" },
+  { label: "Built for teachers", href: "#built-for-teachers" },
+  { label: "Why it matters", href: "#why-it-matters" },
+] as const;
 
 const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = getSupabaseServerClient();
@@ -155,6 +165,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         state.matches.map((match) => match.routeId),
       ),
   });
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const [isMobileNavOpen, setIsMobileNavOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMobileNavOpen(false);
+  }, [pathname]);
 
   React.useEffect(() => {
     if (import.meta.env.PROD && "serviceWorker" in navigator) {
@@ -178,47 +196,101 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <div className={pageShellClassName}>
           <div className={shouldShowTopbar ? pageFrameClassName : ""}>
             {shouldShowTopbar ? (
-              <header className="mb-16 flex flex-wrap items-center gap-4 border-b border-outline-variant pb-4">
-                <div className="grid gap-1">
-                  <span className={eyebrowClassName}>Academic Minimalist</span>
-                  <Link to="/" className={brandTitleClassName}>
-                    Viva Voce AI
-                  </Link>
-                  <p
-                    className={cn("max-w-[42rem] text-sm", mutedTextClassName)}
-                  >
-                    Quiet software for grading, transcripts, and oral assessment
-                    workflows.
-                  </p>
-                </div>
-                <nav className="ml-auto flex flex-wrap items-center gap-2">
-                  <Link
-                    to="/"
-                    className={navLinkClassName}
-                    activeProps={{
-                      className: cn(navLinkClassName, navLinkActiveClassName),
-                    }}
-                    activeOptions={{ exact: true }}
-                  >
-                    Home
-                  </Link>
-                  {user ? (
-                    <>
-                      <span className="border border-outline-variant bg-surface-container-low px-[14px] py-[10px] text-sm text-on-surface-variant">
-                        {user.email}{" "}
-                      </span>{" "}
-                      <Link to="/logout" className={navLinkClassName}>
-                        {" "}
-                        Logout
+              <>
+                <header className="mb-16 flex flex-wrap items-center gap-4 border-b border-outline-variant pb-4">
+                  <MobileNavHeader
+                    isMenuOpen={isMobileNavOpen}
+                    onOpenMenu={() => setIsMobileNavOpen(true)}
+                  />
+
+                  <div className="hidden lg:contents">
+                    <div className="grid gap-1">
+                      <span className={eyebrowClassName}>
+                        Academic Minimalist
+                      </span>
+                      <Link to="/" className={brandTitleClassName}>
+                        Viva Voce AI
                       </Link>
-                    </>
-                  ) : (
-                    <Link to="/login" className={navLinkClassName}>
-                      Login
-                    </Link>
-                  )}
-                </nav>
-              </header>
+                      <p
+                        className={cn(
+                          "max-w-[42rem] text-sm",
+                          mutedTextClassName,
+                        )}
+                      >
+                        Quiet software for grading, transcripts, and oral
+                        assessment workflows.
+                      </p>
+                    </div>
+                    <nav className="ml-auto flex flex-wrap items-center gap-2">
+                      <Link
+                        to="/"
+                        className={navLinkClassName}
+                        activeProps={{
+                          className: cn(
+                            navLinkClassName,
+                            navLinkActiveClassName,
+                          ),
+                        }}
+                        activeOptions={{ exact: true }}
+                      >
+                        Home
+                      </Link>
+                      {user ? (
+                        <>
+                          <span className="border border-outline-variant bg-surface-container-low px-[14px] py-[10px] text-sm text-on-surface-variant">
+                            {user.email}{" "}
+                          </span>{" "}
+                          <Link to="/logout" className={navLinkClassName}>
+                            {" "}
+                            Logout
+                          </Link>
+                        </>
+                      ) : (
+                        <Link to="/login" className={navLinkClassName}>
+                          Login
+                        </Link>
+                      )}
+                    </nav>
+                  </div>
+                </header>
+
+                <MobileNavDrawer
+                  items={publicMobileNavItems}
+                  open={isMobileNavOpen}
+                  onOpenChange={setIsMobileNavOpen}
+                  footer={
+                    user ? (
+                      <>
+                        <p className={eyebrowClassName}>Signed in as</p>
+                        <p className="text-sm text-on-surface [overflow-wrap:anywhere]">
+                          {user.email}
+                        </p>
+                        <Link
+                          to="/logout"
+                          className={mobileNavFooterLinkClassName}
+                        >
+                          Logout
+                        </Link>
+                      </>
+                    ) : (
+                      <div className="grid gap-2">
+                        <Link
+                          to="/login"
+                          className={mobileNavFooterLinkClassName}
+                        >
+                          Login
+                        </Link>
+                        <Link
+                          to="/signup"
+                          className={mobileNavFooterLinkClassName}
+                        >
+                          Sign Up
+                        </Link>
+                      </div>
+                    )
+                  }
+                />
+              </>
             ) : null}
             {children}
           </div>
