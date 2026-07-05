@@ -1,19 +1,18 @@
 import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouterState } from '@tanstack/react-router'
 import { cn } from '../../styles/classes'
-import { AuthenticatedSidebar } from './AuthenticatedSidebar'
+import { AuthenticatedSidebar, type AuthenticatedNavItem } from './AuthenticatedSidebar'
+import { MobileNavDrawer } from './MobileNavDrawer'
+import { MobileNavHeader } from './MobileNavHeader'
 
 const authenticatedAppShellItems = [
   { label: 'Submissions', to: '/submissions' },
   { label: 'Student Records', to: '/student-records' },
 ] as const
 
-type AuthenticatedAppShellItem = {
-  label: string
-  to: string
-}
-
 type AuthenticatedAppShellProps = {
-  items?: readonly AuthenticatedAppShellItem[]
+  items?: readonly AuthenticatedNavItem[]
   children: ReactNode
   userEmail?: string
 }
@@ -23,6 +22,15 @@ export function AuthenticatedAppShell({
   children,
   userEmail = 'teacher@example.com',
 }: AuthenticatedAppShellProps) {
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+
+  useEffect(() => {
+    setIsMobileNavOpen(false)
+  }, [pathname])
+
   return (
     <div
       className={cn(
@@ -30,7 +38,19 @@ export function AuthenticatedAppShell({
         'lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)]',
       )}
     >
+      <MobileNavHeader
+        isMenuOpen={isMobileNavOpen}
+        onOpenMenu={() => setIsMobileNavOpen(true)}
+      />
+
       <AuthenticatedSidebar items={items} userEmail={userEmail} />
+
+      <MobileNavDrawer
+        items={items}
+        userEmail={userEmail}
+        open={isMobileNavOpen}
+        onOpenChange={setIsMobileNavOpen}
+      />
 
       <main className="min-w-0 px-6 pb-16 pt-8">{children}</main>
     </div>
