@@ -3,9 +3,14 @@ import { createServerFn } from '@tanstack/react-start'
 import { AuthenticatedAppShell } from '../components/navigation/AuthenticatedAppShell'
 import { getSupabaseServerClient } from '../utils/supabase-server'
 
+export type LoginResult = {
+  error: true
+  message: string
+} | undefined
+
 export const loginFn = createServerFn({ method: 'POST' })
   .inputValidator((d: { email: string; password: string }) => d)
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<LoginResult> => {
     const supabase = getSupabaseServerClient()
     const { error } = await supabase.auth.signInWithPassword({
       email: data.email,
