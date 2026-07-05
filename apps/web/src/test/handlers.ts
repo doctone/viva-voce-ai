@@ -21,10 +21,20 @@ export function authenticatedUserHandler(user: TestUser | null = createTestUser(
 }
 
 export function submissionsListHandler(
-  submissions: TestSubmission[] = [createTestSubmission()],
+  submissions: Array<
+    TestSubmission & { vivaQuestionsCount?: number; submissionVivaCount?: number }
+  > = [createTestSubmission()],
 ) {
   return http.get(`${SUPABASE_URL}/rest/v1/submissions`, () =>
-    HttpResponse.json(submissions),
+    HttpResponse.json(
+      submissions.map(
+        ({ vivaQuestionsCount = 0, submissionVivaCount = 0, ...submission }) => ({
+          ...submission,
+          viva_questions: [{ count: vivaQuestionsCount }],
+          submission_viva: [{ count: submissionVivaCount }],
+        }),
+      ),
+    ),
   )
 }
 

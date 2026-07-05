@@ -26,6 +26,38 @@ describe('SubmissionsPage', () => {
     expect(screen.queryByText('2026-03-12T09:00:00.000Z')).not.toBeInTheDocument()
   })
 
+  it('shows the submission status as a chip based on question and recording progress', async () => {
+    server.use(
+      submissionsListHandler([
+        { ...testSubmission, vivaQuestionsCount: 0, submissionVivaCount: 0 },
+        {
+          ...createTestSubmission({
+            id: '30420000-0000-0000-0000-000000000001',
+            student_id: 'STU-1098',
+            submission_title: 'Postcolonial Literature Reflection',
+          }),
+          vivaQuestionsCount: 12,
+          submissionVivaCount: 0,
+        },
+        {
+          ...createTestSubmission({
+            id: '30420000-0000-0000-0000-000000000002',
+            student_id: 'STU-1120',
+            submission_title: 'Victorian Novel Analysis',
+          }),
+          vivaQuestionsCount: 12,
+          submissionVivaCount: 1,
+        },
+      ]),
+    )
+
+    renderWithRouter(<SubmissionsPage />, '/submissions')
+
+    expect(await screen.findByText('Pending Questions')).toBeInTheDocument()
+    expect(screen.getByText('Ready for Viva')).toBeInTheDocument()
+    expect(screen.getByText('Recorded')).toBeInTheDocument()
+  })
+
   it('shows a helpful empty state when there are no submissions', async () => {
     server.use(submissionsListHandler([]))
 

@@ -5,16 +5,45 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table'
+import { cn } from '../../../styles/classes'
+
+export type SubmissionStatus = 'pending' | 'questions_ready' | 'recorded'
 
 export type SubmissionRow = {
   id: string
   studentId: string
   submissionTitle: string
   dateSubmitted: string
+  status: SubmissionStatus
 }
 
 type SubmissionsTableProps = {
   rows: SubmissionRow[]
+}
+
+const STATUS_LABEL: Record<SubmissionStatus, string> = {
+  pending: 'Pending Questions',
+  questions_ready: 'Ready for Viva',
+  recorded: 'Recorded',
+}
+
+const STATUS_CHIP_CLASSNAME: Record<SubmissionStatus, string> = {
+  pending: 'bg-surface-container text-on-surface-variant',
+  questions_ready: 'bg-tertiary-container text-on-tertiary',
+  recorded: 'bg-primary-container text-on-primary-container',
+}
+
+function StatusChip({ status }: { status: SubmissionStatus }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em]',
+        STATUS_CHIP_CLASSNAME[status],
+      )}
+    >
+      {STATUS_LABEL[status]}
+    </span>
+  )
 }
 
 const columnHelper = createColumnHelper<SubmissionRow>()
@@ -51,6 +80,10 @@ const columns = [
         {info.getValue()}
       </span>
     ),
+  }),
+  columnHelper.accessor('status', {
+    header: 'Status',
+    cell: (info) => <StatusChip status={info.getValue()} />,
   }),
 ]
 
