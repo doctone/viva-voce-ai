@@ -9,14 +9,14 @@ import {
 import type { ErrorComponentProps } from '@tanstack/react-router'
 import { Button } from './ui/Button'
 import { buttonClassName } from './ui/Button'
+import { cn } from '~/lib/utils'
 import {
-  cn,
   eyebrowClassName,
   pageFrameClassName,
   pageShellClassName,
   paperPanelClassName,
   sectionCardClassName,
-} from '../styles/classes'
+} from '~/lib/class-names'
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter()

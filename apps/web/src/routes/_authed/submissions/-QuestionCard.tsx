@@ -2,7 +2,8 @@ import * as React from 'react'
 import { Button } from '../../../components/ui/Button'
 import { SelectField } from '../../../components/ui/SelectField'
 import { TextAreaField } from '../../../components/ui/TextAreaField'
-import { cn, eyebrowClassName, mutedTextClassName, paperPanelClassName } from '../../../styles/classes'
+import { cn } from '~/lib/utils'
+import { eyebrowClassName, mutedTextClassName, paperPanelClassName } from '~/lib/class-names'
 
 type QuestionCardProps = {
   id: string

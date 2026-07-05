@@ -2,7 +2,8 @@ import { Link, redirect, createFileRoute } from '@tanstack/react-router'
 import { createServerFn, useServerFn } from '@tanstack/react-start'
 import { useMutation } from '../hooks/useMutation'
 import { Auth } from '../components/Auth'
-import { cn, mutedTextClassName } from '../styles/classes'
+import { cn } from '~/lib/utils'
+import { mutedTextClassName } from '~/lib/class-names'
 import { getSupabaseServerClient } from '../utils/supabase-server'
 
 export const signupFn = createServerFn({ method: 'POST' })

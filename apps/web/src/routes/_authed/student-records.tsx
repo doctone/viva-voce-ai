@@ -1,12 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { cn } from '~/lib/utils'
 import {
-  cn,
   eyebrowClassName,
   headingOneClassName,
   mutedTextClassName,
   paperPanelClassName,
   sectionCardClassName,
-} from '../../styles/classes'
+} from '~/lib/class-names'
 
 export const Route = createFileRoute('/_authed/student-records')({
   component: StudentRecordsPage,

@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { Button } from './ui/Button'
+import { cn } from '~/lib/utils'
 import {
-  cn,
   editorialListClassName,
   editorialRowClassName,
   eyebrowClassName,
@@ -10,7 +10,7 @@ import {
   ledeClassName,
   mutedTextClassName,
   paperPanelClassName,
-} from '../styles/classes'
+} from '~/lib/class-names'
 
 const howItWorksSteps = [
   {

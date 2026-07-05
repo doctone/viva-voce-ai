@@ -1,4 +1,5 @@
-import { brandTitleClassName, cn, paperPanelClassName } from '../../styles/classes'
+import { cn } from '~/lib/utils'
+import { brandTitleClassName, paperPanelClassName } from '~/lib/class-names'
 
 type MobileNavHeaderProps = {
   isMenuOpen: boolean

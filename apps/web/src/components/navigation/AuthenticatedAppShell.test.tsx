@@ -8,13 +8,13 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { cn } from '~/lib/utils'
 import {
-  cn,
   headingOneClassName,
   mutedTextClassName,
   paperPanelClassName,
   sectionCardClassName,
-} from '../../styles/classes'
+} from '~/lib/class-names'
 import { AuthenticatedAppShell } from './AuthenticatedAppShell'
 import { render } from '../../test/router'
 import { getShouldShowTopbar } from '../../routes/__root'

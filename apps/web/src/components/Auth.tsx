@@ -1,12 +1,12 @@
 import { Button } from './ui/Button'
+import { cn } from '~/lib/utils'
 import {
-  cn,
   eyebrowClassName,
   headingOneClassName,
   headingTwoClassName,
   mutedTextClassName,
   paperPanelClassName,
-} from '../styles/classes'
+} from '~/lib/class-names'
 import { TextField } from './ui/TextField'
 
 export function Auth({

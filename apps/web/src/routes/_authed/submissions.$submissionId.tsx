@@ -9,15 +9,15 @@ import {
   TabsTrigger,
 } from "../../components/ui/Tabs";
 import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
+import { cn } from "~/lib/utils";
 import {
-  cn,
   eyebrowClassName,
   headingOneClassName,
   headingTwoClassName,
   mutedTextClassName,
   paperPanelClassName,
   sectionCardClassName,
-} from "../../styles/classes";
+} from "~/lib/class-names";
 import { getSupabaseBrowserClient } from "../../utils/supabase-browser";
 import {
   AddManualQuestionCard,

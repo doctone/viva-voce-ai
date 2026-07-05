@@ -1,10 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import {
-  cn,
-  eyebrowClassName,
-  mobileNavFooterLinkClassName,
-  paperPanelClassName,
-} from '../../styles/classes'
+import { cn } from '~/lib/utils'
+import { eyebrowClassName, mobileNavFooterLinkClassName, paperPanelClassName } from '~/lib/class-names'
 
 export type AuthenticatedNavItem = {
   label: string
