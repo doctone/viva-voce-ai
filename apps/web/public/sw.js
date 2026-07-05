@@ -1,6 +1,5 @@
-const CACHE_NAME = 'viva-voce-ai-v2'
+const CACHE_NAME = 'viva-voce-ai-v3'
 const APP_SHELL = [
-  '/',
   '/site.webmanifest',
   '/icon.svg',
   '/favicon.svg',
@@ -22,6 +21,12 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
   const requestUrl = new URL(event.request.url)
   if (requestUrl.origin !== self.location.origin) return
+
+  // Never cache server function calls — they carry auth state
+  if (requestUrl.pathname.startsWith('/_serverFn')) return
+
+  // Never cache HTML navigation requests — they depend on auth state
+  if (event.request.mode === 'navigate') return
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
