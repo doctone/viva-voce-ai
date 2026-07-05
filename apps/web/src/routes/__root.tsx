@@ -44,8 +44,9 @@ export const Route = createRootRoute({
     const user = await fetchUser();
     const isAuthPage =
       location.pathname === "/login" || location.pathname === "/signup";
+    const isPublicPage = isAuthPage || location.pathname === "/";
 
-    if (!user && !isAuthPage) {
+    if (!user && !isPublicPage) {
       throw redirect({
         to: "/login",
       });
