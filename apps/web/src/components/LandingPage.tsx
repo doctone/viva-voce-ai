@@ -65,7 +65,7 @@ export function LandingPage() {
         />
       </section>
 
-      <section className="grid gap-8 py-16">
+      <section id="how-it-works" className="grid gap-8 py-16">
         <h2 className={headingTwoClassName}>How it works</h2>
         <div className="grid gap-8 lg:grid-cols-3">
           {howItWorksSteps.map((step) => (
@@ -87,7 +87,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="grid gap-6 py-16">
+      <section id="built-for-teachers" className="grid gap-6 py-16">
         <h2 className={headingTwoClassName}>Built for teachers</h2>
         <ul
           aria-label="Built for teachers"
@@ -101,7 +101,7 @@ export function LandingPage() {
         </ul>
       </section>
 
-      <section className="grid gap-4 py-16">
+      <section id="why-it-matters" className="grid gap-4 py-16">
         <h2 className={headingTwoClassName}>Why viva voce matters</h2>
         <p className={cn('max-w-[42rem]', ledeClassName)}>
           In an era where AI can produce polished written work in seconds, a

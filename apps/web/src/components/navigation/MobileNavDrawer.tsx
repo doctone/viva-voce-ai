@@ -1,25 +1,29 @@
+import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Dialog as DialogPrimitive } from 'radix-ui'
-import { cn, eyebrowClassName, paperPanelClassName } from '../../styles/classes'
+import { cn, paperPanelClassName } from '../../styles/classes'
 import {
   authenticatedNavLinkActiveClassName,
   authenticatedNavLinkClassName,
-  type AuthenticatedNavItem,
 } from './AuthenticatedSidebar'
 
+export type MobileNavItem = { label: string; to: string } | { label: string; href: string }
+
 type MobileNavDrawerProps = {
-  items: readonly AuthenticatedNavItem[]
-  userEmail: string
+  items: readonly MobileNavItem[]
   open: boolean
   onOpenChange: (open: boolean) => void
+  footer?: ReactNode
 }
 
 export function MobileNavDrawer({
   items,
-  userEmail,
   open,
   onOpenChange,
+  footer,
 }: MobileNavDrawerProps) {
+  const closeMenu = () => onOpenChange(false)
+
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
@@ -45,7 +49,7 @@ export function MobileNavDrawer({
             Navigation menu
           </DialogPrimitive.Title>
           <DialogPrimitive.Description className="sr-only">
-            Site navigation links, account information, and logout
+            Site navigation links{footer ? ' and account actions' : ''}
           </DialogPrimitive.Description>
 
           <div className="flex items-center justify-between">
@@ -66,33 +70,38 @@ export function MobileNavDrawer({
             className="-mx-8 grid content-start justify-items-stretch gap-1"
             aria-label="Primary"
           >
-            {items.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={authenticatedNavLinkClassName}
-                activeProps={{
-                  className: authenticatedNavLinkActiveClassName,
-                }}
-                activeOptions={{ exact: true }}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {items.map((item) =>
+              'to' in item ? (
+                <Link
+                  key={item.label}
+                  to={item.to}
+                  className={authenticatedNavLinkClassName}
+                  activeProps={{
+                    className: authenticatedNavLinkActiveClassName,
+                  }}
+                  activeOptions={{ exact: true }}
+                  onClick={closeMenu}
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className={authenticatedNavLinkClassName}
+                  onClick={closeMenu}
+                >
+                  {item.label}
+                </a>
+              ),
+            )}
           </nav>
 
-          <div className="grid gap-2 border-t border-outline-variant pt-4">
-            <p className={eyebrowClassName}>Signed in as</p>
-            <p className="text-sm text-on-surface [overflow-wrap:anywhere]">
-              {userEmail}
-            </p>
-            <Link
-              to="/logout"
-              className="inline-flex min-h-11 items-center justify-center border border-outline-variant px-[18px] text-sm font-bold uppercase tracking-[0.08em] text-on-surface transition-[background-color,border-color] duration-150 ease-out hover:border-on-surface-variant hover:bg-surface-container-low"
-            >
-              Logout
-            </Link>
-          </div>
+          {footer ? (
+            <div className="grid gap-2 border-t border-outline-variant pt-4">
+              {footer}
+            </div>
+          ) : null}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
