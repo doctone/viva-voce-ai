@@ -17,16 +17,19 @@ const howItWorksSteps = [
     title: 'Submit student work',
     description:
       'Paste or upload a piece of coursework — no special formatting needed.',
+    imageSrc: '/landing-step-submit.png',
   },
   {
     title: 'AI generates tailored questions',
     description:
       'Get questions across comprehension, argumentation, and authenticity, mapped to what you’re actually marking.',
+    imageSrc: '/landing-step-generate.png',
   },
   {
     title: 'Review, edit, and record',
     description:
       'You stay in control — edit any question, add your own, then record the viva.',
+    imageSrc: '/landing-step-review.png',
   },
 ] as const
 
@@ -59,7 +62,7 @@ export function LandingPage() {
           </div>
         </div>
         <img
-          src="/app-screenshot-placeholder.png"
+          src="/landing-hero-workspace.png"
           alt="Screenshot of the Viva Voce AI submission review workspace"
           className={cn('aspect-[4/3] w-full object-cover', paperPanelClassName)}
         />
@@ -71,7 +74,7 @@ export function LandingPage() {
           {howItWorksSteps.map((step) => (
             <div key={step.title} className="grid gap-3">
               <img
-                src="/app-screenshot-placeholder.png"
+                src={step.imageSrc}
                 alt={`Illustration: ${step.title}`}
                 className={cn(
                   'aspect-[4/3] w-full object-cover',
