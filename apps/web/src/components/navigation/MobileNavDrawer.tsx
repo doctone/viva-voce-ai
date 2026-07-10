@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Dialog as DialogPrimitive } from 'radix-ui'
-import { cn, paperPanelClassName } from '../../styles/classes'
+import { cn } from '~/lib/utils'
+import { eyebrowClassName, paperPanelClassName } from '~/lib/class-names'
 import {
   authenticatedNavLinkActiveClassName,
   authenticatedNavLinkClassName,

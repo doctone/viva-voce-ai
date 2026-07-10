@@ -1,14 +1,14 @@
 import { Link } from '@tanstack/react-router'
 import { Button, buttonClassName } from './ui/Button'
+import { cn } from '~/lib/utils'
 import {
-  cn,
   eyebrowClassName,
   mutedTextClassName,
   pageFrameClassName,
   pageShellClassName,
   paperPanelClassName,
   sectionCardClassName,
-} from '../styles/classes'
+} from '~/lib/class-names'
 
 export function NotFound({ children }: { children?: React.ReactNode }) {
   return (

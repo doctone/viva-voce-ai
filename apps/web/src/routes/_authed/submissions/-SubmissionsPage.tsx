@@ -2,12 +2,12 @@ import { Link } from '@tanstack/react-router'
 import { buttonClassName } from '../../../components/ui/Button'
 import { SubmissionsTable } from './-SubmissionsTable'
 import { useSubmissions } from './-useSubmissions'
+import { cn } from '~/lib/utils'
 import {
-  cn,
   eyebrowClassName,
   headingOneClassName,
   mutedTextClassName,
-} from '../../../styles/classes'
+} from '~/lib/class-names'
 
 export function SubmissionsPage() {
   const submissionsQuery = useSubmissions()

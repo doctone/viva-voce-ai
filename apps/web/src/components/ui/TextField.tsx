@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { cn } from '../../styles/classes'
+import { cn } from '~/lib/utils'
 import { FieldShell, fieldControlClassName } from './Field'
 
 type TextFieldProps = React.InputHTMLAttributes<HTMLInputElement> & {

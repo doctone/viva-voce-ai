@@ -17,15 +17,15 @@ import { NotFound } from "../components/NotFound";
 import { MobileNavDrawer } from "../components/navigation/MobileNavDrawer";
 import { MobileNavHeader } from "../components/navigation/MobileNavHeader";
 import appCss from "../styles/app.css?url";
+import { cn } from "~/lib/utils";
 import {
   brandTitleClassName,
-  cn,
   eyebrowClassName,
   mobileNavFooterLinkClassName,
   mutedTextClassName,
   pageFrameClassName,
   pageShellClassName,
-} from "../styles/classes";
+} from "~/lib/class-names";
 import { seo } from "../utils/seo";
 import { getSupabaseServerClient } from "../utils/supabase-server";
 

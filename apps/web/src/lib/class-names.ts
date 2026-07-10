@@ -1,7 +1,3 @@
-export function cn(...classNames: Array<string | false | null | undefined>) {
-  return classNames.filter(Boolean).join(" ");
-}
-
 export const pageShellClassName = "min-h-screen";
 
 export const pageFrameClassName =

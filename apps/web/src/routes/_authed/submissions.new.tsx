@@ -11,14 +11,14 @@ import {
 import { useMutation } from '../../hooks/useMutation'
 import { getSupabaseBrowserClient } from '../../utils/supabase-browser'
 import { Button } from '../../components/ui/Button'
+import { cn } from '~/lib/utils'
 import {
-  cn,
   eyebrowClassName,
   headingOneClassName,
   mutedTextClassName,
   paperPanelClassName,
   sectionCardClassName,
-} from '../../styles/classes'
+} from '~/lib/class-names'
 
 export const Route = createFileRoute('/_authed/submissions/new')({
   component: NewSubmissionPage,
