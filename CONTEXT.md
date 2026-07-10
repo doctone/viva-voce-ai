@@ -40,8 +40,36 @@ _Avoid_: Question type, topic, tag
 A viva question identified as especially useful when the teacher must select a smaller question set.
 _Avoid_: Starred question, highlighted question, required question
 
+**Viva Question Set**:
+The ordered selection of viva questions that a teacher has prepared for one viva.
+_Avoid_: Question list, selected questions, quiz
+
+**Asked Question**:
+A viva question or unplanned follow-up that the teacher actually asks during a Viva Session.
+_Avoid_: Selected question, prompt, transcript segment
+
 ### Viva Evidence
+
+**Viva Session**:
+One conducted instance of a viva, from its readiness checks until the teacher ends the conversation.
+_Avoid_: Recording, attempt, interview
+
+**Observation**:
+A private note made by the teacher during or after a viva about the student's response or conduct.
+_Avoid_: Comment, feedback, annotation
+
+**Evidence Marker**:
+A teacher-applied indication that a response demonstrates clear understanding, needs further probing, or raises a concern.
+_Avoid_: Score, grade, AI flag
 
 **Viva Recording**:
 An audio record of a viva associated with its submission.
 _Avoid_: Submission audio, attachment, playback
+
+**Viva Conclusion**:
+The teacher's explicit determination after reviewing the viva: understanding demonstrated, further review required, authenticity concern, or unable to conclude.
+_Avoid_: AI verdict, grade, result
+
+**Viva Record**:
+The signed account of a completed viva, including what was asked, the teacher's observations and evidence, and the Viva Conclusion.
+_Avoid_: Report, transcript, session data
