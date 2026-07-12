@@ -31,6 +31,15 @@ import {
   createSupabaseVivaSessionRepository,
   startVivaSession,
 } from "../../features/submissions/vivaSession";
+import {
+  applyEvidenceMarker,
+  createSupabaseAskedQuestionRepository,
+  createSupabaseEvidenceMarkerRepository,
+  createSupabaseObservationRepository,
+  recordAskedQuestion,
+  saveObservation,
+  type EvidenceMarkerType,
+} from "../../features/submissions/vivaSessionCapture";
 import { cn } from "~/lib/utils";
 import {
   eyebrowClassName,
@@ -44,6 +53,10 @@ import {
   QuestionCard,
 } from "./submissions/-QuestionCard";
 import { QuestionSetPanel } from "./submissions/-QuestionSetPanel";
+import {
+  VivaSessionCapturePanel,
+  type CaptureAskedQuestion,
+} from "./submissions/-VivaSessionCapturePanel";
 import {
   VivaSessionReadinessPanel,
   type VivaSessionStartInput,
@@ -225,6 +238,92 @@ async function fetchActiveVivaSession(vivaQuestionSetId: string) {
   const repository = createSupabaseVivaSessionRepository(supabase);
 
   return repository.findActiveSession(vivaQuestionSetId);
+}
+
+type CaptureAskedQuestionRow = {
+  id: string;
+  is_unplanned: boolean;
+  question_text: string;
+  viva_question_id: string | null;
+};
+
+type CaptureObservationRow = {
+  asked_question_id: string;
+  content: string;
+};
+
+type CaptureEvidenceMarkerRow = {
+  asked_question_id: string;
+  marker_type: EvidenceMarkerType;
+};
+
+async function fetchCaptureAskedQuestions(
+  vivaSessionId: string,
+): Promise<CaptureAskedQuestion[]> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("asked_questions")
+    .select("id, question_text, is_unplanned, viva_question_id, asked_at")
+    .eq("viva_session_id", vivaSessionId)
+    .order("asked_at", { ascending: true });
+
+  if (error) {
+    throw new Error("We could not load Asked Questions.");
+  }
+
+  const rows = (data as CaptureAskedQuestionRow[] | null) ?? [];
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const askedQuestionIds = rows.map((row) => row.id);
+
+  const [observationsResult, evidenceMarkersResult] = await Promise.all([
+    supabase
+      .from("observations")
+      .select("asked_question_id, content")
+      .in("asked_question_id", askedQuestionIds),
+    supabase
+      .from("evidence_markers")
+      .select("asked_question_id, marker_type")
+      .in("asked_question_id", askedQuestionIds),
+  ]);
+
+  if (observationsResult.error || evidenceMarkersResult.error) {
+    throw new Error("We could not load Observations and Evidence Markers.");
+  }
+
+  const observationsByAskedQuestionId = new Map(
+    ((observationsResult.data as CaptureObservationRow[] | null) ?? []).map(
+      (row) => [row.asked_question_id, row.content] as const,
+    ),
+  );
+  const evidenceMarkersByAskedQuestionId = new Map(
+    (
+      (evidenceMarkersResult.data as CaptureEvidenceMarkerRow[] | null) ?? []
+    ).map((row) => [row.asked_question_id, row.marker_type] as const),
+  );
+
+  return rows.map((row) => {
+    const observationContent = observationsByAskedQuestionId.get(row.id);
+    const evidenceMarkerType = evidenceMarkersByAskedQuestionId.get(row.id);
+
+    return {
+      evidenceMarker:
+        evidenceMarkerType !== undefined
+          ? { markerType: evidenceMarkerType }
+          : null,
+      id: row.id,
+      isUnplanned: row.is_unplanned,
+      observation:
+        observationContent !== undefined
+          ? { content: observationContent }
+          : null,
+      questionText: row.question_text,
+      vivaQuestionId: row.viva_question_id,
+    };
+  });
 }
 
 type SubmissionVivaRecord = {
@@ -558,7 +657,96 @@ export function SubmissionDetailPage() {
     queryFn: () => fetchActiveVivaSession(vivaQuestionSetId as string),
     queryKey: ["viva-session", vivaQuestionSetId ?? null],
   });
+  const vivaSessionId = vivaSessionQuery.data?.id;
+  const askedQuestionsQuery = useQuery({
+    enabled: Boolean(vivaSessionId),
+    queryFn: () => fetchCaptureAskedQuestions(vivaSessionId as string),
+    queryKey: ["asked-questions", vivaSessionId ?? null],
+  });
   const checkEquipment = useEquipmentCheck();
+
+  const invalidateAskedQuestions = React.useCallback(async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ["asked-questions", vivaSessionId ?? null],
+    });
+  }, [queryClient, vivaSessionId]);
+
+  const askPlannedQuestion = React.useCallback(
+    async (vivaQuestionId: string) => {
+      if (!vivaSessionId) {
+        return;
+      }
+
+      const plannedQuestion = questions.find(
+        (question) => question.id === vivaQuestionId,
+      );
+
+      if (!plannedQuestion) {
+        return;
+      }
+
+      const supabase = getSupabaseBrowserClient();
+      const repository = createSupabaseAskedQuestionRepository(supabase);
+
+      await recordAskedQuestion(
+        {
+          questionText: plannedQuestion.questionText,
+          vivaQuestionId,
+          vivaSessionId,
+        },
+        repository,
+      );
+
+      await invalidateAskedQuestions();
+    },
+    [invalidateAskedQuestions, questions, vivaSessionId],
+  );
+
+  const askFollowUpQuestion = React.useCallback(
+    async (questionText: string) => {
+      if (!vivaSessionId) {
+        return;
+      }
+
+      const supabase = getSupabaseBrowserClient();
+      const repository = createSupabaseAskedQuestionRepository(supabase);
+
+      await recordAskedQuestion(
+        { questionText, vivaQuestionId: null, vivaSessionId },
+        repository,
+      );
+
+      await invalidateAskedQuestions();
+    },
+    [invalidateAskedQuestions, vivaSessionId],
+  );
+
+  const saveAskedQuestionObservation = React.useCallback(
+    async (askedQuestionId: string, content: string) => {
+      const supabase = getSupabaseBrowserClient();
+      const repository = createSupabaseObservationRepository(supabase);
+      const result = await saveObservation(askedQuestionId, content, repository);
+
+      if (result.outcome === "rejected") {
+        throw new Error(result.reason);
+      }
+
+      await invalidateAskedQuestions();
+    },
+    [invalidateAskedQuestions],
+  );
+
+  const applyAskedQuestionEvidenceMarker = React.useCallback(
+    async (askedQuestionId: string, markerType: EvidenceMarkerType) => {
+      const supabase = getSupabaseBrowserClient();
+      const repository = createSupabaseEvidenceMarkerRepository(supabase);
+
+      await applyEvidenceMarker(askedQuestionId, markerType, repository);
+
+      await invalidateAskedQuestions();
+    },
+    [invalidateAskedQuestions],
+  );
 
   const saveQuestionText = React.useCallback(
     async (questionId: string, questionText: string) => {
@@ -957,6 +1145,20 @@ export function SubmissionDetailPage() {
                 studentId={submission.student_id}
                 submissionTitle={submission.submission_title}
               />
+
+              {vivaSessionQuery.data ? (
+                <VivaSessionCapturePanel
+                  askedQuestions={askedQuestionsQuery.data ?? []}
+                  plannedQuestions={setQuestions.map((question) => ({
+                    id: question.id,
+                    questionText: question.questionText,
+                  }))}
+                  onApplyEvidenceMarker={applyAskedQuestionEvidenceMarker}
+                  onAskFollowUpQuestion={askFollowUpQuestion}
+                  onAskPlannedQuestion={askPlannedQuestion}
+                  onSaveObservation={saveAskedQuestionObservation}
+                />
+              ) : null}
 
               <section
                 className={cn(

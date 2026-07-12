@@ -3,6 +3,9 @@ import {
   createTestSubmission,
   createTestUser,
   createTestVivaQuestionSet,
+  type TestAskedQuestion,
+  type TestEvidenceMarker,
+  type TestObservation,
   type TestQuestion,
   type TestSubmission,
   type TestSubmissionViva,
@@ -75,6 +78,82 @@ export function vivaSessionHandler(sessions: TestVivaSession[] = []) {
   )
 }
 
+export function askedQuestionsHandler(records: TestAskedQuestion[] = []) {
+  return http.get(`${SUPABASE_URL}/rest/v1/asked_questions`, () =>
+    HttpResponse.json(records),
+  )
+}
+
+export function askedQuestionInsertHandler(
+  options: {
+    id?: string
+    onRequest?: (body: Record<string, unknown>) => void
+  } = {},
+) {
+  const { id = '80420000-0000-0000-0000-000000000000', onRequest } = options
+
+  return http.post(`${SUPABASE_URL}/rest/v1/asked_questions`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    onRequest?.(body)
+
+    return HttpResponse.json(
+      [{ id, asked_at: '2026-07-12T09:05:00.000Z', ...body }],
+      { status: 201 },
+    )
+  })
+}
+
+export function observationsHandler(records: TestObservation[] = []) {
+  return http.get(`${SUPABASE_URL}/rest/v1/observations`, () =>
+    HttpResponse.json(records),
+  )
+}
+
+export function observationUpsertHandler(
+  options: {
+    onRequest?: (body: Record<string, unknown>) => void
+    status?: number
+  } = {},
+) {
+  const { onRequest, status = 201 } = options
+
+  return http.post(`${SUPABASE_URL}/rest/v1/observations`, async ({ request }) => {
+    if (status !== 201) {
+      return HttpResponse.json({ message: 'Request failed' }, { status })
+    }
+
+    const body = (await request.json()) as Record<string, unknown>
+    onRequest?.(body)
+
+    return HttpResponse.json(
+      [{ created_at: '2026-07-12T09:10:00.000Z', ...body }],
+      { status },
+    )
+  })
+}
+
+export function evidenceMarkersHandler(records: TestEvidenceMarker[] = []) {
+  return http.get(`${SUPABASE_URL}/rest/v1/evidence_markers`, () =>
+    HttpResponse.json(records),
+  )
+}
+
+export function evidenceMarkerUpsertHandler(
+  options: { onRequest?: (body: Record<string, unknown>) => void } = {},
+) {
+  const { onRequest } = options
+
+  return http.post(`${SUPABASE_URL}/rest/v1/evidence_markers`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    onRequest?.(body)
+
+    return HttpResponse.json(
+      [{ created_at: '2026-07-12T09:15:00.000Z', ...body }],
+      { status: 201 },
+    )
+  })
+}
+
 export function submissionCreateHandler(
   options: {
     id?: string
@@ -139,4 +218,7 @@ export const defaultHandlers = [
   signedUrlHandler(),
   vivaQuestionSetHandler(),
   vivaSessionHandler(),
+  askedQuestionsHandler(),
+  observationsHandler(),
+  evidenceMarkersHandler(),
 ]

@@ -1,14 +1,18 @@
-import { act, screen, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import { SubmissionDetailPage } from './submissions.$submissionId'
 import {
+  createTestAskedQuestion,
   createTestQuestion,
   createTestSubmission,
   createTestSubmissionViva,
   createTestVivaQuestionSet,
   createTestVivaSession,
+  type TestAskedQuestion,
+  type TestEvidenceMarker,
+  type TestObservation,
 } from '../../test/factories'
 import {
   signedUrlHandler,
@@ -1136,6 +1140,112 @@ describe('SubmissionDetailPage', () => {
     expect(
       screen.queryByRole('button', { name: 'Start Viva Session' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('captures Observations and Evidence Markers against Asked Questions during an active Viva Session', async () => {
+    generateSubmissionVivaSpy.mockReset()
+    equipmentCheckSpy.mockReset()
+
+    const activeSession = createTestVivaSession()
+    const plannedQuestion = createTestQuestion({ set_position: 0 })
+    const createdAskedQuestion = createTestAskedQuestion({
+      viva_question_id: plannedQuestion.id,
+      question_text: plannedQuestion.question_text,
+    })
+
+    let askedQuestions: TestAskedQuestion[] = []
+    let observations: TestObservation[] = []
+    let evidenceMarkers: TestEvidenceMarker[] = []
+    let observationRequestBody: Record<string, unknown> | null = null
+    let evidenceMarkerRequestBody: Record<string, unknown> | null = null
+
+    server.use(
+      ...submissionWithQuestionsHandlers(testSubmission, [plannedQuestion]),
+      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'ready' })),
+      submissionVivaHandler([]),
+      vivaSessionHandler([activeSession]),
+      http.get(`${SUPABASE_URL}/rest/v1/asked_questions`, () =>
+        HttpResponse.json(askedQuestions),
+      ),
+      http.post(`${SUPABASE_URL}/rest/v1/asked_questions`, async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>
+        askedQuestions = [{ ...createdAskedQuestion, ...body }]
+        return HttpResponse.json(askedQuestions, { status: 201 })
+      }),
+      http.get(`${SUPABASE_URL}/rest/v1/observations`, () =>
+        HttpResponse.json(observations),
+      ),
+      http.post(`${SUPABASE_URL}/rest/v1/observations`, async ({ request }) => {
+        observationRequestBody = (await request.json()) as Record<string, unknown>
+        observations = [
+          {
+            asked_question_id: createdAskedQuestion.id,
+            content: observationRequestBody.content as string,
+            teacher_id: '20420000-0000-0000-0000-000000000000',
+            created_at: '2026-07-12T09:10:00.000Z',
+            updated_at: '2026-07-12T09:10:00.000Z',
+          },
+        ]
+        return HttpResponse.json(observations, { status: 201 })
+      }),
+      http.get(`${SUPABASE_URL}/rest/v1/evidence_markers`, () =>
+        HttpResponse.json(evidenceMarkers),
+      ),
+      http.post(`${SUPABASE_URL}/rest/v1/evidence_markers`, async ({ request }) => {
+        evidenceMarkerRequestBody = (await request.json()) as Record<string, unknown>
+        evidenceMarkers = [
+          {
+            asked_question_id: createdAskedQuestion.id,
+            marker_type: evidenceMarkerRequestBody.marker_type as TestEvidenceMarker['marker_type'],
+            teacher_id: '20420000-0000-0000-0000-000000000000',
+            created_at: '2026-07-12T09:15:00.000Z',
+            updated_at: '2026-07-12T09:15:00.000Z',
+          },
+        ]
+        return HttpResponse.json(evidenceMarkers, { status: 201 })
+      }),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
+
+    expect(await screen.findByText('Viva Session in progress')).toBeInTheDocument()
+
+    await user.click(await screen.findByRole('button', { name: 'Mark as asked' }))
+
+    expect(
+      await screen.findByRole('button', { name: plannedQuestion.question_text }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Clear understanding' }))
+
+    await waitFor(() => {
+      expect(evidenceMarkerRequestBody).toMatchObject({
+        marker_type: 'clear_understanding',
+      })
+    })
+
+    await user.type(
+      screen.getByLabelText('Observation'),
+      'Confident and well reasoned.',
+    )
+
+    await waitFor(
+      () => {
+        expect(observationRequestBody).toMatchObject({
+          content: 'Confident and well reasoned.',
+        })
+      },
+      { timeout: 3000 },
+    )
+
+    expect(await screen.findByText('Saved')).toBeInTheDocument()
   })
 
   it('cancels the readiness checklist without starting a Viva Session', async () => {
