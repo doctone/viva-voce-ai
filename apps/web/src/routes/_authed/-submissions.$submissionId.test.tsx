@@ -8,6 +8,7 @@ import {
   createTestSubmission,
   createTestSubmissionViva,
   createTestVivaQuestionSet,
+  createTestVivaSession,
 } from '../../test/factories'
 import {
   signedUrlHandler,
@@ -15,6 +16,7 @@ import {
   submissionVivaHandler,
   submissionWithQuestionsHandlers,
   vivaQuestionSetHandler,
+  vivaSessionHandler,
 } from '../../test/handlers'
 import { renderWithRouter } from '../../test/router'
 import { server } from '../../test/server'
@@ -29,9 +31,14 @@ const testSubmission = createTestSubmission({
 })
 
 const generateSubmissionVivaSpy = vi.fn()
+const equipmentCheckSpy = vi.fn()
 
 vi.mock('../../features/submissions/useGenerateSubmissionViva', () => ({
   useGenerateSubmissionViva: () => generateSubmissionVivaSpy,
+}))
+
+vi.mock('../../features/submissions/useEquipmentCheck', () => ({
+  useEquipmentCheck: () => equipmentCheckSpy,
 }))
 
 function createDeferred<T>() {
@@ -1038,5 +1045,142 @@ describe('SubmissionDetailPage', () => {
     await user.click(screen.getByRole('button', { name: 'Revert set to draft' }))
 
     expect(await screen.findByText('Draft')).toBeInTheDocument()
+  })
+
+  it('cannot start a Viva Session while the Viva Question Set is a draft', async () => {
+    generateSubmissionVivaSpy.mockReset()
+    equipmentCheckSpy.mockReset()
+
+    server.use(
+      ...submissionWithQuestionsHandlers(testSubmission, [
+        createTestQuestion({ set_position: 0 }),
+      ]),
+      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'draft' })),
+      vivaSessionHandler([]),
+      submissionVivaHandler([]),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
+
+    expect(
+      await screen.findByText(
+        'Mark the Viva Question Set ready before starting a Viva Session.',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Start Viva Session' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('starts a Viva Session once the readiness checklist is complete, and does not allow starting a second one', async () => {
+    generateSubmissionVivaSpy.mockReset()
+    equipmentCheckSpy.mockReset()
+    equipmentCheckSpy.mockResolvedValue('passed')
+
+    let insertedSessionBody: Record<string, unknown> | null = null
+    let insertCount = 0
+    const createdSession = createTestVivaSession()
+
+    server.use(
+      ...submissionWithQuestionsHandlers(testSubmission, [
+        createTestQuestion({ set_position: 0 }),
+      ]),
+      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'ready' })),
+      submissionVivaHandler([]),
+      http.get(`${SUPABASE_URL}/rest/v1/viva_sessions`, () =>
+        HttpResponse.json(insertedSessionBody ? [createdSession] : []),
+      ),
+      http.post(`${SUPABASE_URL}/rest/v1/viva_sessions`, async ({ request }) => {
+        insertCount += 1
+        insertedSessionBody = (await request.json()) as Record<string, unknown>
+
+        return HttpResponse.json([createdSession], { status: 201 })
+      }),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
+
+    await user.click(
+      await screen.findByRole('checkbox', {
+        name: /I've confirmed this is the correct student/,
+      }),
+    )
+    await user.click(
+      screen.getByRole('radio', { name: 'Consent given to record this viva' }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Run microphone check' }))
+    await screen.findByText('Microphone check passed')
+
+    await user.click(screen.getByRole('button', { name: 'Start Viva Session' }))
+
+    expect(await screen.findByText('Viva Session in progress')).toBeInTheDocument()
+    expect(insertCount).toBe(1)
+    expect(insertedSessionBody).toMatchObject({
+      consent_state: 'consent_given',
+      equipment_check_result: 'passed',
+    })
+    expect(
+      screen.queryByRole('button', { name: 'Start Viva Session' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('cancels the readiness checklist without starting a Viva Session', async () => {
+    generateSubmissionVivaSpy.mockReset()
+    equipmentCheckSpy.mockReset()
+    equipmentCheckSpy.mockResolvedValue('passed')
+
+    let postCount = 0
+
+    server.use(
+      ...submissionWithQuestionsHandlers(testSubmission, [
+        createTestQuestion({ set_position: 0 }),
+      ]),
+      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'ready' })),
+      submissionVivaHandler([]),
+      vivaSessionHandler([]),
+      http.post(`${SUPABASE_URL}/rest/v1/viva_sessions`, () => {
+        postCount += 1
+        return HttpResponse.json([createTestVivaSession()], { status: 201 })
+      }),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
+
+    const studentConfirmedCheckbox = await screen.findByRole('checkbox', {
+      name: /I've confirmed this is the correct student/,
+    })
+    await user.click(studentConfirmedCheckbox)
+    await user.click(
+      screen.getByRole('radio', { name: 'Consent given to record this viva' }),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(studentConfirmedCheckbox).not.toBeChecked()
+    expect(
+      screen.getByRole('radio', { name: 'Consent given to record this viva' }),
+    ).not.toBeChecked()
+    expect(postCount).toBe(0)
   })
 })

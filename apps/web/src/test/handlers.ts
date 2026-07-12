@@ -8,6 +8,7 @@ import {
   type TestSubmissionViva,
   type TestUser,
   type TestVivaQuestionSet,
+  type TestVivaSession,
 } from './factories'
 
 const SUPABASE_URL = 'https://example-project.supabase.co'
@@ -65,6 +66,12 @@ export function vivaQuestionSetHandler(
 ) {
   return http.get(`${SUPABASE_URL}/rest/v1/viva_question_sets`, () =>
     HttpResponse.json(set ? [set] : []),
+  )
+}
+
+export function vivaSessionHandler(sessions: TestVivaSession[] = []) {
+  return http.get(`${SUPABASE_URL}/rest/v1/viva_sessions`, () =>
+    HttpResponse.json(sessions),
   )
 }
 
@@ -131,4 +138,5 @@ export const defaultHandlers = [
   storageUploadHandler(),
   signedUrlHandler(),
   vivaQuestionSetHandler(),
+  vivaSessionHandler(),
 ]
