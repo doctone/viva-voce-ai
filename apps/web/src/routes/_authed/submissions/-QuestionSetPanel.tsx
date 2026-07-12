@@ -108,9 +108,9 @@ export function QuestionSetPanel({
     <section className={cn(paperPanelClassName, "bg-surface-container-low p-8")}>
       <div className="grid gap-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="grid gap-2">
+          <div className="grid min-w-0 gap-2">
             <span className={eyebrowClassName}>Viva Question Set</span>
-            <h2 className="font-display text-[28px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
+            <h2 className="font-display text-[28px] font-medium leading-[1.3] tracking-[-0.01em] text-primary text-balance">
               {questions.length === 0
                 ? "Build your Viva Question Set"
                 : "Your Viva Question Set"}

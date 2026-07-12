@@ -811,7 +811,7 @@ export function SubmissionDetailPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="submission" className="gap-6">
+      <Tabs defaultValue="submission" className="min-w-0 gap-6">
         <TabsList
           variant="line"
           aria-label="Submission detail views"
@@ -831,7 +831,7 @@ export function SubmissionDetailPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="submission" className="mt-0">
+        <TabsContent value="submission" className="mt-0 min-w-0">
           <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:items-start">
             <section className="xl:col-span-8">
               <article
@@ -893,13 +893,13 @@ export function SubmissionDetailPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="viva-questions" className="mt-0">
+        <TabsContent value="viva-questions" className="mt-0 min-w-0">
           <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:items-start">
-            <div className="xl:col-span-7">
+            <div className="min-w-0 xl:col-span-7">
               <Heading level={2}>Viva Questions for this Submission</Heading>
             </div>
 
-            <section className="space-y-4 xl:col-span-7 xl:row-start-2">
+            <section className="min-w-0 space-y-4 xl:col-span-7 xl:row-start-2">
 
               {questions.map((question) => (
                 <QuestionCard
@@ -922,7 +922,7 @@ export function SubmissionDetailPage() {
               <AddManualQuestionCard onAdd={addManualQuestion} />
             </section>
 
-            <aside className="grid content-start gap-4 xl:col-span-5 xl:row-start-2 xl:sticky xl:top-24">
+            <aside className="grid min-w-0 content-start gap-4 xl:col-span-5 xl:row-start-2 xl:sticky xl:top-24">
               <QuestionSetPanel
                 categoryBalance={categoryBalance}
                 estimatedDurationMinutes={estimatedDurationMinutes}
