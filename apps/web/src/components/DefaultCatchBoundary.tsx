@@ -7,16 +7,8 @@ import {
   useRouter,
 } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
-import { Button } from './ui/Button'
-import { buttonClassName } from './ui/Button'
-import { cn } from '~/lib/utils'
-import {
-  eyebrowClassName,
-  pageFrameClassName,
-  pageShellClassName,
-  paperPanelClassName,
-  sectionCardClassName,
-} from '~/lib/class-names'
+import { Button, buttonClassName, Card } from '~/components/ui'
+import { eyebrowClassName, pageFrameClassName, pageShellClassName } from '~/lib/class-names'
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter()
@@ -30,7 +22,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   return (
     <div className={pageShellClassName}>
       <div className={pageFrameClassName}>
-        <div className={cn(paperPanelClassName, sectionCardClassName, 'min-w-0')}>
+        <Card className="min-w-0">
           <span className={eyebrowClassName}>Application Error</span>
           <ErrorComponent error={error} />
           <div className="flex gap-2 items-center flex-wrap">
@@ -58,7 +50,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
               </Link>
             )}
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   )

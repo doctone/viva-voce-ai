@@ -1,22 +1,21 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Button } from "../../components/ui/Button";
 import {
+  Button,
+  Card,
+  Heading,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "../../components/ui/Tabs";
+} from "../../components/ui";
 import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
 import { cn } from "~/lib/utils";
 import {
   eyebrowClassName,
-  headingOneClassName,
-  headingTwoClassName,
   mutedTextClassName,
   paperPanelClassName,
-  sectionCardClassName,
 } from "~/lib/class-names";
 import { getSupabaseBrowserClient } from "../../utils/supabase-browser";
 import {
@@ -248,7 +247,7 @@ function SubmissionGenerationShell({
           <div className="grid gap-3">
             <span className={eyebrowClassName}>Submissions</span>
             <div className="grid gap-2">
-              <h1 className={headingOneClassName}>Preparing viva questions</h1>
+              <Heading>Preparing viva questions</Heading>
               <p
                 className={cn(
                   mutedTextClassName,
@@ -364,9 +363,9 @@ function SubmissionGenerationFailure({
   onRetry,
 }: SubmissionGenerationFailureProps) {
   return (
-    <section className={cn(paperPanelClassName, sectionCardClassName, "gap-5")}>
+    <Card as="section" className="gap-5">
       <span className={eyebrowClassName}>Submissions</span>
-      <h1 className={headingOneClassName}>Viva questions unavailable</h1>
+      <Heading>Viva questions unavailable</Heading>
       <p className={cn(mutedTextClassName, "max-w-[60ch] text-sm leading-6")}>
         The submission was saved, but viva question generation did not complete.
       </p>
@@ -378,7 +377,7 @@ function SubmissionGenerationFailure({
           Try again
         </Button>
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -488,34 +487,34 @@ export function SubmissionDetailPage() {
 
   if (submissionQuery.isLoading) {
     return (
-      <section className={cn(paperPanelClassName, sectionCardClassName)}>
+      <Card as="section">
         <span className={eyebrowClassName}>Submissions</span>
-        <h1 className={headingOneClassName}>Loading submission</h1>
-      </section>
+        <Heading>Loading submission</Heading>
+      </Card>
     );
   }
 
   if (submissionQuery.error instanceof Error) {
     return (
-      <section className={cn(paperPanelClassName, sectionCardClassName)}>
+      <Card as="section">
         <span className={eyebrowClassName}>Submissions</span>
-        <h1 className={headingOneClassName}>Submission unavailable</h1>
+        <Heading>Submission unavailable</Heading>
         <p className="text-sm leading-6 text-error">
           {submissionQuery.error.message}
         </p>
-      </section>
+      </Card>
     );
   }
 
   if (questionsQuery.error instanceof Error) {
     return (
-      <section className={cn(paperPanelClassName, sectionCardClassName)}>
+      <Card as="section">
         <span className={eyebrowClassName}>Submissions</span>
-        <h1 className={headingOneClassName}>Submission unavailable</h1>
+        <Heading>Submission unavailable</Heading>
         <p className="text-sm leading-6 text-error">
           {questionsQuery.error.message}
         </p>
-      </section>
+      </Card>
     );
   }
 
@@ -550,7 +549,7 @@ export function SubmissionDetailPage() {
     <section className="grid gap-8">
       <div className="grid gap-3">
         <span className={eyebrowClassName}>Submissions</span>
-        {/* <h1 className={headingOneClassName}>{submission.submission_title}</h1> */}
+        {/* <Heading>{submission.submission_title}</Heading> */}
         <p className={cn(mutedTextClassName, "text-sm leading-6")}>
           Student {submission.student_id} · Submitted{" "}
           {formatSubmissionDate(submission.created_at)}
@@ -642,9 +641,7 @@ export function SubmissionDetailPage() {
         <TabsContent value="viva-questions" className="mt-0">
           <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:items-start">
             <div className="xl:col-span-7">
-              <h2 className={headingTwoClassName}>
-                Viva Questions for this Submission
-              </h2>
+              <Heading level={2}>Viva Questions for this Submission</Heading>
             </div>
 
             <section className="space-y-4 xl:col-span-7 xl:row-start-2">
