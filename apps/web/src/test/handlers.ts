@@ -2,10 +2,12 @@ import { http, HttpResponse } from 'msw'
 import {
   createTestSubmission,
   createTestUser,
+  createTestVivaQuestionSet,
   type TestQuestion,
   type TestSubmission,
   type TestSubmissionViva,
   type TestUser,
+  type TestVivaQuestionSet,
 } from './factories'
 
 const SUPABASE_URL = 'https://example-project.supabase.co'
@@ -55,6 +57,14 @@ export function submissionWithQuestionsHandlers(
 export function submissionVivaHandler(records: TestSubmissionViva[] = []) {
   return http.get(`${SUPABASE_URL}/rest/v1/submission_viva`, () =>
     HttpResponse.json(records),
+  )
+}
+
+export function vivaQuestionSetHandler(
+  set: TestVivaQuestionSet | null = createTestVivaQuestionSet(),
+) {
+  return http.get(`${SUPABASE_URL}/rest/v1/viva_question_sets`, () =>
+    HttpResponse.json(set ? [set] : []),
   )
 }
 
@@ -120,4 +130,5 @@ export const defaultHandlers = [
   submissionsListHandler(),
   storageUploadHandler(),
   signedUrlHandler(),
+  vivaQuestionSetHandler(),
 ]

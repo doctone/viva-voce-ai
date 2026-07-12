@@ -33,6 +33,7 @@ export type TestQuestion = {
   teacher_note: string
   is_recommended: boolean
   sort_order: number
+  set_position: number | null
   created_at: string
 }
 
@@ -48,7 +49,27 @@ export function createTestQuestion(
       'Listen for understanding of legal reform and why it mattered.',
     is_recommended: true,
     sort_order: 1,
+    set_position: null,
     created_at: '2026-04-30T20:05:00.000Z',
+    ...overrides,
+  }
+}
+
+export type TestVivaQuestionSetStatus = 'draft' | 'ready'
+
+export type TestVivaQuestionSet = {
+  id: string
+  submission_id: string
+  status: TestVivaQuestionSetStatus
+}
+
+export function createTestVivaQuestionSet(
+  overrides: Partial<TestVivaQuestionSet> = {},
+): TestVivaQuestionSet {
+  return {
+    id: '60420000-0000-0000-0000-000000000000',
+    submission_id: '30420000-0000-0000-0000-000000000000',
+    status: 'draft',
     ...overrides,
   }
 }

@@ -16,6 +16,16 @@ import {
   resolveVivaRecordingAccess,
   type VivaRecordingAccessResult,
 } from "../../features/submissions/vivaRecordingAccess";
+import {
+  computeNextSetPosition,
+  computeSequentialPositions,
+  estimateQuestionSetDurationMinutes,
+  formatQuestionCategory,
+  moveQuestionInSet,
+  sortQuestionsBySetPosition,
+  summarizeCategoryBalance,
+  type QuestionSetStatus,
+} from "../../features/submissions/vivaQuestionSet";
 import { cn } from "~/lib/utils";
 import {
   eyebrowClassName,
@@ -28,6 +38,7 @@ import {
   type ManualQuestionInput,
   QuestionCard,
 } from "./submissions/-QuestionCard";
+import { QuestionSetPanel } from "./submissions/-QuestionSetPanel";
 
 export const Route = createFileRoute("/_authed/submissions/$submissionId")({
   component: SubmissionDetailPage,
@@ -46,18 +57,32 @@ type VivaQuestionRecord = {
   id: string;
   is_recommended?: boolean;
   question_text: string;
+  set_position?: number | null;
   sort_order?: number;
   submission_id: string;
   teacher_note: string;
 };
 
 type SubmissionQuestion = {
+  category: string;
   id: string;
   isHighlighted?: boolean;
   label: string;
   questionText: string;
+  setPosition: number | null;
   sortOrder: number;
   teacherNote: string;
+};
+
+type VivaQuestionSetRecord = {
+  id: string;
+  status: QuestionSetStatus;
+};
+
+type VivaQuestionSetRow = {
+  id: string;
+  status: QuestionSetStatus;
+  submission_id: string;
 };
 
 type GenerationState = "idle" | "running" | "failed";
@@ -89,7 +114,7 @@ async function fetchSubmissionQuestions(
   const { data, error } = await supabase
     .from("viva_questions")
     .select(
-      "id, submission_id, category, question_text, teacher_note, is_recommended, sort_order",
+      "id, submission_id, category, question_text, teacher_note, is_recommended, sort_order, set_position",
     )
     .eq("submission_id", submissionId);
 
@@ -101,14 +126,89 @@ async function fetchSubmissionQuestions(
 
   return rows
     .map((question) => ({
+      category: question.category,
       id: question.id,
       isHighlighted: question.is_recommended ?? false,
       label: formatQuestionCategory(question.category),
       questionText: question.question_text,
+      setPosition: question.set_position ?? null,
       sortOrder: question.sort_order ?? 0,
       teacherNote: question.teacher_note,
     }))
     .sort((left, right) => left.sortOrder - right.sortOrder);
+}
+
+async function fetchOrCreateVivaQuestionSet(
+  submissionId: string,
+): Promise<VivaQuestionSetRecord> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("viva_question_sets")
+    .select("id, submission_id, status")
+    .eq("submission_id", submissionId);
+
+  if (error) {
+    throw new Error("We could not load the Viva Question Set.");
+  }
+
+  const existing = (data as VivaQuestionSetRow[] | null)?.[0];
+
+  if (existing) {
+    return { id: existing.id, status: existing.status };
+  }
+
+  const { data: created, error: insertError } = await supabase
+    .from("viva_question_sets")
+    .insert({ submission_id: submissionId, status: "draft" })
+    .select("id, submission_id, status");
+
+  if (insertError) {
+    throw new Error("We could not create the Viva Question Set.");
+  }
+
+  const createdRow = (created as VivaQuestionSetRow[] | null)?.[0];
+
+  if (!createdRow) {
+    throw new Error("We could not create the Viva Question Set.");
+  }
+
+  return { id: createdRow.id, status: createdRow.status };
+}
+
+async function updateQuestionSetPositions(
+  updates: Array<{ id: string; position: number | null }>,
+) {
+  const supabase = getSupabaseBrowserClient();
+  const results = await Promise.all(
+    updates.map(({ id, position }) =>
+      supabase
+        .from("viva_questions")
+        .update({ set_position: position })
+        .eq("id", id),
+    ),
+  );
+
+  if (results.some((result) => result.error)) {
+    throw new Error("We could not update the Viva Question Set.");
+  }
+}
+
+async function updateVivaQuestionSetStatus(
+  questionSetId: string,
+  status: QuestionSetStatus,
+) {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase
+    .from("viva_question_sets")
+    .update({
+      ready_at: status === "ready" ? new Date().toISOString() : null,
+      status,
+    })
+    .eq("id", questionSetId);
+
+  if (error) {
+    throw new Error("We could not update the Viva Question Set.");
+  }
 }
 
 type SubmissionVivaRecord = {
@@ -217,13 +317,6 @@ async function addManualSubmissionQuestion(
   if (error) {
     throw new Error("We could not add the question.");
   }
-}
-
-function formatQuestionCategory(category: string) {
-  return category
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 }
 
 function formatSubmissionDate(value: string) {
@@ -439,6 +532,10 @@ export function SubmissionDetailPage() {
     queryKey: ["submission-viva", submissionId],
   });
   const vivaAudioRecords = vivaAudioQuery.data ?? [];
+  const questionSetQuery = useQuery({
+    queryFn: () => fetchOrCreateVivaQuestionSet(submissionId),
+    queryKey: ["viva-question-set", submissionId],
+  });
 
   const saveQuestionText = React.useCallback(
     async (questionId: string, questionText: string) => {
@@ -463,6 +560,55 @@ export function SubmissionDetailPage() {
       });
     },
     [questions, queryClient, submissionId],
+  );
+
+  const toggleQuestionInSet = React.useCallback(
+    async (questionId: string, included: boolean) => {
+      const position = included
+        ? computeNextSetPosition(questions.map((question) => question.setPosition))
+        : null;
+
+      await updateQuestionSetPositions([{ id: questionId, position }]);
+      await queryClient.invalidateQueries({
+        queryKey: ["submission-questions", submissionId],
+      });
+    },
+    [questions, queryClient, submissionId],
+  );
+
+  const moveSetQuestion = React.useCallback(
+    async (questionId: string, direction: "up" | "down") => {
+      const orderedQuestions = sortQuestionsBySetPosition(questions);
+      const reordered = moveQuestionInSet(orderedQuestions, questionId, direction);
+      const positions = computeSequentialPositions(
+        reordered.map((question) => question.id),
+      );
+
+      await updateQuestionSetPositions(positions);
+      await queryClient.invalidateQueries({
+        queryKey: ["submission-questions", submissionId],
+      });
+    },
+    [questions, queryClient, submissionId],
+  );
+
+  const removeQuestionFromSet = React.useCallback(
+    (questionId: string) => toggleQuestionInSet(questionId, false),
+    [toggleQuestionInSet],
+  );
+
+  const updateSetStatus = React.useCallback(
+    async (status: QuestionSetStatus) => {
+      if (!questionSetQuery.data) {
+        return;
+      }
+
+      await updateVivaQuestionSetStatus(questionSetQuery.data.id, status);
+      await queryClient.invalidateQueries({
+        queryKey: ["viva-question-set", submissionId],
+      });
+    },
+    [questionSetQuery.data, queryClient, submissionId],
   );
 
   const runGeneration = React.useCallback(async () => {
@@ -568,6 +714,34 @@ export function SubmissionDetailPage() {
       />
     );
   }
+
+  if (questionSetQuery.isLoading) {
+    return (
+      <Card as="section">
+        <span className={eyebrowClassName}>Submissions</span>
+        <Heading>Loading Viva Question Set</Heading>
+      </Card>
+    );
+  }
+
+  if (questionSetQuery.error instanceof Error) {
+    return (
+      <Card as="section">
+        <span className={eyebrowClassName}>Submissions</span>
+        <Heading>Submission unavailable</Heading>
+        <p className="text-sm leading-6 text-error">
+          {questionSetQuery.error.message}
+        </p>
+      </Card>
+    );
+  }
+
+  const questionSet = questionSetQuery.data as VivaQuestionSetRecord;
+  const setQuestions = sortQuestionsBySetPosition(questions);
+  const categoryBalance = summarizeCategoryBalance(setQuestions);
+  const estimatedDurationMinutes = estimateQuestionSetDurationMinutes(
+    setQuestions.length,
+  );
 
   const submissionParagraphs = splitSubmissionTextIntoParagraphs(
     submission.submission_text,
@@ -680,11 +854,15 @@ export function SubmissionDetailPage() {
                   key={question.id}
                   id={question.id}
                   isHighlighted={question.isHighlighted}
+                  isInSet={question.setPosition !== null}
                   label={question.label}
                   questionText={question.questionText}
                   teacherNote={question.teacherNote}
                   onSave={(questionText) =>
                     saveQuestionText(question.id, questionText)
+                  }
+                  onToggleInSet={(included) =>
+                    toggleQuestionInSet(question.id, included)
                   }
                 />
               ))}
@@ -693,6 +871,27 @@ export function SubmissionDetailPage() {
             </section>
 
             <aside className="grid content-start gap-4 xl:col-span-5 xl:row-start-2 xl:sticky xl:top-24">
+              <QuestionSetPanel
+                categoryBalance={categoryBalance}
+                estimatedDurationMinutes={estimatedDurationMinutes}
+                status={questionSet.status}
+                questions={setQuestions.map((question) => ({
+                  category: question.category,
+                  id: question.id,
+                  label: question.label,
+                  questionText: question.questionText,
+                }))}
+                onMarkReady={() => updateSetStatus("ready")}
+                onRevertToDraft={() => updateSetStatus("draft")}
+                onMoveQuestionUp={(questionId) =>
+                  moveSetQuestion(questionId, "up")
+                }
+                onMoveQuestionDown={(questionId) =>
+                  moveSetQuestion(questionId, "down")
+                }
+                onRemoveQuestion={removeQuestionFromSet}
+              />
+
               <section
                 className={cn(
                   paperPanelClassName,

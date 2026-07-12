@@ -3,15 +3,23 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import { SubmissionDetailPage } from './submissions.$submissionId'
-import { createTestQuestion, createTestSubmission, createTestSubmissionViva } from '../../test/factories'
+import {
+  createTestQuestion,
+  createTestSubmission,
+  createTestSubmissionViva,
+  createTestVivaQuestionSet,
+} from '../../test/factories'
 import {
   signedUrlHandler,
   storageUploadHandler,
   submissionVivaHandler,
   submissionWithQuestionsHandlers,
+  vivaQuestionSetHandler,
 } from '../../test/handlers'
 import { renderWithRouter } from '../../test/router'
 import { server } from '../../test/server'
+
+const SUPABASE_URL = 'https://example-project.supabase.co'
 
 const testSubmission = createTestSubmission({
   submission_title: 'Mercantile law response',
@@ -325,15 +333,24 @@ describe('SubmissionDetailPage', () => {
 
     await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
 
-    expect(screen.getByText('Comprehension And Accuracy')).toBeInTheDocument()
-    expect(screen.getByText('Argumentation And Reasoning')).toBeInTheDocument()
-    expect(screen.getByText('Authenticity And Ownership')).toBeInTheDocument()
-
     const recommendedCard = screen.getByText('Recommended question').closest('article')
     const nonRecommendedCard = screen.getByText('Non-recommended question').closest('article')
+    const authenticityCard = screen.getByText('Authenticity question').closest('article')
 
     expect(recommendedCard).not.toBeNull()
     expect(nonRecommendedCard).not.toBeNull()
+    expect(authenticityCard).not.toBeNull()
+
+    expect(
+      within(recommendedCard as HTMLElement).getByText('Comprehension And Accuracy'),
+    ).toBeInTheDocument()
+    expect(
+      within(nonRecommendedCard as HTMLElement).getByText('Argumentation And Reasoning'),
+    ).toBeInTheDocument()
+    expect(
+      within(authenticityCard as HTMLElement).getByText('Authenticity And Ownership'),
+    ).toBeInTheDocument()
+
     expect(within(recommendedCard as HTMLElement).getByText('Recommended')).toBeInTheDocument()
     expect(within(nonRecommendedCard as HTMLElement).queryByText('Recommended')).not.toBeInTheDocument()
 
@@ -818,5 +835,208 @@ describe('SubmissionDetailPage', () => {
       ),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+
+  it('selects a question into the Viva Question Set and shows it in the panel', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    let question = createTestQuestion({
+      question_text: 'Why does the response describe Lord Mansfield as pivotal?',
+      teacher_note: 'Listen for understanding of legal reform and why it mattered.',
+      set_position: null,
+    })
+
+    server.use(
+      http.get(`${SUPABASE_URL}/rest/v1/submissions`, () =>
+        HttpResponse.json([createTestSubmission({ submission_text: 'Body text.' })]),
+      ),
+      http.get(`${SUPABASE_URL}/rest/v1/viva_questions`, () => HttpResponse.json([question])),
+      http.patch(`${SUPABASE_URL}/rest/v1/viva_questions`, async ({ request }) => {
+        const body = (await request.json()) as { set_position: number | null }
+        question = { ...question, set_position: body.set_position }
+
+        return HttpResponse.json({}, { status: 204 })
+      }),
+      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'draft' })),
+      submissionVivaHandler([]),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
+
+    expect(
+      screen.getByText(
+        'No questions selected yet. Add questions from the list to build your Viva Question Set.',
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByLabelText('Add to Viva Question Set', { exact: false }),
+    )
+
+    expect(await screen.findByText(/1\. Comprehension And Accuracy/)).toBeInTheDocument()
+    expect(screen.getByText('2 min')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'No questions selected yet. Add questions from the list to build your Viva Question Set.',
+      ),
+    ).not.toBeInTheDocument()
+  })
+
+  it('removes a question from the Viva Question Set from the panel', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    let question = createTestQuestion({
+      question_text: 'Why does the response describe Lord Mansfield as pivotal?',
+      teacher_note: 'Listen for understanding of legal reform and why it mattered.',
+      set_position: 0,
+    })
+
+    server.use(
+      http.get(`${SUPABASE_URL}/rest/v1/submissions`, () =>
+        HttpResponse.json([createTestSubmission({ submission_text: 'Body text.' })]),
+      ),
+      http.get(`${SUPABASE_URL}/rest/v1/viva_questions`, () => HttpResponse.json([question])),
+      http.patch(`${SUPABASE_URL}/rest/v1/viva_questions`, async ({ request }) => {
+        const body = (await request.json()) as { set_position: number | null }
+        question = { ...question, set_position: body.set_position }
+
+        return HttpResponse.json({}, { status: 204 })
+      }),
+      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'draft' })),
+      submissionVivaHandler([]),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
+
+    expect(await screen.findByText(/1\. Comprehension And Accuracy/)).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Remove question from set: Why does the response describe Lord Mansfield as pivotal?',
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        'No questions selected yet. Add questions from the list to build your Viva Question Set.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('reorders Viva Question Set questions with Move up and Move down', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    let questions = [
+      createTestQuestion({
+        id: '40420000-0000-0000-0000-000000000000',
+        category: 'comprehension_and_accuracy',
+        question_text: 'First question',
+        set_position: 0,
+      }),
+      createTestQuestion({
+        id: '40420000-0000-0000-0000-000000000001',
+        category: 'argumentation_and_reasoning',
+        question_text: 'Second question',
+        set_position: 1,
+      }),
+    ]
+
+    server.use(
+      http.get(`${SUPABASE_URL}/rest/v1/submissions`, () =>
+        HttpResponse.json([createTestSubmission({ submission_text: 'Body text.' })]),
+      ),
+      http.get(`${SUPABASE_URL}/rest/v1/viva_questions`, () => HttpResponse.json(questions)),
+      http.patch(`${SUPABASE_URL}/rest/v1/viva_questions`, async ({ request }) => {
+        const body = (await request.json()) as { set_position: number | null }
+        const url = new URL(request.url)
+        const idFilter = url.searchParams.get('id')
+        const id = idFilter?.replace('eq.', '')
+
+        questions = questions.map((existingQuestion) =>
+          existingQuestion.id === id
+            ? { ...existingQuestion, set_position: body.set_position }
+            : existingQuestion,
+        )
+
+        return HttpResponse.json({}, { status: 204 })
+      }),
+      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'draft' })),
+      submissionVivaHandler([]),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
+
+    expect(await screen.findByText(/1\. Comprehension And Accuracy/)).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: 'Move question up: Second question' }),
+    )
+
+    await screen.findByText(/1\. Argumentation And Reasoning/)
+    const reorderedQuestions = questions.slice().sort((left, right) => (left.set_position ?? 0) - (right.set_position ?? 0))
+    expect(reorderedQuestions.map((question) => question.question_text)).toEqual([
+      'Second question',
+      'First question',
+    ])
+  })
+
+  it('marks the Viva Question Set ready and can revert it to draft', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    let questionSet = createTestVivaQuestionSet({ status: 'draft' })
+
+    server.use(
+      ...submissionWithQuestionsHandlers(createTestSubmission({ submission_text: 'Body text.' }), [
+        createTestQuestion({ set_position: 0 }),
+      ]),
+      http.get(`${SUPABASE_URL}/rest/v1/viva_question_sets`, () => HttpResponse.json([questionSet])),
+      http.patch(`${SUPABASE_URL}/rest/v1/viva_question_sets`, async ({ request }) => {
+        const body = (await request.json()) as { status: 'draft' | 'ready' }
+        questionSet = { ...questionSet, status: body.status }
+
+        return HttpResponse.json({}, { status: 204 })
+      }),
+      submissionVivaHandler([]),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
+
+    expect(await screen.findByText('Draft')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Mark set ready for viva' }))
+
+    expect(await screen.findByText('Ready for Viva')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Revert set to draft' }))
+
+    expect(await screen.findByText('Draft')).toBeInTheDocument()
   })
 })
