@@ -93,6 +93,40 @@ export function createTestUser(overrides: Partial<TestUser> = {}): TestUser {
   }
 }
 
+export type TestVivaSessionConsentState = 'consent_given' | 'recording_disabled'
+export type TestVivaSessionStatus = 'active' | 'ended'
+
+export type TestVivaSession = {
+  id: string
+  submission_id: string
+  viva_question_set_id: string
+  status: TestVivaSessionStatus
+  consent_state: TestVivaSessionConsentState
+  consent_declined_reason: string | null
+  equipment_check_result: 'passed' | 'failed'
+  expected_duration_minutes: number
+  accessibility_adjustments: string
+  started_at: string
+}
+
+export function createTestVivaSession(
+  overrides: Partial<TestVivaSession> = {},
+): TestVivaSession {
+  return {
+    id: '70420000-0000-0000-0000-000000000000',
+    submission_id: '30420000-0000-0000-0000-000000000000',
+    viva_question_set_id: '60420000-0000-0000-0000-000000000000',
+    status: 'active',
+    consent_state: 'consent_given',
+    consent_declined_reason: null,
+    equipment_check_result: 'passed',
+    expected_duration_minutes: 10,
+    accessibility_adjustments: '',
+    started_at: '2026-07-12T09:00:00.000Z',
+    ...overrides,
+  }
+}
+
 export type TestSubmissionViva = {
   id: string
   submission_id: string

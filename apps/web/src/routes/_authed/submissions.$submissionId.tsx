@@ -10,6 +10,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui";
+import { useEquipmentCheck } from "../../features/submissions/useEquipmentCheck";
 import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
 import {
   createSupabaseVivaRecordingAccessRepository,
@@ -26,6 +27,10 @@ import {
   summarizeCategoryBalance,
   type QuestionSetStatus,
 } from "../../features/submissions/vivaQuestionSet";
+import {
+  createSupabaseVivaSessionRepository,
+  startVivaSession,
+} from "../../features/submissions/vivaSession";
 import { cn } from "~/lib/utils";
 import {
   eyebrowClassName,
@@ -39,6 +44,10 @@ import {
   QuestionCard,
 } from "./submissions/-QuestionCard";
 import { QuestionSetPanel } from "./submissions/-QuestionSetPanel";
+import {
+  VivaSessionReadinessPanel,
+  type VivaSessionStartInput,
+} from "./submissions/-VivaSessionReadinessPanel";
 
 export const Route = createFileRoute("/_authed/submissions/$submissionId")({
   component: SubmissionDetailPage,
@@ -209,6 +218,13 @@ async function updateVivaQuestionSetStatus(
   if (error) {
     throw new Error("We could not update the Viva Question Set.");
   }
+}
+
+async function fetchActiveVivaSession(vivaQuestionSetId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const repository = createSupabaseVivaSessionRepository(supabase);
+
+  return repository.findActiveSession(vivaQuestionSetId);
 }
 
 type SubmissionVivaRecord = {
@@ -536,6 +552,13 @@ export function SubmissionDetailPage() {
     queryFn: () => fetchOrCreateVivaQuestionSet(submissionId),
     queryKey: ["viva-question-set", submissionId],
   });
+  const vivaQuestionSetId = questionSetQuery.data?.id;
+  const vivaSessionQuery = useQuery({
+    enabled: Boolean(vivaQuestionSetId),
+    queryFn: () => fetchActiveVivaSession(vivaQuestionSetId as string),
+    queryKey: ["viva-session", vivaQuestionSetId ?? null],
+  });
+  const checkEquipment = useEquipmentCheck();
 
   const saveQuestionText = React.useCallback(
     async (questionId: string, questionText: string) => {
@@ -606,6 +629,35 @@ export function SubmissionDetailPage() {
       await updateVivaQuestionSetStatus(questionSetQuery.data.id, status);
       await queryClient.invalidateQueries({
         queryKey: ["viva-question-set", submissionId],
+      });
+    },
+    [questionSetQuery.data, queryClient, submissionId],
+  );
+
+  const startSessionForQuestionSet = React.useCallback(
+    async (input: VivaSessionStartInput) => {
+      if (!questionSetQuery.data) {
+        return;
+      }
+
+      const supabase = getSupabaseBrowserClient();
+      const repository = createSupabaseVivaSessionRepository(supabase);
+
+      await startVivaSession(
+        {
+          accessibilityAdjustments: input.accessibilityAdjustments,
+          consentDeclinedReason: input.consentDeclinedReason,
+          consentState: input.consentState,
+          equipmentCheckResult: input.equipmentCheckResult,
+          expectedDurationMinutes: input.expectedDurationMinutes,
+          submissionId,
+          vivaQuestionSetId: questionSetQuery.data.id,
+        },
+        repository,
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: ["viva-session", questionSetQuery.data.id],
       });
     },
     [questionSetQuery.data, queryClient, submissionId],
@@ -890,6 +942,20 @@ export function SubmissionDetailPage() {
                   moveSetQuestion(questionId, "down")
                 }
                 onRemoveQuestion={removeQuestionFromSet}
+              />
+
+              <VivaSessionReadinessPanel
+                activeSession={
+                  vivaSessionQuery.data
+                    ? { startedAt: vivaSessionQuery.data.startedAt }
+                    : null
+                }
+                estimatedDurationMinutes={estimatedDurationMinutes}
+                onCheckEquipment={checkEquipment}
+                onStart={startSessionForQuestionSet}
+                questionSetStatus={questionSet.status}
+                studentId={submission.student_id}
+                submissionTitle={submission.submission_title}
               />
 
               <section
