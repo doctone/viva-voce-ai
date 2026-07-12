@@ -4,7 +4,12 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import { SubmissionDetailPage } from './submissions.$submissionId'
 import { createTestQuestion, createTestSubmission, createTestSubmissionViva } from '../../test/factories'
-import { storageUploadHandler, submissionVivaHandler, submissionWithQuestionsHandlers } from '../../test/handlers'
+import {
+  signedUrlHandler,
+  storageUploadHandler,
+  submissionVivaHandler,
+  submissionWithQuestionsHandlers,
+} from '../../test/handlers'
 import { renderWithRouter } from '../../test/router'
 import { server } from '../../test/server'
 
@@ -560,7 +565,7 @@ describe('SubmissionDetailPage', () => {
           {
             id: '50420000-0000-0000-0000-000000000000',
             submission_id: '30420000-0000-0000-0000-000000000000',
-            audio_url: 'https://example-project.supabase.co/storage/v1/object/public/submission-viva-audio/existing.webm',
+            audio_path: 'existing.webm',
             file_name: 'existing.webm',
             created_at: '2026-04-30T20:10:00.000Z',
           },
@@ -577,8 +582,92 @@ describe('SubmissionDetailPage', () => {
 
     await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
 
-    expect(await screen.findByTestId('submission-viva-player')).toBeInTheDocument()
+    const player = await screen.findByTestId('submission-viva-player')
+    expect(player).toBeInTheDocument()
+    expect(player.getAttribute('src')).toContain('/object/sign/submission-viva-audio/')
+    expect(player.getAttribute('src')).toContain('token=')
     expect(screen.getByText('existing.webm')).toBeInTheDocument()
+  })
+
+  it('does not render a player and shows a message when playback is denied', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    server.use(
+      ...submissionWithQuestionsHandlers(
+        createTestSubmission({ submission_text: 'Body text.' }),
+        [createTestQuestion({ question_text: 'Test question', teacher_note: 'Test note' })],
+      ),
+      submissionVivaHandler([createTestSubmissionViva()]),
+      signedUrlHandler({ status: 403 }),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
+
+    expect(
+      await screen.findByText('You do not have permission to play this recording.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('submission-viva-player')).not.toBeInTheDocument()
+  })
+
+  it('does not render a player and shows a message when the session has expired', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    server.use(
+      ...submissionWithQuestionsHandlers(
+        createTestSubmission({ submission_text: 'Body text.' }),
+        [createTestQuestion({ question_text: 'Test question', teacher_note: 'Test note' })],
+      ),
+      submissionVivaHandler([createTestSubmissionViva()]),
+      signedUrlHandler({ status: 401 }),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
+
+    expect(
+      await screen.findByText('Your session has expired. Sign in again to play this recording.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('submission-viva-player')).not.toBeInTheDocument()
+  })
+
+  it('does not render a player and shows a message when the recording is missing', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    server.use(
+      ...submissionWithQuestionsHandlers(
+        createTestSubmission({ submission_text: 'Body text.' }),
+        [createTestQuestion({ question_text: 'Test question', teacher_note: 'Test note' })],
+      ),
+      submissionVivaHandler([createTestSubmissionViva()]),
+      signedUrlHandler({ status: 404 }),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
+
+    expect(
+      await screen.findByText('This recording is no longer available.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('submission-viva-player')).not.toBeInTheDocument()
   })
 
   it('shows a loading state while uploading and an error without removing the upload prompt on failure', async () => {
