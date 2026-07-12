@@ -1,5 +1,5 @@
 import { cn } from '~/lib/utils'
-import { brandTitleClassName, paperPanelClassName } from '~/lib/class-names'
+import { brandTitleClassName } from '~/lib/class-names'
 
 type MobileNavHeaderProps = {
   isMenuOpen: boolean
@@ -10,8 +10,8 @@ export function MobileNavHeader({ isMenuOpen, onOpenMenu }: MobileNavHeaderProps
   return (
     <div
       className={cn(
-        paperPanelClassName,
-        'sticky top-0 z-30 flex items-center gap-4 px-4 py-3 lg:hidden',
+        'border-b border-outline-variant bg-surface-container-lowest shadow-technical',
+        'sticky top-0 z-30 flex items-center gap-4 px-6 py-3 lg:hidden',
       )}
     >
       <button
