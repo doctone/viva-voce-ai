@@ -378,10 +378,10 @@ export function VivaSessionCapturePanel({
                       aria-pressed={question.id === selectedAskedQuestionId}
                       onClick={() => setSelectedAskedQuestionId(question.id)}
                       className={cn(
-                        "w-full border border-outline-variant p-2 text-left text-sm",
+                        "w-full border bg-surface-container-lowest p-2 text-left text-sm",
                         question.id === selectedAskedQuestionId
-                          ? "bg-primary-container"
-                          : "bg-surface-container-lowest",
+                          ? "border-dashed border-primary-container"
+                          : "border-outline-variant",
                       )}
                     >
                       {question.questionText}
