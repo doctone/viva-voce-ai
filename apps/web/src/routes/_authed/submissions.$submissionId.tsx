@@ -9,6 +9,11 @@ import {
   TabsTrigger,
 } from "../../components/ui/Tabs";
 import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
+import {
+  createSupabaseVivaRecordingAccessRepository,
+  resolveVivaRecordingAccess,
+  type VivaRecordingAccessResult,
+} from "../../features/submissions/vivaRecordingAccess";
 import { cn } from "~/lib/utils";
 import {
   eyebrowClassName,
@@ -110,16 +115,22 @@ async function fetchSubmissionQuestions(
 type SubmissionVivaRecord = {
   id: string;
   submission_id: string;
-  audio_url: string;
+  audio_path: string;
   file_name: string;
   created_at: string;
 };
 
-async function fetchSubmissionViva(submissionId: string) {
+type SubmissionVivaPlayback = SubmissionVivaRecord & {
+  access: VivaRecordingAccessResult;
+};
+
+async function fetchSubmissionViva(
+  submissionId: string,
+): Promise<SubmissionVivaPlayback[]> {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from("submission_viva")
-    .select("id, submission_id, audio_url, file_name, created_at")
+    .select("id, submission_id, audio_path, file_name, created_at")
     .eq("submission_id", submissionId)
     .order("created_at", { ascending: false });
 
@@ -127,7 +138,15 @@ async function fetchSubmissionViva(submissionId: string) {
     throw new Error("We could not load viva audio.");
   }
 
-  return (data as SubmissionVivaRecord[] | null) ?? [];
+  const records = (data as SubmissionVivaRecord[] | null) ?? [];
+  const repository = createSupabaseVivaRecordingAccessRepository(supabase);
+
+  return Promise.all(
+    records.map(async (record) => ({
+      ...record,
+      access: await resolveVivaRecordingAccess(record.audio_path, repository),
+    })),
+  );
 }
 
 async function uploadSubmissionVivaAudio(submissionId: string, file: File) {
@@ -141,18 +160,28 @@ async function uploadSubmissionVivaAudio(submissionId: string, file: File) {
     throw new Error("We could not upload viva audio.");
   }
 
-  const publicUrlResult = supabase.storage
-    .from("submission-viva-audio")
-    .getPublicUrl(filePath);
-
   const { error } = await supabase.from("submission_viva").insert({
     submission_id: submissionId,
-    audio_url: publicUrlResult.data.publicUrl,
+    audio_path: filePath,
     file_name: file.name,
   });
 
   if (error) {
     throw new Error("We could not save viva audio.");
+  }
+}
+
+function describeUnavailableVivaRecording(
+  status: Exclude<VivaRecordingAccessResult["status"], "allowed">,
+) {
+  switch (status) {
+    case "expired":
+      return "Your session has expired. Sign in again to play this recording.";
+    case "missing":
+      return "This recording is no longer available.";
+    case "denied":
+    default:
+      return "You do not have permission to play this recording.";
   }
 }
 
@@ -734,13 +763,24 @@ export function SubmissionDetailPage() {
                       className="grid gap-2 border border-outline-variant bg-surface-container-lowest p-4"
                     >
                       <p className="text-sm font-medium">{record.file_name}</p>
-                      <audio
-                        data-testid="submission-viva-player"
-                        controls
-                        src={record.audio_url}
-                      >
-                        <track kind="captions" />
-                      </audio>
+                      {record.access.status === "allowed" ? (
+                        <audio
+                          data-testid="submission-viva-player"
+                          controls
+                          src={record.access.signedUrl}
+                        >
+                          <track kind="captions" />
+                        </audio>
+                      ) : (
+                        <p
+                          className="text-sm text-error"
+                          data-testid="submission-viva-unavailable"
+                        >
+                          {describeUnavailableVivaRecording(
+                            record.access.status,
+                          )}
+                        </p>
+                      )}
                     </article>
                   ))}
                   {vivaAudioQuery.isLoading ? (

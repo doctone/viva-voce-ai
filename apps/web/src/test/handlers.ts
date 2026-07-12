@@ -80,9 +80,44 @@ export function storageUploadHandler(bucket = 'submission-viva-audio') {
   )
 }
 
+export function signedUrlHandler(
+  options: {
+    bucket?: string
+    errorBody?: Record<string, unknown>
+    status?: number
+    token?: string
+  } = {},
+) {
+  const {
+    bucket = 'submission-viva-audio',
+    errorBody,
+    status = 200,
+    token = 'test-signed-token',
+  } = options
+
+  return http.post(`${SUPABASE_URL}/storage/v1/object/sign/${bucket}/*`, ({ request }) => {
+    if (status !== 200) {
+      return HttpResponse.json(
+        errorBody ?? { error: 'Error', message: 'Request failed', statusCode: String(status) },
+        { status },
+      )
+    }
+
+    const path = new URL(request.url).pathname.replace(
+      `/storage/v1/object/sign/${bucket}/`,
+      '',
+    )
+
+    return HttpResponse.json({
+      signedURL: `/object/sign/${bucket}/${path}?token=${token}`,
+    })
+  })
+}
+
 // Baseline "logged in with some data" state; tests override specific endpoints via server.use(...).
 export const defaultHandlers = [
   authenticatedUserHandler(),
   submissionsListHandler(),
   storageUploadHandler(),
+  signedUrlHandler(),
 ]

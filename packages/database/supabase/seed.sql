@@ -97,7 +97,7 @@ end $$;
 do $$
 begin
   insert into storage.buckets (id, name, public)
-  values ('submission-viva-audio', 'submission-viva-audio', true)
+  values ('submission-viva-audio', 'submission-viva-audio', false)
   on conflict (id) do update
   set public = excluded.public,
       name = excluded.name;

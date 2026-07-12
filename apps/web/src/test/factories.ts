@@ -75,7 +75,7 @@ export function createTestUser(overrides: Partial<TestUser> = {}): TestUser {
 export type TestSubmissionViva = {
   id: string
   submission_id: string
-  audio_url: string
+  audio_path: string
   file_name: string
   created_at: string
 }
@@ -86,8 +86,7 @@ export function createTestSubmissionViva(
   return {
     id: '50420000-0000-0000-0000-000000000000',
     submission_id: '30420000-0000-0000-0000-000000000000',
-    audio_url:
-      'https://example-project.supabase.co/storage/v1/object/public/submission-viva-audio/30420000-0000-0000-0000-000000000000/test.webm',
+    audio_path: '30420000-0000-0000-0000-000000000000/test.webm',
     file_name: 'test.webm',
     created_at: '2026-04-30T20:10:00.000Z',
     ...overrides,
