@@ -127,6 +127,76 @@ export function createTestVivaSession(
   }
 }
 
+export type TestAskedQuestion = {
+  id: string
+  viva_session_id: string
+  viva_question_id: string | null
+  question_text: string
+  is_unplanned: boolean
+  asked_at: string
+}
+
+export function createTestAskedQuestion(
+  overrides: Partial<TestAskedQuestion> = {},
+): TestAskedQuestion {
+  return {
+    id: '80420000-0000-0000-0000-000000000000',
+    viva_session_id: '70420000-0000-0000-0000-000000000000',
+    viva_question_id: '40420000-0000-0000-0000-000000000000',
+    question_text: 'Why does the response describe Lord Mansfield as pivotal?',
+    is_unplanned: false,
+    asked_at: '2026-07-12T09:05:00.000Z',
+    ...overrides,
+  }
+}
+
+export type TestObservation = {
+  asked_question_id: string
+  content: string
+  teacher_id: string
+  created_at: string
+  updated_at: string
+}
+
+export function createTestObservation(
+  overrides: Partial<TestObservation> = {},
+): TestObservation {
+  return {
+    asked_question_id: '80420000-0000-0000-0000-000000000000',
+    content: 'Confident and well reasoned.',
+    teacher_id: '20420000-0000-0000-0000-000000000000',
+    created_at: '2026-07-12T09:10:00.000Z',
+    updated_at: '2026-07-12T09:10:00.000Z',
+    ...overrides,
+  }
+}
+
+export type TestEvidenceMarkerType =
+  | 'clear_understanding'
+  | 'needs_further_probing'
+  | 'concern'
+
+export type TestEvidenceMarker = {
+  asked_question_id: string
+  marker_type: TestEvidenceMarkerType
+  teacher_id: string
+  created_at: string
+  updated_at: string
+}
+
+export function createTestEvidenceMarker(
+  overrides: Partial<TestEvidenceMarker> = {},
+): TestEvidenceMarker {
+  return {
+    asked_question_id: '80420000-0000-0000-0000-000000000000',
+    marker_type: 'clear_understanding',
+    teacher_id: '20420000-0000-0000-0000-000000000000',
+    created_at: '2026-07-12T09:15:00.000Z',
+    updated_at: '2026-07-12T09:15:00.000Z',
+    ...overrides,
+  }
+}
+
 export type TestSubmissionViva = {
   id: string
   submission_id: string
