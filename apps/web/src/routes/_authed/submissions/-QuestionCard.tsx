@@ -6,8 +6,10 @@ import { eyebrowClassName, mutedTextClassName, paperPanelClassName } from '~/lib
 type QuestionCardProps = {
   id: string
   isHighlighted?: boolean
+  isInSet?: boolean
   label: string
   onSave: (questionText: string) => Promise<void>
+  onToggleInSet?: (included: boolean) => Promise<void>
   questionText: string
   teacherNote?: string
 }
@@ -15,8 +17,10 @@ type QuestionCardProps = {
 export function QuestionCard({
   id,
   isHighlighted = false,
+  isInSet = false,
   label,
   onSave,
+  onToggleInSet,
   questionText,
   teacherNote,
 }: QuestionCardProps) {
@@ -24,6 +28,29 @@ export function QuestionCard({
   const [draftText, setDraftText] = React.useState(questionText)
   const [isSaving, setIsSaving] = React.useState(false)
   const [saveErrorMessage, setSaveErrorMessage] = React.useState<string | null>(null)
+  const [isTogglingSet, setIsTogglingSet] = React.useState(false)
+  const [toggleErrorMessage, setToggleErrorMessage] = React.useState<string | null>(null)
+
+  async function handleToggleInSet(nextIncluded: boolean) {
+    if (!onToggleInSet) {
+      return
+    }
+
+    setIsTogglingSet(true)
+    setToggleErrorMessage(null)
+
+    try {
+      await onToggleInSet(nextIncluded)
+    } catch (error) {
+      setToggleErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'We could not update the Viva Question Set.',
+      )
+    } finally {
+      setIsTogglingSet(false)
+    }
+  }
 
   if (isEditing) {
     return (
@@ -145,6 +172,25 @@ export function QuestionCard({
         <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
           {teacherNote}
         </p>
+      ) : null}
+      {onToggleInSet ? (
+        <div className="grid gap-1">
+          <label className="flex w-fit items-center gap-2 text-sm text-on-surface-variant">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={isInSet}
+              disabled={isTogglingSet}
+              onChange={(event) => {
+                void handleToggleInSet(event.target.checked)
+              }}
+            />
+            {isInSet ? 'In Viva Question Set' : 'Add to Viva Question Set'}
+          </label>
+          {toggleErrorMessage ? (
+            <p className="text-sm text-error">{toggleErrorMessage}</p>
+          ) : null}
+        </div>
       ) : null}
     </article>
   )
