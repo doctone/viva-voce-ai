@@ -1,13 +1,6 @@
-import { Button } from './ui/Button'
+import { Button, Heading, TextField } from './ui'
 import { cn } from '~/lib/utils'
-import {
-  eyebrowClassName,
-  headingOneClassName,
-  headingTwoClassName,
-  mutedTextClassName,
-  paperPanelClassName,
-} from '~/lib/class-names'
-import { TextField } from './ui/TextField'
+import { eyebrowClassName, mutedTextClassName, paperPanelClassName } from '~/lib/class-names'
 
 export function Auth({
   actionText,
@@ -34,7 +27,7 @@ export function Auth({
           >
             <div className="mb-8 grid gap-2">
               <span className={eyebrowClassName}>Viva Voce AI</span>
-              <h1 className={headingOneClassName}>{actionText}</h1>
+              <Heading>{actionText}</Heading>
               <p className={mutedTextClassName}>
                 Strengthen examination integrity with AI-assisted review that
                 helps educators judge whether submitted work genuinely reflects
@@ -78,9 +71,9 @@ export function Auth({
           <div className="flex min-h-full items-end bg-[linear-gradient(180deg,rgba(0,32,70,0.08),rgba(0,32,70,0.5)),linear-gradient(0deg,rgba(250,249,245,0.05),rgba(250,249,245,0.05))] p-[clamp(24px,4vw,40px)]">
             <div className="max-w-[28rem] border border-outline-variant bg-[rgb(250_249_245_/_0.82)] p-6 text-on-surface backdrop-blur-[10px]">
               <span className={eyebrowClassName}>Paper & Ink</span>
-              <h2 className={cn(headingTwoClassName, 'mb-2')}>
+              <Heading level={2} className="mb-2">
                 Evidence-led support for authentic assessment.
-              </h2>
+              </Heading>
               <p className={mutedTextClassName}>
                 Designed for teachers who need calm, defensible signals when
                 deciding whether coursework, viva responses, and written

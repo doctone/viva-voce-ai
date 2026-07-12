@@ -1,13 +1,9 @@
 import { Link } from '@tanstack/react-router'
-import { buttonClassName } from '../../../components/ui/Button'
+import { buttonClassName, Heading } from '../../../components/ui'
 import { SubmissionsTable } from './-SubmissionsTable'
 import { useSubmissions } from './-useSubmissions'
 import { cn } from '~/lib/utils'
-import {
-  eyebrowClassName,
-  headingOneClassName,
-  mutedTextClassName,
-} from '~/lib/class-names'
+import { eyebrowClassName, mutedTextClassName } from '~/lib/class-names'
 
 export function SubmissionsPage() {
   const submissionsQuery = useSubmissions()
@@ -17,7 +13,7 @@ export function SubmissionsPage() {
       <div className="grid gap-4 border-b border-outline-variant px-6 pb-6 pt-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-6 lg:px-8">
         <div className="grid gap-3">
           <span className={eyebrowClassName}>Workspace</span>
-          <h1 className={headingOneClassName}>Submissions</h1>
+          <Heading>Submissions</Heading>
           <p className={cn(mutedTextClassName, 'max-w-[64ch] text-sm leading-6')}>
             Review recent submissions before opening an individual submission record.
           </p>

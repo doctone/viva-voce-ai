@@ -1,7 +1,5 @@
 import * as React from 'react'
-import { Button } from '../../../components/ui/Button'
-import { SelectField } from '../../../components/ui/SelectField'
-import { TextAreaField } from '../../../components/ui/TextAreaField'
+import { Button, SelectField, TextAreaField } from '../../../components/ui'
 import { cn } from '~/lib/utils'
 import { eyebrowClassName, mutedTextClassName, paperPanelClassName } from '~/lib/class-names'
 

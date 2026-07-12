@@ -1,12 +1,8 @@
 import { Link } from '@tanstack/react-router'
-import { Button } from './ui/Button'
+import { Button, EditorialList, EditorialListItem, Heading } from './ui'
 import { cn } from '~/lib/utils'
 import {
-  editorialListClassName,
-  editorialRowClassName,
   eyebrowClassName,
-  headingOneClassName,
-  headingTwoClassName,
   ledeClassName,
   mutedTextClassName,
   paperPanelClassName,
@@ -47,9 +43,7 @@ export function LandingPage() {
       <section className="grid gap-10 py-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center lg:gap-16">
         <div className="grid gap-6">
           <span className={eyebrowClassName}>Viva Voce AI</span>
-          <h1 className={headingOneClassName}>
-            Prepare viva questions in seconds, not hours
-          </h1>
+          <Heading>Prepare viva questions in seconds, not hours</Heading>
           <p className={cn('max-w-[38rem]', ledeClassName)}>
             Viva Voce AI reads a student&rsquo;s coursework and generates
             tailored oral exam questions for KS4 English teachers, so prep for
@@ -69,7 +63,7 @@ export function LandingPage() {
       </section>
 
       <section id="how-it-works" className="grid gap-8 py-16">
-        <h2 className={headingTwoClassName}>How it works</h2>
+        <Heading level={2}>How it works</Heading>
         <div className="grid gap-8 lg:grid-cols-3">
           {howItWorksSteps.map((step) => (
             <div key={step.title} className="grid gap-3">
@@ -91,21 +85,16 @@ export function LandingPage() {
       </section>
 
       <section id="built-for-teachers" className="grid gap-6 py-16">
-        <h2 className={headingTwoClassName}>Built for teachers</h2>
-        <ul
-          aria-label="Built for teachers"
-          className={cn('max-w-[42rem]', editorialListClassName)}
-        >
+        <Heading level={2}>Built for teachers</Heading>
+        <EditorialList aria-label="Built for teachers" className="max-w-[42rem]">
           {features.map((feature) => (
-            <li key={feature} className={editorialRowClassName}>
-              {feature}
-            </li>
+            <EditorialListItem key={feature}>{feature}</EditorialListItem>
           ))}
-        </ul>
+        </EditorialList>
       </section>
 
       <section id="why-it-matters" className="grid gap-4 py-16">
-        <h2 className={headingTwoClassName}>Why viva voce matters</h2>
+        <Heading level={2}>Why viva voce matters</Heading>
         <p className={cn('max-w-[42rem]', ledeClassName)}>
           In an era where AI can produce polished written work in seconds, a
           short oral conversation is one of the clearest ways to verify a
@@ -128,9 +117,9 @@ export function LandingPage() {
         <p className={mutedTextClassName}>
           Currently piloting with KS4 English departments.
         </p>
-        <h2 className={headingTwoClassName}>
+        <Heading level={2}>
           Ready to bring viva voce into your department?
-        </h2>
+        </Heading>
         <div className="flex justify-center">
           <Button asChild>
             <Link to="/signup">Request access</Link>

@@ -1,20 +1,12 @@
 import { Link } from '@tanstack/react-router'
-import { Button, buttonClassName } from './ui/Button'
-import { cn } from '~/lib/utils'
-import {
-  eyebrowClassName,
-  mutedTextClassName,
-  pageFrameClassName,
-  pageShellClassName,
-  paperPanelClassName,
-  sectionCardClassName,
-} from '~/lib/class-names'
+import { Button, buttonClassName, Card } from '~/components/ui'
+import { eyebrowClassName, mutedTextClassName, pageFrameClassName, pageShellClassName } from '~/lib/class-names'
 
 export function NotFound({ children }: { children?: React.ReactNode }) {
   return (
     <div className={pageShellClassName}>
       <div className={pageFrameClassName}>
-        <div className={cn(paperPanelClassName, sectionCardClassName)}>
+        <Card>
           <span className={eyebrowClassName}>Page Not Found</span>
           <div className={mutedTextClassName}>
             {children || <p>The page you are looking for does not exist.</p>}
@@ -27,7 +19,7 @@ export function NotFound({ children }: { children?: React.ReactNode }) {
               Start Over
             </Link>
           </p>
-        </div>
+        </Card>
       </div>
     </div>
   )

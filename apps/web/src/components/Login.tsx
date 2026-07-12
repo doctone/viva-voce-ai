@@ -6,7 +6,7 @@ import { signupFn } from '../routes/signup'
 import { cn } from '~/lib/utils'
 import { mutedTextClassName } from '~/lib/class-names'
 import { Auth } from './Auth'
-import { Button } from './ui/Button'
+import { Button } from './ui'
 
 export function Login() {
   const router = useRouter()

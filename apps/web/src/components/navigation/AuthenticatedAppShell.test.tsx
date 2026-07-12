@@ -8,13 +8,8 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { cn } from '~/lib/utils'
-import {
-  headingOneClassName,
-  mutedTextClassName,
-  paperPanelClassName,
-  sectionCardClassName,
-} from '~/lib/class-names'
+import { Card, Heading } from '~/components/ui'
+import { mutedTextClassName } from '~/lib/class-names'
 import { AuthenticatedAppShell } from './AuthenticatedAppShell'
 import { render } from '../../test/router'
 import { getShouldShowTopbar } from '../../routes/__root'
@@ -38,9 +33,9 @@ function renderShellWithRoutes() {
     getParentRoute: () => rootRoute,
     path: '/submissions',
     component: () => (
-      <section className={cn(paperPanelClassName, sectionCardClassName)}>
-        <h1 className={headingOneClassName}>Submissions</h1>
-      </section>
+      <Card as="section">
+        <Heading>Submissions</Heading>
+      </Card>
     ),
   })
 
@@ -48,9 +43,9 @@ function renderShellWithRoutes() {
     getParentRoute: () => rootRoute,
     path: '/reports',
     component: () => (
-      <section className={cn(paperPanelClassName, sectionCardClassName)}>
-        <h1 className={headingOneClassName}>Reports</h1>
-      </section>
+      <Card as="section">
+        <Heading>Reports</Heading>
+      </Card>
     ),
   })
 
@@ -88,10 +83,10 @@ describe('AuthenticatedAppShell', () => {
       getParentRoute: () => rootRoute,
       path: '/submissions',
       component: () => (
-        <section className={cn(paperPanelClassName, sectionCardClassName)}>
-          <h1 className={headingOneClassName}>Submissions</h1>
+        <Card as="section">
+          <Heading>Submissions</Heading>
           <p className={mutedTextClassName}>Practice sessions will appear here soon.</p>
-        </section>
+        </Card>
       ),
     })
 
@@ -99,10 +94,10 @@ describe('AuthenticatedAppShell', () => {
       getParentRoute: () => rootRoute,
       path: '/reports',
       component: () => (
-        <section className={cn(paperPanelClassName, sectionCardClassName)}>
-          <h1 className={headingOneClassName}>Reports</h1>
+        <Card as="section">
+          <Heading>Reports</Heading>
           <p className={mutedTextClassName}>Assessment summaries live here.</p>
-        </section>
+        </Card>
       ),
     })
 

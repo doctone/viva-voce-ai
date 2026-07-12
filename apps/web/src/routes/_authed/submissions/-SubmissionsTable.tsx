@@ -5,7 +5,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { cn } from '../../../styles/classes'
+import { cn } from '~/lib/utils'
 
 export type SubmissionStatus = 'pending' | 'questions_ready' | 'recorded'
 

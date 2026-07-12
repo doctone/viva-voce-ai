@@ -4,21 +4,17 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { createFileRoute } from '@tanstack/react-router'
 import {
+  Button,
+  Card,
   FormSelectField,
   FormTextAreaField,
   FormTextField,
-} from '../../components/ui/TanStackFormField'
+  Heading,
+} from '../../components/ui'
 import { useMutation } from '../../hooks/useMutation'
 import { getSupabaseBrowserClient } from '../../utils/supabase-browser'
-import { Button } from '../../components/ui/Button'
 import { cn } from '~/lib/utils'
-import {
-  eyebrowClassName,
-  headingOneClassName,
-  mutedTextClassName,
-  paperPanelClassName,
-  sectionCardClassName,
-} from '~/lib/class-names'
+import { eyebrowClassName, mutedTextClassName } from '~/lib/class-names'
 
 export const Route = createFileRoute('/_authed/submissions/new')({
   component: NewSubmissionPage,
@@ -138,14 +134,15 @@ export function NewSubmissionPage() {
     <section className="grid gap-8">
       <div className="grid gap-3">
         <span className={eyebrowClassName}>Submissions</span>
-        <h1 className={headingOneClassName}>New submission</h1>
+        <Heading>New submission</Heading>
         <p className={cn(mutedTextClassName, 'max-w-[64ch] text-sm leading-6')}>
           Save the submission and generate viva questions in one step.
         </p>
       </div>
 
-      <form
-        className={cn(paperPanelClassName, sectionCardClassName, 'gap-6')}
+      <Card
+        as="form"
+        className="gap-6"
         noValidate
         onSubmit={(event) => {
           event.preventDefault()
@@ -242,7 +239,7 @@ export function NewSubmissionPage() {
             </div>
           )}
         />
-      </form>
+      </Card>
     </section>
   )
 }
