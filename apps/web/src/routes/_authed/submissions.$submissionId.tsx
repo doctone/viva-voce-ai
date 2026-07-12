@@ -1110,7 +1110,7 @@ export function SubmissionDetailPage() {
               <AddManualQuestionCard onAdd={addManualQuestion} />
             </section>
 
-            <aside className="grid content-start gap-4 xl:col-span-5 xl:row-start-2 xl:sticky xl:top-24">
+            <aside className="grid min-w-0 content-start gap-4 [&>*]:min-w-0 xl:col-span-5 xl:row-start-2 xl:sticky xl:top-24">
               <QuestionSetPanel
                 categoryBalance={categoryBalance}
                 estimatedDurationMinutes={estimatedDurationMinutes}
@@ -1229,6 +1229,7 @@ export function SubmissionDetailPage() {
                       <p className="text-sm font-medium">{record.file_name}</p>
                       {record.access.status === "allowed" ? (
                         <audio
+                          className="w-full"
                           data-testid="submission-viva-player"
                           controls
                           src={record.access.signedUrl}
