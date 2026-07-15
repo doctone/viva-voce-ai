@@ -2,7 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
-import { SubmissionDetailPage } from './submissions.$submissionId'
+import { SubmissionDetailPage } from './submissions.$submissionId.index'
 import {
   createTestAskedQuestion,
   createTestQuestion,
