@@ -1248,6 +1248,40 @@ describe('SubmissionDetailPage', () => {
     expect(await screen.findByText('Saved')).toBeInTheDocument()
   })
 
+  it('links to Conduct mode once a Viva Session is active', async () => {
+    generateSubmissionVivaSpy.mockReset()
+    equipmentCheckSpy.mockReset()
+
+    const activeSession = createTestVivaSession()
+
+    server.use(
+      ...submissionWithQuestionsHandlers(testSubmission, [
+        createTestQuestion({ set_position: 0 }),
+      ]),
+      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'ready' })),
+      submissionVivaHandler([]),
+      vivaSessionHandler([activeSession]),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
+
+    const conductLink = await screen.findByRole('link', {
+      name: 'Conduct Viva Session',
+    })
+
+    expect(conductLink).toHaveAttribute(
+      'href',
+      '/submissions/30420000-0000-0000-0000-000000000000/conduct',
+    )
+  })
+
   it('cancels the readiness checklist without starting a Viva Session', async () => {
     generateSubmissionVivaSpy.mockReset()
     equipmentCheckSpy.mockReset()

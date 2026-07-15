@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Button,
   Card,
@@ -9,6 +9,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  buttonClassName,
 } from "../../components/ui";
 import { useEquipmentCheck } from "../../features/submissions/useEquipmentCheck";
 import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
@@ -1145,6 +1146,18 @@ export function SubmissionDetailPage() {
                 studentId={submission.student_id}
                 submissionTitle={submission.submission_title}
               />
+
+              {vivaSessionQuery.data ? (
+                <div>
+                  <Link
+                    to="/submissions/$submissionId/conduct"
+                    params={{ submissionId }}
+                    className={buttonClassName()}
+                  >
+                    Conduct Viva Session
+                  </Link>
+                </div>
+              ) : null}
 
               {vivaSessionQuery.data ? (
                 <VivaSessionCapturePanel
