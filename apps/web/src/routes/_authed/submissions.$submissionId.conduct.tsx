@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Card, Heading, buttonClassName } from "../../components/ui";
+import { Breadcrumb, Card, Heading, buttonClassName } from "../../components/ui";
 import {
   createSupabaseAskedQuestionRepository,
   recordAskedQuestion,
@@ -250,40 +250,60 @@ export function ConductVivaSessionPage() {
     [invalidateAskedQuestions, vivaSession],
   );
 
+  const submissionTitle = submissionQuery.data?.submission_title;
+  const conductBreadcrumb = (
+    <Breadcrumb
+      items={[
+        { label: "Submissions", to: "/submissions" },
+        {
+          label: submissionTitle ?? "Submission",
+          to: "/submissions/$submissionId",
+        },
+        { label: "Conduct" },
+      ]}
+    />
+  );
+
   if (
     submissionQuery.isLoading ||
     questionSetIdQuery.isLoading ||
     vivaSessionQuery.isLoading
   ) {
     return (
-      <Card as="section" className="gap-4">
-        <span className={eyebrowClassName}>Conduct mode</span>
-        <p className={cn(mutedTextClassName, "text-sm leading-6")}>
-          Loading…
-        </p>
-      </Card>
+      <div className="grid gap-6">
+        {conductBreadcrumb}
+        <Card as="section" className="gap-4">
+          <span className={eyebrowClassName}>Conduct mode</span>
+          <p className={cn(mutedTextClassName, "text-sm leading-6")}>
+            Loading…
+          </p>
+        </Card>
+      </div>
     );
   }
 
   if (!vivaSession) {
     return (
-      <Card as="section" className="gap-4">
-        <span className={eyebrowClassName}>Conduct mode</span>
-        <Heading>No active Viva Session</Heading>
-        <p className={cn(mutedTextClassName, "max-w-[60ch] text-sm leading-6")}>
-          Start a Viva Session from the submission page before entering
-          Conduct mode.
-        </p>
-        <div>
-          <Link
-            to="/submissions/$submissionId"
-            params={{ submissionId }}
-            className={buttonClassName()}
-          >
-            Back to submission
-          </Link>
-        </div>
-      </Card>
+      <div className="grid gap-6">
+        {conductBreadcrumb}
+        <Card as="section" className="gap-4">
+          <span className={eyebrowClassName}>Conduct mode</span>
+          <Heading>No active Viva Session</Heading>
+          <p className={cn(mutedTextClassName, "max-w-[60ch] text-sm leading-6")}>
+            Start a Viva Session from the submission page before entering
+            Conduct mode.
+          </p>
+          <div>
+            <Link
+              to="/submissions/$submissionId"
+              params={{ submissionId }}
+              className={buttonClassName()}
+            >
+              Back to submission
+            </Link>
+          </div>
+        </Card>
+      </div>
     );
   }
 
@@ -291,15 +311,7 @@ export function ConductVivaSessionPage() {
 
   return (
     <div className="grid gap-6">
-      <div>
-        <Link
-          to="/submissions/$submissionId"
-          params={{ submissionId }}
-          className="text-sm text-on-surface-variant underline-offset-4 hover:text-primary hover:underline"
-        >
-          Back to submission
-        </Link>
-      </div>
+      {conductBreadcrumb}
       <ConductModePanel
         currentIndex={currentIndex}
         elapsedSeconds={elapsedSeconds}

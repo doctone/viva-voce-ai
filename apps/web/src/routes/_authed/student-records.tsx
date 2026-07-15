@@ -1,21 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Card, Heading } from '~/components/ui'
-import { cn } from '~/lib/utils'
-import { eyebrowClassName, mutedTextClassName } from '~/lib/class-names'
+import { EmptyState, PageFrame } from '~/components/ui'
 
 export const Route = createFileRoute('/_authed/student-records')({
   component: StudentRecordsPage,
 })
 
-function StudentRecordsPage() {
+export function StudentRecordsPage() {
   return (
-    <Card as="section">
-      <span className={eyebrowClassName}>Students</span>
-      <Heading>Student Records</Heading>
-      <p className={cn(mutedTextClassName, 'max-w-[58ch] text-sm leading-6')}>
-        Student record management will live here next. This placeholder keeps
-        the sidebar navigation real while the page is being built.
-      </p>
-    </Card>
+    <PageFrame
+      eyebrow="Students"
+      title="Student Records"
+      description="Keep a durable record of each student's viva history alongside their coursework."
+    >
+      <EmptyState
+        title="No student records yet"
+        description="Student records will appear here once a submission has been reviewed. They will bring together viva questions, sessions, and evidence for each student in one place."
+      />
+    </PageFrame>
   )
 }

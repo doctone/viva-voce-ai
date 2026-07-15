@@ -94,7 +94,9 @@ describe('SubmissionDetailPage', () => {
     expect(
       await screen.findByText(/The evolution of mercantile law in the 18th century/),
     ).toBeInTheDocument()
-    expect(screen.getByText('Mercantile law response')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Mercantile law response' }),
+    ).toBeInTheDocument()
     expect(
       screen.getByText(/The evolution of mercantile law in the 18th century/),
     ).toBeInTheDocument()
