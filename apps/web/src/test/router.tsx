@@ -16,7 +16,8 @@ type RouteOverrides = Partial<
     | '/signup'
     | '/submissions'
     | '/submissions/new'
-    | '/submissions/$submissionId',
+    | '/submissions/$submissionId'
+    | '/submissions/$submissionId/conduct',
     ReactElement
   >
 >
@@ -57,6 +58,12 @@ export function renderWithRouter(
     path: '/submissions/$submissionId',
     component: () => routeOverrides['/submissions/$submissionId'] ?? ui,
   })
+  const submissionConductRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/submissions/$submissionId/conduct',
+    component: () =>
+      routeOverrides['/submissions/$submissionId/conduct'] ?? ui,
+  })
   const routeTree = rootRoute.addChildren([
     indexRoute,
     loginRoute,
@@ -64,6 +71,7 @@ export function renderWithRouter(
     submissionsRoute,
     submissionsNewRoute,
     submissionDetailRoute,
+    submissionConductRoute,
   ])
 
   const router = createRouter({
