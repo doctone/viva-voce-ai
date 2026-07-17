@@ -1,8 +1,11 @@
+export { Breadcrumb, type BreadcrumbItem } from './Breadcrumb'
 export { Button, buttonClassName, buttonVariants } from './Button'
 export { Card } from './Card'
 export { EditorialList, EditorialListItem } from './EditorialList'
+export { EmptyState } from './EmptyState'
 export { FieldShell, fieldControlClassName } from './Field'
 export { Heading } from './Heading'
+export { PageFrame } from './PageFrame'
 export { SelectField } from './SelectField'
 export {
   Tabs,

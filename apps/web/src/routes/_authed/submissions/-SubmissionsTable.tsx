@@ -6,6 +6,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { cn } from '~/lib/utils'
+import { EmptyState } from '~/components/ui'
 
 export type SubmissionStatus = 'pending' | 'questions_ready' | 'recorded'
 
@@ -97,15 +98,10 @@ export function SubmissionsTable({ rows }: SubmissionsTableProps) {
 
   if (rows.length === 0) {
     return (
-      <div className="grid gap-3 border border-dashed border-outline bg-surface-container-low px-6 py-8 text-left">
-        <p className="text-base font-medium text-on-surface">
-          No submissions yet.
-        </p>
-        <p className="max-w-[52ch] text-sm leading-6 text-on-surface-variant">
-          Student submissions will appear here once coursework is ready for
-          review.
-        </p>
-      </div>
+      <EmptyState
+        title="No submissions yet."
+        description="Student submissions will appear here once coursework is ready for review."
+      />
     )
   }
 

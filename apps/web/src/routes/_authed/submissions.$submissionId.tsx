@@ -2,9 +2,11 @@ import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  Breadcrumb,
   Button,
   Card,
   Heading,
+  PageFrame,
   Tabs,
   TabsContent,
   TabsList,
@@ -453,6 +455,17 @@ function countSubmissionWords(value: string) {
   return value.trim().split(/\s+/).filter(Boolean).length;
 }
 
+function SubmissionBreadcrumb({ title }: { title?: string }) {
+  return (
+    <Breadcrumb
+      items={[
+        { label: "Submissions", to: "/submissions" },
+        { label: title ?? "Submission" },
+      ]}
+    />
+  );
+}
+
 function LoadingPulseLine({ className }: { className?: string }) {
   return (
     <div
@@ -474,11 +487,13 @@ function SubmissionGenerationShell({
   submissionTitle,
 }: SubmissionGenerationShellProps) {
   return (
-    <section className="-mx-6 -mb-16 -mt-8 grid min-h-screen w-[calc(100%+3rem)]">
+    <div className="grid gap-8">
+      <SubmissionBreadcrumb title={submissionTitle} />
+
       <div
         className={cn(
           paperPanelClassName,
-          "grid min-h-full w-full grid-rows-[auto_1fr] overflow-hidden",
+          "grid w-full grid-rows-[auto_1fr] overflow-hidden",
         )}
       >
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-outline-variant px-8 py-6">
@@ -587,7 +602,7 @@ function SubmissionGenerationShell({
           </aside>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -601,21 +616,24 @@ function SubmissionGenerationFailure({
   onRetry,
 }: SubmissionGenerationFailureProps) {
   return (
-    <Card as="section" className="gap-5">
-      <span className={eyebrowClassName}>Submissions</span>
-      <Heading>Viva questions unavailable</Heading>
-      <p className={cn(mutedTextClassName, "max-w-[60ch] text-sm leading-6")}>
-        The submission was saved, but viva question generation did not complete.
-      </p>
-      {errorMessage ? (
-        <p className="text-sm leading-6 text-error">{errorMessage}</p>
-      ) : null}
-      <div>
-        <Button type="button" onClick={onRetry}>
-          Try again
-        </Button>
-      </div>
-    </Card>
+    <div className="grid gap-8">
+      <SubmissionBreadcrumb />
+      <Card as="section" className="gap-5">
+        <span className={eyebrowClassName}>Submissions</span>
+        <Heading>Viva questions unavailable</Heading>
+        <p className={cn(mutedTextClassName, "max-w-[60ch] text-sm leading-6")}>
+          The submission was saved, but viva question generation did not complete.
+        </p>
+        {errorMessage ? (
+          <p className="text-sm leading-6 text-error">{errorMessage}</p>
+        ) : null}
+        <div>
+          <Button type="button" onClick={onRetry}>
+            Try again
+          </Button>
+        </div>
+      </Card>
+    </div>
   );
 }
 
@@ -903,34 +921,43 @@ export function SubmissionDetailPage() {
 
   if (submissionQuery.isLoading) {
     return (
-      <Card as="section">
-        <span className={eyebrowClassName}>Submissions</span>
-        <Heading>Loading submission</Heading>
-      </Card>
+      <div className="grid gap-8">
+        <SubmissionBreadcrumb />
+        <Card as="section">
+          <span className={eyebrowClassName}>Submissions</span>
+          <Heading>Loading submission</Heading>
+        </Card>
+      </div>
     );
   }
 
   if (submissionQuery.error instanceof Error) {
     return (
-      <Card as="section">
-        <span className={eyebrowClassName}>Submissions</span>
-        <Heading>Submission unavailable</Heading>
-        <p className="text-sm leading-6 text-error">
-          {submissionQuery.error.message}
-        </p>
-      </Card>
+      <div className="grid gap-8">
+        <SubmissionBreadcrumb />
+        <Card as="section">
+          <span className={eyebrowClassName}>Submissions</span>
+          <Heading>Submission unavailable</Heading>
+          <p className="text-sm leading-6 text-error">
+            {submissionQuery.error.message}
+          </p>
+        </Card>
+      </div>
     );
   }
 
   if (questionsQuery.error instanceof Error) {
     return (
-      <Card as="section">
-        <span className={eyebrowClassName}>Submissions</span>
-        <Heading>Submission unavailable</Heading>
-        <p className="text-sm leading-6 text-error">
-          {questionsQuery.error.message}
-        </p>
-      </Card>
+      <div className="grid gap-8">
+        <SubmissionBreadcrumb />
+        <Card as="section">
+          <span className={eyebrowClassName}>Submissions</span>
+          <Heading>Submission unavailable</Heading>
+          <p className="text-sm leading-6 text-error">
+            {questionsQuery.error.message}
+          </p>
+        </Card>
+      </div>
     );
   }
 
@@ -958,22 +985,28 @@ export function SubmissionDetailPage() {
 
   if (questionSetQuery.isLoading) {
     return (
-      <Card as="section">
-        <span className={eyebrowClassName}>Submissions</span>
-        <Heading>Loading Viva Question Set</Heading>
-      </Card>
+      <div className="grid gap-8">
+        <SubmissionBreadcrumb title={submission.submission_title} />
+        <Card as="section">
+          <span className={eyebrowClassName}>Submissions</span>
+          <Heading>Loading Viva Question Set</Heading>
+        </Card>
+      </div>
     );
   }
 
   if (questionSetQuery.error instanceof Error) {
     return (
-      <Card as="section">
-        <span className={eyebrowClassName}>Submissions</span>
-        <Heading>Submission unavailable</Heading>
-        <p className="text-sm leading-6 text-error">
-          {questionSetQuery.error.message}
-        </p>
-      </Card>
+      <div className="grid gap-8">
+        <SubmissionBreadcrumb title={submission.submission_title} />
+        <Card as="section">
+          <span className={eyebrowClassName}>Submissions</span>
+          <Heading>Submission unavailable</Heading>
+          <p className="text-sm leading-6 text-error">
+            {questionSetQuery.error.message}
+          </p>
+        </Card>
+      </div>
     );
   }
 
@@ -990,16 +1023,16 @@ export function SubmissionDetailPage() {
   const submissionWordCount = countSubmissionWords(submission.submission_text);
 
   return (
-    <section className="grid gap-8">
-      <div className="grid gap-3">
-        <span className={eyebrowClassName}>Submissions</span>
-        {/* <Heading>{submission.submission_title}</Heading> */}
-        <p className={cn(mutedTextClassName, "text-sm leading-6")}>
+    <PageFrame
+      breadcrumb={<SubmissionBreadcrumb title={submission.submission_title} />}
+      title={submission.submission_title}
+      description={
+        <>
           Student {submission.student_id} · Submitted{" "}
           {formatSubmissionDate(submission.created_at)}
-        </p>
-      </div>
-
+        </>
+      }
+    >
       <Tabs defaultValue="submission" className="gap-6">
         <TabsList
           variant="line"
@@ -1021,19 +1054,11 @@ export function SubmissionDetailPage() {
         </TabsList>
 
         <TabsContent value="submission" className="mt-0">
-          <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:items-start">
-            <section className="xl:col-span-8">
-              <article
-                className={cn(
-                  paperPanelClassName,
-                  "relative overflow-hidden p-8",
-                )}
-              >
-                <div className="absolute inset-y-0 left-0 w-1 bg-primary-container" />
-                <h2 className="mb-6 border-b border-stone-100 pb-4 font-display text-[32px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
-                  {submission.submission_title}
-                </h2>
-                <div className="max-w-2xl space-y-4 font-serif text-lg leading-relaxed text-on-surface-variant">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
+            <section className="lg:col-span-8">
+              <article className={cn(paperPanelClassName, "p-8")}>
+                <span className={eyebrowClassName}>Submission text</span>
+                <div className="mt-4 max-w-2xl space-y-4 font-serif text-lg leading-relaxed text-on-surface-variant">
                   {submissionParagraphs.map((paragraph) => (
                     <p key={paragraph}>{paragraph}</p>
                   ))}
@@ -1041,7 +1066,7 @@ export function SubmissionDetailPage() {
               </article>
             </section>
 
-            <aside className="grid content-start gap-4 xl:col-span-4 xl:sticky xl:top-24">
+            <aside className="grid content-start gap-4 lg:col-span-4 lg:sticky lg:top-24">
               <section
                 className={cn(
                   paperPanelClassName,
@@ -1083,12 +1108,12 @@ export function SubmissionDetailPage() {
         </TabsContent>
 
         <TabsContent value="viva-questions" className="mt-0">
-          <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:items-start">
-            <div className="xl:col-span-7">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
+            <div className="lg:col-span-7">
               <Heading level={2}>Viva Questions for this Submission</Heading>
             </div>
 
-            <section className="space-y-4 xl:col-span-7 xl:row-start-2">
+            <section className="space-y-4 lg:col-span-7 lg:row-start-2">
 
               {questions.map((question) => (
                 <QuestionCard
@@ -1111,167 +1136,166 @@ export function SubmissionDetailPage() {
               <AddManualQuestionCard onAdd={addManualQuestion} />
             </section>
 
-            <aside className="grid min-w-0 content-start gap-4 [&>*]:min-w-0 xl:col-span-5 xl:row-start-2 xl:sticky xl:top-24">
-              <QuestionSetPanel
-                categoryBalance={categoryBalance}
-                estimatedDurationMinutes={estimatedDurationMinutes}
-                status={questionSet.status}
-                questions={setQuestions.map((question) => ({
-                  category: question.category,
-                  id: question.id,
-                  label: question.label,
-                  questionText: question.questionText,
-                }))}
-                onMarkReady={() => updateSetStatus("ready")}
-                onRevertToDraft={() => updateSetStatus("draft")}
-                onMoveQuestionUp={(questionId) =>
-                  moveSetQuestion(questionId, "up")
-                }
-                onMoveQuestionDown={(questionId) =>
-                  moveSetQuestion(questionId, "down")
-                }
-                onRemoveQuestion={removeQuestionFromSet}
-              />
-
-              <VivaSessionReadinessPanel
-                activeSession={
-                  vivaSessionQuery.data
-                    ? { startedAt: vivaSessionQuery.data.startedAt }
-                    : null
-                }
-                estimatedDurationMinutes={estimatedDurationMinutes}
-                onCheckEquipment={checkEquipment}
-                onStart={startSessionForQuestionSet}
-                questionSetStatus={questionSet.status}
-                studentId={submission.student_id}
-                submissionTitle={submission.submission_title}
-              />
-
-              {vivaSessionQuery.data ? (
-                <div>
-                  <Link
-                    to="/submissions/$submissionId/conduct"
-                    params={{ submissionId }}
-                    className={buttonClassName()}
-                  >
-                    Conduct Viva Session
-                  </Link>
-                </div>
-              ) : null}
-
-              {vivaSessionQuery.data ? (
-                <VivaSessionCapturePanel
-                  askedQuestions={askedQuestionsQuery.data ?? []}
-                  plannedQuestions={setQuestions.map((question) => ({
+            <aside className="grid min-w-0 content-start gap-8 [&>*]:min-w-0 lg:col-span-5 lg:row-start-2 lg:sticky lg:top-24">
+              <div className="grid gap-4">
+                <span className={eyebrowClassName}>Stage 1 · Build the set</span>
+                <QuestionSetPanel
+                  categoryBalance={categoryBalance}
+                  estimatedDurationMinutes={estimatedDurationMinutes}
+                  status={questionSet.status}
+                  questions={setQuestions.map((question) => ({
+                    category: question.category,
                     id: question.id,
+                    label: question.label,
                     questionText: question.questionText,
                   }))}
-                  onApplyEvidenceMarker={applyAskedQuestionEvidenceMarker}
-                  onAskFollowUpQuestion={askFollowUpQuestion}
-                  onAskPlannedQuestion={askPlannedQuestion}
-                  onSaveObservation={saveAskedQuestionObservation}
+                  onMarkReady={() => updateSetStatus("ready")}
+                  onRevertToDraft={() => updateSetStatus("draft")}
+                  onMoveQuestionUp={(questionId) =>
+                    moveSetQuestion(questionId, "up")
+                  }
+                  onMoveQuestionDown={(questionId) =>
+                    moveSetQuestion(questionId, "down")
+                  }
+                  onRemoveQuestion={removeQuestionFromSet}
                 />
+              </div>
+
+              <div className="grid gap-4 border-t border-outline-variant pt-8">
+                <span className={eyebrowClassName}>Stage 2 · Prepare to conduct</span>
+                <VivaSessionReadinessPanel
+                  activeSession={
+                    vivaSessionQuery.data
+                      ? { startedAt: vivaSessionQuery.data.startedAt }
+                      : null
+                  }
+                  estimatedDurationMinutes={estimatedDurationMinutes}
+                  onCheckEquipment={checkEquipment}
+                  onStart={startSessionForQuestionSet}
+                  questionSetStatus={questionSet.status}
+                  studentId={submission.student_id}
+                  submissionTitle={submission.submission_title}
+                />
+
+                {vivaSessionQuery.data ? (
+                  <div>
+                    <Link
+                      to="/submissions/$submissionId/conduct"
+                      params={{ submissionId }}
+                      className={buttonClassName()}
+                    >
+                      Conduct Viva Session
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
+
+              {vivaSessionQuery.data ? (
+                <div className="grid gap-4 border-t border-outline-variant pt-8">
+                  <span className={eyebrowClassName}>Stage 3 · Capture the session</span>
+                  <VivaSessionCapturePanel
+                    askedQuestions={askedQuestionsQuery.data ?? []}
+                    plannedQuestions={setQuestions.map((question) => ({
+                      id: question.id,
+                      questionText: question.questionText,
+                    }))}
+                    onApplyEvidenceMarker={applyAskedQuestionEvidenceMarker}
+                    onAskFollowUpQuestion={askFollowUpQuestion}
+                    onAskPlannedQuestion={askPlannedQuestion}
+                    onSaveObservation={saveAskedQuestionObservation}
+                  />
+                </div>
               ) : null}
 
-              <section
-                className={cn(
-                  paperPanelClassName,
-                  "bg-surface-container-low p-8",
-                )}
-              >
-                <div className="grid gap-4">
-                  <h2 className="font-display text-[28px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
-                    Oral Examination Audio
-                  </h2>
-                  <p className={cn(mutedTextClassName, "text-sm leading-6")}>
-                    Upload a recorded viva for this submission.
+              <div className="grid gap-3 border-t border-outline-variant pt-8">
+                <span className={eyebrowClassName}>Evidence</span>
+                <h2 className="font-display text-[20px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
+                  Oral Examination Audio
+                </h2>
+                <p className={cn(mutedTextClassName, "text-sm leading-6")}>
+                  Upload a recorded viva for this submission.
+                </p>
+                <label
+                  className="grid gap-2 text-sm"
+                  htmlFor="submissionVivaUpload"
+                >
+                  Upload viva audio
+                  <input
+                    aria-label="Upload viva audio"
+                    id="submissionVivaUpload"
+                    type="file"
+                    accept="audio/*"
+                    disabled={isUploadingViva}
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0];
+
+                      if (!file) {
+                        return;
+                      }
+
+                      setIsUploadingViva(true);
+                      setVivaUploadErrorMessage(null);
+
+                      try {
+                        await uploadSubmissionVivaAudio(submissionId, file);
+                        await queryClient.invalidateQueries({
+                          queryKey: ["submission-viva", submissionId],
+                        });
+                      } catch (error) {
+                        setVivaUploadErrorMessage(
+                          error instanceof Error
+                            ? error.message
+                            : "We could not upload viva audio.",
+                        );
+                      } finally {
+                        setIsUploadingViva(false);
+                      }
+                    }}
+                  />
+                </label>
+                {isUploadingViva ? (
+                  <p className={cn(mutedTextClassName, "text-sm")}>
+                    Uploading viva audio…
                   </p>
-                  <label
-                    className="grid gap-2 text-sm"
-                    htmlFor="submissionVivaUpload"
+                ) : null}
+                {vivaUploadErrorMessage ? (
+                  <p className="text-sm text-error">{vivaUploadErrorMessage}</p>
+                ) : null}
+                {vivaAudioRecords.map((record) => (
+                  <article
+                    key={record.id}
+                    className="grid gap-2 border border-outline-variant bg-surface-container-lowest p-4"
                   >
-                    Upload viva audio
-                    <input
-                      aria-label="Upload viva audio"
-                      id="submissionVivaUpload"
-                      type="file"
-                      accept="audio/*"
-                      disabled={isUploadingViva}
-                      onChange={async (event) => {
-                        const file = event.target.files?.[0];
-
-                        if (!file) {
-                          return;
-                        }
-
-                        setIsUploadingViva(true);
-                        setVivaUploadErrorMessage(null);
-
-                        try {
-                          await uploadSubmissionVivaAudio(submissionId, file);
-                          await queryClient.invalidateQueries({
-                            queryKey: ["submission-viva", submissionId],
-                          });
-                        } catch (error) {
-                          setVivaUploadErrorMessage(
-                            error instanceof Error
-                              ? error.message
-                              : "We could not upload viva audio.",
-                          );
-                        } finally {
-                          setIsUploadingViva(false);
-                        }
-                      }}
-                    />
-                  </label>
-                  {isUploadingViva ? (
-                    <p className={cn(mutedTextClassName, "text-sm")}>
-                      Uploading viva audio…
-                    </p>
-                  ) : null}
-                  {vivaUploadErrorMessage ? (
-                    <p className="text-sm text-error">
-                      {vivaUploadErrorMessage}
-                    </p>
-                  ) : null}
-                  {vivaAudioRecords.map((record) => (
-                    <article
-                      key={record.id}
-                      className="grid gap-2 border border-outline-variant bg-surface-container-lowest p-4"
-                    >
-                      <p className="text-sm font-medium">{record.file_name}</p>
-                      {record.access.status === "allowed" ? (
-                        <audio
-                          className="w-full"
-                          data-testid="submission-viva-player"
-                          controls
-                          src={record.access.signedUrl}
-                        >
-                          <track kind="captions" />
-                        </audio>
-                      ) : (
-                        <p
-                          className="text-sm text-error"
-                          data-testid="submission-viva-unavailable"
-                        >
-                          {describeUnavailableVivaRecording(
-                            record.access.status,
-                          )}
-                        </p>
-                      )}
-                    </article>
-                  ))}
-                  {vivaAudioQuery.isLoading ? (
-                    <p className={cn(mutedTextClassName, "text-sm")}>
-                      Loading viva audio…
-                    </p>
-                  ) : null}
-                </div>
-              </section>
+                    <p className="text-sm font-medium">{record.file_name}</p>
+                    {record.access.status === "allowed" ? (
+                      <audio
+                        className="w-full"
+                        data-testid="submission-viva-player"
+                        controls
+                        src={record.access.signedUrl}
+                      >
+                        <track kind="captions" />
+                      </audio>
+                    ) : (
+                      <p
+                        className="text-sm text-error"
+                        data-testid="submission-viva-unavailable"
+                      >
+                        {describeUnavailableVivaRecording(record.access.status)}
+                      </p>
+                    )}
+                  </article>
+                ))}
+                {vivaAudioQuery.isLoading ? (
+                  <p className={cn(mutedTextClassName, "text-sm")}>
+                    Loading viva audio…
+                  </p>
+                ) : null}
+              </div>
             </aside>
           </div>
         </TabsContent>
       </Tabs>
-    </section>
+    </PageFrame>
   );
 }

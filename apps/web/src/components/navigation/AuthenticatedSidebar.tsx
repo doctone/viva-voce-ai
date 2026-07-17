@@ -1,6 +1,11 @@
 import { Link } from '@tanstack/react-router'
 import { cn } from '~/lib/utils'
-import { eyebrowClassName, mobileNavFooterLinkClassName, paperPanelClassName } from '~/lib/class-names'
+import {
+  brandTitleClassName,
+  eyebrowClassName,
+  mobileNavFooterLinkClassName,
+  paperPanelClassName,
+} from '~/lib/class-names'
 
 export type AuthenticatedNavItem = {
   label: string
@@ -8,9 +13,9 @@ export type AuthenticatedNavItem = {
 }
 
 export const authenticatedNavLinkClassName =
-  'border-r-4 border-r-transparent px-6 py-4 font-display text-sm font-medium uppercase tracking-[0.16em] text-on-surface-variant transition-[background-color,border-color,color] duration-150 ease-out hover:bg-[rgb(244_244_240_/_0.55)] hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]'
+  'px-6 py-4 font-display text-sm font-medium uppercase tracking-[0.16em] text-on-surface-variant transition-[background-color,color] duration-150 ease-out hover:bg-[rgb(244_244_240_/_0.55)] hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]'
 export const authenticatedNavLinkActiveClassName =
-  'border-r-primary bg-surface-container-low text-primary hover:bg-surface-container-low hover:text-primary'
+  'bg-primary text-on-primary hover:bg-primary hover:text-on-primary'
 
 type AuthenticatedSidebarProps = {
   items: readonly AuthenticatedNavItem[]
@@ -31,12 +36,15 @@ export function AuthenticatedSidebar({
         'hidden content-start grid-rows-[auto_1fr_auto] gap-8 p-8 lg:grid',
       )}
     >
-      <div className="grid justify-items-center gap-1">
+      <div className="flex items-center gap-3 px-2">
         <img
           src="/favicon.svg"
-          alt="Viva Voce AI"
-          className="h-28 w-28 rounded-[18px] object-contain"
+          alt=""
+          className="h-10 w-10 shrink-0 rounded-[6px] object-contain"
         />
+        <span className={cn(brandTitleClassName, 'text-[20px] leading-[1.2]')}>
+          Viva Voce AI
+        </span>
       </div>
 
       <nav className="-mx-6 grid content-start justify-items-stretch gap-1 lg:-mx-8" aria-label="Primary">

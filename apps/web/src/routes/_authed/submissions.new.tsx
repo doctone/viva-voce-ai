@@ -4,17 +4,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { createFileRoute } from '@tanstack/react-router'
 import {
+  Breadcrumb,
   Button,
   Card,
   FormSelectField,
   FormTextAreaField,
   FormTextField,
-  Heading,
+  PageFrame,
 } from '../../components/ui'
 import { useMutation } from '../../hooks/useMutation'
 import { getSupabaseBrowserClient } from '../../utils/supabase-browser'
 import { cn } from '~/lib/utils'
-import { eyebrowClassName, mutedTextClassName } from '~/lib/class-names'
+import { mutedTextClassName } from '~/lib/class-names'
 
 export const Route = createFileRoute('/_authed/submissions/new')({
   component: NewSubmissionPage,
@@ -131,15 +132,18 @@ export function NewSubmissionPage() {
   })
 
   return (
-    <section className="grid gap-8">
-      <div className="grid gap-3">
-        <span className={eyebrowClassName}>Submissions</span>
-        <Heading>New submission</Heading>
-        <p className={cn(mutedTextClassName, 'max-w-[64ch] text-sm leading-6')}>
-          Save the submission and generate viva questions in one step.
-        </p>
-      </div>
-
+    <PageFrame
+      breadcrumb={
+        <Breadcrumb
+          items={[
+            { label: 'Submissions', to: '/submissions' },
+            { label: 'New submission' },
+          ]}
+        />
+      }
+      title="New submission"
+      description="Save the submission and generate viva questions in one step."
+    >
       <Card
         as="form"
         className="gap-6"
@@ -240,6 +244,6 @@ export function NewSubmissionPage() {
           )}
         />
       </Card>
-    </section>
+    </PageFrame>
   )
 }

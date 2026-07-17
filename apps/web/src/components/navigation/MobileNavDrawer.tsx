@@ -54,11 +54,16 @@ export function MobileNavDrawer({
           </DialogPrimitive.Description>
 
           <div className="flex items-center justify-between">
-            <img
-              src="/favicon.svg"
-              alt="Viva Voce AI"
-              className="h-16 w-16 rounded-[14px] object-contain"
-            />
+            <div className="flex items-center gap-3">
+              <img
+                src="/favicon.svg"
+                alt=""
+                className="h-9 w-9 shrink-0 rounded-[6px] object-contain"
+              />
+              <span className="font-display text-[18px] font-medium leading-[1.2] text-primary">
+                Viva Voce AI
+              </span>
+            </div>
             <DialogPrimitive.Close
               aria-label="Close navigation menu"
               className="inline-flex h-11 w-11 items-center justify-center border border-outline-variant text-on-surface transition-colors duration-150 ease-out hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]"
