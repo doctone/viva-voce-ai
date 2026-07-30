@@ -5,6 +5,7 @@ import {
   eyebrowClassName,
   mutedTextClassName,
   paperPanelClassName,
+  subheadClassName,
 } from "~/lib/class-names";
 import {
   formatQuestionCategory,
@@ -37,7 +38,7 @@ function StatusBadge({ status }: { status: QuestionSetStatus }) {
   return (
     <span
       className={cn(
-        "inline-flex h-fit items-center px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em]",
+        "inline-flex h-fit items-center px-2 py-1 text-[12px] font-bold uppercase tracking-[0.08em]",
         isReady
           ? "bg-tertiary-container text-on-tertiary"
           : "bg-surface-container text-on-surface-variant",
@@ -63,6 +64,9 @@ export function QuestionSetPanel({
     string | null
   >(null);
   const [isChangingStatus, setIsChangingStatus] = React.useState(false);
+  const [confirmingRemovalId, setConfirmingRemovalId] = React.useState<
+    string | null
+  >(null);
   const [actionErrorMessage, setActionErrorMessage] = React.useState<
     string | null
   >(null);
@@ -110,7 +114,7 @@ export function QuestionSetPanel({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid gap-2">
             <span className={eyebrowClassName}>Viva Question Set</span>
-            <h2 className="font-display text-[28px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
+            <h2 className={subheadClassName}>
               {questions.length === 0
                 ? "Build your Viva Question Set"
                 : "Your Viva Question Set"}
@@ -127,7 +131,9 @@ export function QuestionSetPanel({
             </span>
           </div>
           <div className="grid gap-1">
-            <span className={mutedTextClassName}>Category balance</span>
+            <span className={mutedTextClassName}>
+              Questions by category
+            </span>
             <ul className="grid gap-1">
               {VIVA_QUESTION_CATEGORIES.map((category) => (
                 <li
@@ -161,7 +167,7 @@ export function QuestionSetPanel({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="grid gap-1">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                      <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-on-surface-variant">
                         {index + 1}. {question.label}
                       </span>
                       <p className="text-sm leading-6 text-on-surface">
@@ -171,9 +177,9 @@ export function QuestionSetPanel({
                     <div className="grid shrink-0 gap-1">
                       <button
                         type="button"
-                        aria-label={`Move question up: ${question.questionText}`}
+                        aria-label={`Move question ${index + 1} up`}
                         disabled={index === 0 || isPending}
-                        className="text-sm text-on-surface-variant transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                        className="inline-flex min-h-11 items-center px-2 text-sm text-on-surface-variant transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                         onClick={() =>
                           runQuestionAction(
                             question.id,
@@ -186,11 +192,11 @@ export function QuestionSetPanel({
                       </button>
                       <button
                         type="button"
-                        aria-label={`Move question down: ${question.questionText}`}
+                        aria-label={`Move question ${index + 1} down`}
                         disabled={
                           index === questions.length - 1 || isPending
                         }
-                        className="text-sm text-on-surface-variant transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                        className="inline-flex min-h-11 items-center px-2 text-sm text-on-surface-variant transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                         onClick={() =>
                           runQuestionAction(
                             question.id,
@@ -203,21 +209,51 @@ export function QuestionSetPanel({
                       </button>
                       <button
                         type="button"
-                        aria-label={`Remove question from set: ${question.questionText}`}
+                        aria-label={`Remove question ${index + 1} from the set`}
                         disabled={isPending}
-                        className="text-sm text-on-surface-variant transition-colors hover:text-error disabled:cursor-not-allowed disabled:opacity-40"
-                        onClick={() =>
-                          runQuestionAction(
-                            question.id,
-                            onRemoveQuestion,
-                            "We could not remove the question from the viva question set.",
-                          )
-                        }
+                        className="mt-2 inline-flex min-h-11 items-center border-t border-outline-variant px-2 pt-2 text-sm text-on-surface-variant transition-colors hover:text-error disabled:cursor-not-allowed disabled:opacity-40"
+                        onClick={() => setConfirmingRemovalId(question.id)}
                       >
                         Remove
                       </button>
                     </div>
                   </div>
+                  {confirmingRemovalId === question.id ? (
+                    <div
+                      className="grid gap-2 border-t border-outline-variant pt-3"
+                      role="alertdialog"
+                      aria-label={`Remove question ${index + 1} from the set`}
+                    >
+                      <p className="text-sm leading-6 text-on-surface">
+                        Remove this question from the set? It stays in the
+                        question list and can be added again.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          isLoading={isPending}
+                          onClick={async () => {
+                            setConfirmingRemovalId(null);
+                            await runQuestionAction(
+                              question.id,
+                              onRemoveQuestion,
+                              "We could not remove the question from the viva question set.",
+                            );
+                          }}
+                        >
+                          Remove
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setConfirmingRemovalId(null)}
+                        >
+                          Keep
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
                 </li>
               );
             })}

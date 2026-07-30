@@ -20,6 +20,11 @@ export const headingOneClassName =
 export const headingTwoClassName =
   "font-display text-[32px] font-medium leading-[1.3] tracking-[-0.01em] text-primary";
 
+// Subordinate panel headings: rail and utility panels that must not compete with
+// the page title. Documented in DESIGN.md as the `subhead` typography step.
+export const subheadClassName =
+  "font-display text-[20px] font-medium leading-[1.3] tracking-[-0.01em] text-primary";
+
 export const mutedTextClassName = "font-sans text-on-surface-variant";
 
 export const ledeClassName =

@@ -13,8 +13,9 @@ function renderPanel(
     onCheckEquipment: vi.fn().mockResolvedValue('passed'),
     onStart: vi.fn().mockResolvedValue(undefined),
     questionSetStatus: 'ready',
-    studentId: '10420000-0000-0000-0000-000000000000',
+    submissionExcerpt: 'The evolution of mercantile law in the 18th century',
     submissionTitle: 'Mercantile law response',
+    submittedAt: '2026-04-30T20:00:00.000Z',
     ...overrides,
   }
 
@@ -31,7 +32,7 @@ describe('VivaSessionReadinessPanel', () => {
       screen.getByText('Mark the Viva Question Set ready before starting a Viva Session.'),
     ).toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: 'Start Viva Session' }),
+      screen.queryByRole('button', { name: 'Open Viva Session' }),
     ).not.toBeInTheDocument()
   })
 
@@ -40,22 +41,22 @@ describe('VivaSessionReadinessPanel', () => {
 
     expect(screen.getByText('Viva Session in progress')).toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: 'Start Viva Session' }),
+      screen.queryByRole('button', { name: 'Open Viva Session' }),
     ).not.toBeInTheDocument()
   })
 
-  it('disables Start Viva Session until every readiness check passes', async () => {
+  it('disables Open Viva Session until every readiness check passes', async () => {
     const user = userEvent.setup()
     renderPanel()
 
-    const startButton = screen.getByRole('button', { name: 'Start Viva Session' })
+    const startButton = screen.getByRole('button', { name: 'Open Viva Session' })
     expect(startButton).toBeDisabled()
     expect(
       screen.getByText('Confirm the student and submission are correct.'),
     ).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole('checkbox', { name: /I've confirmed this is the correct student/ }),
+      screen.getByRole('checkbox', { name: /I have checked this work with the student/ }),
     )
     expect(startButton).toBeDisabled()
 
@@ -78,7 +79,7 @@ describe('VivaSessionReadinessPanel', () => {
     renderPanel()
 
     await user.click(
-      screen.getByRole('checkbox', { name: /I've confirmed this is the correct student/ }),
+      screen.getByRole('checkbox', { name: /I have checked this work with the student/ }),
     )
     await user.click(
       screen.getByRole('radio', { name: 'Recording is disabled for this session' }),
@@ -87,7 +88,7 @@ describe('VivaSessionReadinessPanel', () => {
     await screen.findByText('Microphone check passed')
 
     expect(
-      screen.getByRole('button', { name: 'Start Viva Session' }),
+      screen.getByRole('button', { name: 'Open Viva Session' }),
     ).toBeDisabled()
     expect(
       screen.getByText('Enter a reason recording is disabled.'),
@@ -99,7 +100,7 @@ describe('VivaSessionReadinessPanel', () => {
     )
 
     expect(
-      screen.getByRole('button', { name: 'Start Viva Session' }),
+      screen.getByRole('button', { name: 'Open Viva Session' }),
     ).toBeEnabled()
   })
 
@@ -108,7 +109,7 @@ describe('VivaSessionReadinessPanel', () => {
     const props = renderPanel()
 
     await user.click(
-      screen.getByRole('checkbox', { name: /I've confirmed this is the correct student/ }),
+      screen.getByRole('checkbox', { name: /I have checked this work with the student/ }),
     )
     await user.click(
       screen.getByRole('radio', { name: 'Consent given to record this viva' }),
@@ -123,7 +124,7 @@ describe('VivaSessionReadinessPanel', () => {
       'Extra processing time between questions.',
     )
 
-    await user.click(screen.getByRole('button', { name: 'Start Viva Session' }))
+    await user.click(screen.getByRole('button', { name: 'Open Viva Session' }))
 
     expect(props.onStart).toHaveBeenCalledWith({
       accessibilityAdjustments: 'Extra processing time between questions.',
@@ -141,7 +142,7 @@ describe('VivaSessionReadinessPanel', () => {
     })
 
     await user.click(
-      screen.getByRole('checkbox', { name: /I've confirmed this is the correct student/ }),
+      screen.getByRole('checkbox', { name: /I have checked this work with the student/ }),
     )
     await user.click(
       screen.getByRole('radio', { name: 'Consent given to record this viva' }),
@@ -149,28 +150,47 @@ describe('VivaSessionReadinessPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Run microphone check' }))
     await screen.findByText('Microphone check passed')
 
-    await user.click(screen.getByRole('button', { name: 'Start Viva Session' }))
+    await user.click(screen.getByRole('button', { name: 'Open Viva Session' }))
 
     expect(
       await screen.findByText('We could not start the Viva Session.'),
     ).toBeInTheDocument()
   })
 
-  it('resets the form when Cancel is clicked', async () => {
+  it('keeps the teacher answers when a clear is started and then abandoned', async () => {
+    const user = userEvent.setup()
+    renderPanel()
+
+    await user.click(
+      screen.getByRole('checkbox', { name: /I have checked this work with the student/ }),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Clear checklist' }))
+    await user.click(screen.getByRole('button', { name: 'Keep my answers' }))
+
+    expect(
+      screen.getByRole('checkbox', { name: /I have checked this work with the student/ }),
+    ).toBeChecked()
+  })
+
+  it('clears the form only after the teacher confirms', async () => {
     const user = userEvent.setup()
     const props = renderPanel()
 
     await user.click(
-      screen.getByRole('checkbox', { name: /I've confirmed this is the correct student/ }),
+      screen.getByRole('checkbox', { name: /I have checked this work with the student/ }),
     )
     await user.click(
       screen.getByRole('radio', { name: 'Consent given to record this viva' }),
     )
 
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await user.click(screen.getByRole('button', { name: 'Clear checklist' }))
+    await user.click(
+      screen.getByRole('alertdialog').querySelector('button') as HTMLButtonElement,
+    )
 
     expect(
-      screen.getByRole('checkbox', { name: /I've confirmed this is the correct student/ }),
+      screen.getByRole('checkbox', { name: /I have checked this work with the student/ }),
     ).not.toBeChecked()
     expect(
       screen.getByRole('radio', { name: 'Consent given to record this viva' }),

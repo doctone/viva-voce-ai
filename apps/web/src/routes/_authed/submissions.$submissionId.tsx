@@ -34,20 +34,12 @@ import {
   createSupabaseVivaSessionRepository,
   startVivaSession,
 } from "../../features/submissions/vivaSession";
-import {
-  applyEvidenceMarker,
-  createSupabaseAskedQuestionRepository,
-  createSupabaseEvidenceMarkerRepository,
-  createSupabaseObservationRepository,
-  recordAskedQuestion,
-  saveObservation,
-  type EvidenceMarkerType,
-} from "../../features/submissions/vivaSessionCapture";
 import { cn } from "~/lib/utils";
 import {
   eyebrowClassName,
   mutedTextClassName,
   paperPanelClassName,
+  subheadClassName,
 } from "~/lib/class-names";
 import { getSupabaseBrowserClient } from "../../utils/supabase-browser";
 import {
@@ -56,10 +48,6 @@ import {
   QuestionCard,
 } from "./submissions/-QuestionCard";
 import { QuestionSetPanel } from "./submissions/-QuestionSetPanel";
-import {
-  VivaSessionCapturePanel,
-  type CaptureAskedQuestion,
-} from "./submissions/-VivaSessionCapturePanel";
 import {
   VivaSessionReadinessPanel,
   type VivaSessionStartInput,
@@ -243,92 +231,6 @@ async function fetchActiveVivaSession(vivaQuestionSetId: string) {
   return repository.findActiveSession(vivaQuestionSetId);
 }
 
-type CaptureAskedQuestionRow = {
-  id: string;
-  is_unplanned: boolean;
-  question_text: string;
-  viva_question_id: string | null;
-};
-
-type CaptureObservationRow = {
-  asked_question_id: string;
-  content: string;
-};
-
-type CaptureEvidenceMarkerRow = {
-  asked_question_id: string;
-  marker_type: EvidenceMarkerType;
-};
-
-async function fetchCaptureAskedQuestions(
-  vivaSessionId: string,
-): Promise<CaptureAskedQuestion[]> {
-  const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from("asked_questions")
-    .select("id, question_text, is_unplanned, viva_question_id, asked_at")
-    .eq("viva_session_id", vivaSessionId)
-    .order("asked_at", { ascending: true });
-
-  if (error) {
-    throw new Error("We could not load Asked Questions.");
-  }
-
-  const rows = (data as CaptureAskedQuestionRow[] | null) ?? [];
-
-  if (rows.length === 0) {
-    return [];
-  }
-
-  const askedQuestionIds = rows.map((row) => row.id);
-
-  const [observationsResult, evidenceMarkersResult] = await Promise.all([
-    supabase
-      .from("observations")
-      .select("asked_question_id, content")
-      .in("asked_question_id", askedQuestionIds),
-    supabase
-      .from("evidence_markers")
-      .select("asked_question_id, marker_type")
-      .in("asked_question_id", askedQuestionIds),
-  ]);
-
-  if (observationsResult.error || evidenceMarkersResult.error) {
-    throw new Error("We could not load Observations and Evidence Markers.");
-  }
-
-  const observationsByAskedQuestionId = new Map(
-    ((observationsResult.data as CaptureObservationRow[] | null) ?? []).map(
-      (row) => [row.asked_question_id, row.content] as const,
-    ),
-  );
-  const evidenceMarkersByAskedQuestionId = new Map(
-    (
-      (evidenceMarkersResult.data as CaptureEvidenceMarkerRow[] | null) ?? []
-    ).map((row) => [row.asked_question_id, row.marker_type] as const),
-  );
-
-  return rows.map((row) => {
-    const observationContent = observationsByAskedQuestionId.get(row.id);
-    const evidenceMarkerType = evidenceMarkersByAskedQuestionId.get(row.id);
-
-    return {
-      evidenceMarker:
-        evidenceMarkerType !== undefined
-          ? { markerType: evidenceMarkerType }
-          : null,
-      id: row.id,
-      isUnplanned: row.is_unplanned,
-      observation:
-        observationContent !== undefined
-          ? { content: observationContent }
-          : null,
-      questionText: row.question_text,
-      vivaQuestionId: row.viva_question_id,
-    };
-  });
-}
-
 type SubmissionVivaRecord = {
   id: string;
   submission_id: string;
@@ -366,9 +268,20 @@ async function fetchSubmissionViva(
   );
 }
 
+/** Storage keys must not inherit user-controlled path segments or separators. */
+function buildVivaAudioObjectName(fileName: string) {
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-96);
+  const uniquePrefix =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  return `${uniquePrefix}-${safeName}`;
+}
+
 async function uploadSubmissionVivaAudio(submissionId: string, file: File) {
   const supabase = getSupabaseBrowserClient();
-  const filePath = `${submissionId}/${crypto.randomUUID()}-${file.name}`;
+  const filePath = `${submissionId}/${buildVivaAudioObjectName(file.name)}`;
   const uploadResult = await supabase.storage
     .from("submission-viva-audio")
     .upload(filePath, file, { upsert: false });
@@ -438,10 +351,9 @@ async function addManualSubmissionQuestion(
 }
 
 function formatSubmissionDate(value: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeZone: "UTC",
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
+    new Date(value),
+  );
 }
 
 function splitSubmissionTextIntoParagraphs(value: string) {
@@ -455,6 +367,46 @@ function countSubmissionWords(value: string) {
   return value.trim().split(/\s+/).filter(Boolean).length;
 }
 
+const MAX_VIVA_AUDIO_MB = 500;
+const MAX_VIVA_AUDIO_BYTES = MAX_VIVA_AUDIO_MB * 1024 * 1024;
+
+const GENERATION_ATTEMPT_KEY_PREFIX = "viva-generation-attempted:";
+
+function markGenerationAttempted(submissionId: string) {
+  try {
+    window.sessionStorage.setItem(
+      `${GENERATION_ATTEMPT_KEY_PREFIX}${submissionId}`,
+      "1",
+    );
+  } catch {
+    // Storage can be unavailable (private mode, blocked cookies). The guard is
+    // an optimisation against duplicate generation, never a correctness gate.
+  }
+}
+
+function hasGenerationBeenAttempted(submissionId: string) {
+  try {
+    return (
+      window.sessionStorage.getItem(
+        `${GENERATION_ATTEMPT_KEY_PREFIX}${submissionId}`,
+      ) !== null
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** First sentence or so of the submission, for verifying the work in front of you. */
+function buildSubmissionExcerpt(value: string, maxLength = 120) {
+  const normalized = value.trim().replace(/\s+/g, " ");
+
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxLength).trimEnd()}…`;
+}
+
 function SubmissionBreadcrumb({ title }: { title?: string }) {
   return (
     <Breadcrumb
@@ -466,141 +418,38 @@ function SubmissionBreadcrumb({ title }: { title?: string }) {
   );
 }
 
-function LoadingPulseLine({ className }: { className?: string }) {
-  return (
-    <div
-      className={cn(
-        "h-3 rounded-full bg-[color:rgb(0_32_70_/_0.08)] animate-pulse",
-        className,
-      )}
-    />
-  );
-}
-
 type SubmissionGenerationShellProps = {
-  studentId: string;
   submissionTitle: string;
 };
 
 function SubmissionGenerationShell({
-  studentId,
   submissionTitle,
 }: SubmissionGenerationShellProps) {
   return (
     <div className="grid gap-8">
       <SubmissionBreadcrumb title={submissionTitle} />
 
-      <div
-        className={cn(
-          paperPanelClassName,
-          "grid w-full grid-rows-[auto_1fr] overflow-hidden",
-        )}
-      >
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-outline-variant px-8 py-6">
-          <div className="grid gap-3">
-            <span className={eyebrowClassName}>Submissions</span>
-            <div className="grid gap-2">
-              <Heading>Preparing viva questions</Heading>
-              <p
-                className={cn(
-                  mutedTextClassName,
-                  "max-w-[68ch] text-sm leading-6",
-                )}
-              >
-                The submission has been saved. Viva questions are being prepared
-                now.
-              </p>
-            </div>
-          </div>
-
-          <div className="inline-flex items-center gap-3 border border-outline-variant bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
-              <span className="relative rounded-full bg-primary px-[5px] py-[5px]" />
-            </span>
-            <span className="font-sans font-bold uppercase tracking-[0.08em] text-primary">
-              In progress
-            </span>
-          </div>
+      <div className={cn(paperPanelClassName, "grid w-full gap-6 p-8")}>
+        <div className="grid gap-3">
+          <span className={eyebrowClassName}>Submissions</span>
+          <Heading>Preparing viva questions</Heading>
+          <p
+            className={cn(mutedTextClassName, "max-w-[68ch] text-sm leading-6")}
+          >
+            The submission has been saved. We are reading{" "}
+            <span className="text-on-surface">{submissionTitle}</span> and
+            drafting an examiner-ready set of questions, ownership checks, and
+            teacher notes.
+          </p>
         </div>
 
-        <div className="grid gap-10 bg-[linear-gradient(180deg,rgba(244,244,240,0.45),rgba(255,255,255,0.96))] px-8 py-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)] lg:items-stretch lg:gap-12">
-          <div className="grid content-start gap-6">
-            <div className="grid gap-4 border border-outline-variant bg-surface-container-lowest p-6 shadow-technical">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant pb-4">
-                <div className="grid gap-2">
-                  <span className={eyebrowClassName}>Current submission</span>
-                  <h2 className="font-display text-[30px] font-medium leading-[1.2] tracking-[-0.02em] text-primary">
-                    {submissionTitle}
-                  </h2>
-                </div>
-                <p className={cn(mutedTextClassName, "text-sm leading-6")}>
-                  Student {studentId}
-                </p>
-              </div>
-
-              <div className="grid gap-3 pt-2">
-                <LoadingPulseLine className="w-full" />
-                <LoadingPulseLine className="w-[92%]" />
-                <LoadingPulseLine className="w-[96%]" />
-                <LoadingPulseLine className="w-[84%]" />
-                <LoadingPulseLine className="w-[90%]" />
-                <LoadingPulseLine className="w-[78%]" />
-              </div>
-            </div>
-
-            <div className="grid gap-3 border-t border-outline-variant pt-5">
-              <p
-                className={cn(
-                  mutedTextClassName,
-                  "max-w-[62ch] text-sm leading-6",
-                )}
-              >
-                The system is drafting an examiner-ready set of prompts,
-                ownership checks, and follow-up questions for this submission.
-              </p>
-              <p className={cn(mutedTextClassName, "text-sm leading-6")}>
-                This usually takes a few seconds. If it takes longer, you can
-                stay on this page.
-              </p>
-            </div>
-          </div>
-
-          <aside className="grid content-start gap-4 border border-outline-variant bg-[rgb(244_244_240_/_0.82)] p-6">
-            <div className="grid gap-2 border-b border-outline-variant pb-4">
-              <span className={eyebrowClassName}>Viva assembly</span>
-              <h2 className="font-display text-[28px] font-medium leading-[1.25] tracking-[-0.02em] text-primary">
-                Building the question set
-              </h2>
-            </div>
-
-            <div className="grid gap-4">
-              {[
-                "Scanning the submission for key claims and terms",
-                "Drafting oral follow-up questions for the strongest lines of inquiry",
-                "Preparing teacher notes for a live viva conversation",
-              ].map((step, index) => (
-                <div
-                  key={step}
-                  className="grid gap-2 border border-outline-variant bg-surface-container-lowest px-4 py-4 shadow-technical"
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-outline-variant bg-surface-container text-sm font-bold text-primary animate-pulse"
-                      style={{ animationDelay: `${index * 180}ms` }}
-                    >
-                      {index + 1}
-                    </span>
-                    <p className="font-sans text-sm leading-6 text-on-surface">
-                      {step}
-                    </p>
-                  </div>
-                  <LoadingPulseLine className="ml-11 w-[72%]" />
-                </div>
-              ))}
-            </div>
-          </aside>
-        </div>
+        <p
+          className={cn(mutedTextClassName, "max-w-[62ch] text-sm leading-6")}
+          role="status"
+        >
+          This usually takes a few seconds. You can stay on this page — it will
+          fill in as soon as the questions are ready.
+        </p>
       </div>
     </div>
   );
@@ -650,6 +499,8 @@ export function SubmissionDetailPage() {
   const [generationErrorMessage, setGenerationErrorMessage] = React.useState<
     string | null
   >(null);
+  const [hasCompletedGeneration, setHasCompletedGeneration] =
+    React.useState(false);
   const hasTriggeredGenerationRef = React.useRef(false);
   const submissionQuery = useQuery({
     queryFn: () => fetchSubmission(submissionId),
@@ -677,95 +528,7 @@ export function SubmissionDetailPage() {
     queryKey: ["viva-session", vivaQuestionSetId ?? null],
   });
   const vivaSessionId = vivaSessionQuery.data?.id;
-  const askedQuestionsQuery = useQuery({
-    enabled: Boolean(vivaSessionId),
-    queryFn: () => fetchCaptureAskedQuestions(vivaSessionId as string),
-    queryKey: ["asked-questions", vivaSessionId ?? null],
-  });
   const checkEquipment = useEquipmentCheck();
-
-  const invalidateAskedQuestions = React.useCallback(async () => {
-    await queryClient.invalidateQueries({
-      queryKey: ["asked-questions", vivaSessionId ?? null],
-    });
-  }, [queryClient, vivaSessionId]);
-
-  const askPlannedQuestion = React.useCallback(
-    async (vivaQuestionId: string) => {
-      if (!vivaSessionId) {
-        return;
-      }
-
-      const plannedQuestion = questions.find(
-        (question) => question.id === vivaQuestionId,
-      );
-
-      if (!plannedQuestion) {
-        return;
-      }
-
-      const supabase = getSupabaseBrowserClient();
-      const repository = createSupabaseAskedQuestionRepository(supabase);
-
-      await recordAskedQuestion(
-        {
-          questionText: plannedQuestion.questionText,
-          vivaQuestionId,
-          vivaSessionId,
-        },
-        repository,
-      );
-
-      await invalidateAskedQuestions();
-    },
-    [invalidateAskedQuestions, questions, vivaSessionId],
-  );
-
-  const askFollowUpQuestion = React.useCallback(
-    async (questionText: string) => {
-      if (!vivaSessionId) {
-        return;
-      }
-
-      const supabase = getSupabaseBrowserClient();
-      const repository = createSupabaseAskedQuestionRepository(supabase);
-
-      await recordAskedQuestion(
-        { questionText, vivaQuestionId: null, vivaSessionId },
-        repository,
-      );
-
-      await invalidateAskedQuestions();
-    },
-    [invalidateAskedQuestions, vivaSessionId],
-  );
-
-  const saveAskedQuestionObservation = React.useCallback(
-    async (askedQuestionId: string, content: string) => {
-      const supabase = getSupabaseBrowserClient();
-      const repository = createSupabaseObservationRepository(supabase);
-      const result = await saveObservation(askedQuestionId, content, repository);
-
-      if (result.outcome === "rejected") {
-        throw new Error(result.reason);
-      }
-
-      await invalidateAskedQuestions();
-    },
-    [invalidateAskedQuestions],
-  );
-
-  const applyAskedQuestionEvidenceMarker = React.useCallback(
-    async (askedQuestionId: string, markerType: EvidenceMarkerType) => {
-      const supabase = getSupabaseBrowserClient();
-      const repository = createSupabaseEvidenceMarkerRepository(supabase);
-
-      await applyEvidenceMarker(askedQuestionId, markerType, repository);
-
-      await invalidateAskedQuestions();
-    },
-    [invalidateAskedQuestions],
-  );
 
   const saveQuestionText = React.useCallback(
     async (questionId: string, questionText: string) => {
@@ -872,6 +635,7 @@ export function SubmissionDetailPage() {
 
   const runGeneration = React.useCallback(async () => {
     hasTriggeredGenerationRef.current = true;
+    markGenerationAttempted(submissionId);
     setGenerationState("running");
     setGenerationErrorMessage(null);
 
@@ -887,6 +651,7 @@ export function SubmissionDetailPage() {
     }
 
     setGenerationState("idle");
+    setHasCompletedGeneration(true);
     await queryClient.invalidateQueries({
       queryKey: ["submission-questions", submissionId],
     });
@@ -909,6 +674,14 @@ export function SubmissionDetailPage() {
       return;
     }
 
+    // A refresh remounts this component and resets the ref. Without this guard a
+    // reload mid-generation starts a second, duplicate generation run.
+    if (hasGenerationBeenAttempted(submissionId)) {
+      hasTriggeredGenerationRef.current = true;
+      setHasCompletedGeneration(true);
+      return;
+    }
+
     void runGeneration();
   }, [
     generationState,
@@ -916,6 +689,7 @@ export function SubmissionDetailPage() {
     questionsQuery.error,
     questionsQuery.isLoading,
     runGeneration,
+    submissionId,
     submissionQuery.data,
   ]);
 
@@ -975,9 +749,21 @@ export function SubmissionDetailPage() {
       );
     }
 
+    // Generation finished but produced nothing. Without this the page would sit
+    // on the "preparing" shell forever, with retry blocked by the trigger guard.
+    if (generationState === "idle" && hasCompletedGeneration) {
+      return (
+        <SubmissionGenerationFailure
+          errorMessage="We finished reading this submission but did not produce any viva questions."
+          onRetry={() => {
+            void runGeneration();
+          }}
+        />
+      );
+    }
+
     return (
       <SubmissionGenerationShell
-        studentId={submission.student_id}
         submissionTitle={submission.submission_title}
       />
     );
@@ -1021,19 +807,15 @@ export function SubmissionDetailPage() {
     submission.submission_text,
   );
   const submissionWordCount = countSubmissionWords(submission.submission_text);
+  const submissionExcerpt = buildSubmissionExcerpt(submission.submission_text);
 
   return (
     <PageFrame
       breadcrumb={<SubmissionBreadcrumb title={submission.submission_title} />}
       title={submission.submission_title}
-      description={
-        <>
-          Student {submission.student_id} · Submitted{" "}
-          {formatSubmissionDate(submission.created_at)}
-        </>
-      }
+      description={<>Submitted {formatSubmissionDate(submission.created_at)}</>}
     >
-      <Tabs defaultValue="submission" className="gap-6">
+      <Tabs defaultValue="viva-questions" className="gap-6">
         <TabsList
           variant="line"
           aria-label="Submission detail views"
@@ -1041,79 +823,38 @@ export function SubmissionDetailPage() {
         >
           <TabsTrigger
             value="submission"
-            className="rounded-none border-x-0 border-t-0 px-0 pb-4 pt-0 font-sans text-[12px] font-bold uppercase tracking-[0.12em] text-on-surface-variant data-active:text-primary group-data-[variant=line]/tabs-list:after:bg-primary"
+            className="rounded-none border-x-0 border-t-0 px-0 pb-4 pt-0 font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-on-surface-variant data-active:text-primary group-data-[variant=line]/tabs-list:after:bg-primary"
           >
             Submission
           </TabsTrigger>
           <TabsTrigger
             value="viva-questions"
-            className="rounded-none border-x-0 border-t-0 px-0 pb-4 pt-0 font-sans text-[12px] font-bold uppercase tracking-[0.12em] text-on-surface-variant data-active:text-primary group-data-[variant=line]/tabs-list:after:bg-primary"
+            className="rounded-none border-x-0 border-t-0 px-0 pb-4 pt-0 font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-on-surface-variant data-active:text-primary group-data-[variant=line]/tabs-list:after:bg-primary"
           >
             Viva Questions
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="submission" className="mt-0">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
-            <section className="lg:col-span-8">
-              <article className={cn(paperPanelClassName, "p-8")}>
-                <span className={eyebrowClassName}>Submission text</span>
-                <div className="mt-4 max-w-2xl space-y-4 font-serif text-lg leading-relaxed text-on-surface-variant">
-                  {submissionParagraphs.map((paragraph) => (
-                    <p key={paragraph}>{paragraph}</p>
-                  ))}
-                </div>
-              </article>
-            </section>
-
-            <aside className="grid content-start gap-4 lg:col-span-4 lg:sticky lg:top-24">
-              <section
-                className={cn(
-                  paperPanelClassName,
-                  "bg-surface-container-low p-6",
-                )}
-              >
-                <h2 className="mb-4 font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-primary">
-                  Document Statistics
-                </h2>
-                <div className="grid gap-3">
-                  <div className="flex justify-between border-b border-stone-100 pb-1">
-                    <span className={cn(mutedTextClassName, "text-sm")}>
-                      Word Count
-                    </span>
-                    <span className="text-sm font-bold text-on-surface">
-                      {submissionWordCount}
-                    </span>
-                  </div>
-                  <div className="flex justify-between border-b border-stone-100 pb-1">
-                    <span className={cn(mutedTextClassName, "text-sm")}>
-                      Student
-                    </span>
-                    <span className="text-sm font-bold text-on-surface">
-                      {submission.student_id}
-                    </span>
-                  </div>
-                  <div className="flex justify-between border-b border-stone-100 pb-1">
-                    <span className={cn(mutedTextClassName, "text-sm")}>
-                      Questions Generated
-                    </span>
-                    <span className="text-sm font-bold text-on-surface">
-                      {questions.length}
-                    </span>
-                  </div>
-                </div>
-              </section>
-            </aside>
-          </div>
+          <article className={cn(paperPanelClassName, "p-8")}>
+            <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-outline-variant pb-4">
+              <span className={eyebrowClassName}>Submission text</span>
+              <span className={cn(mutedTextClassName, "text-sm")}>
+                {submissionWordCount.toLocaleString("en-GB")} words
+              </span>
+            </div>
+            <div className="mt-6 max-w-[70ch] space-y-4 font-serif text-lg leading-relaxed text-on-surface">
+              {submissionParagraphs.map((paragraph, index) => (
+                <p key={`${index}-${paragraph.slice(0, 32)}`}>{paragraph}</p>
+              ))}
+            </div>
+          </article>
         </TabsContent>
 
         <TabsContent value="viva-questions" className="mt-0">
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
-            <div className="lg:col-span-7">
+            <section className="grid gap-4 lg:col-span-7">
               <Heading level={2}>Viva Questions for this Submission</Heading>
-            </div>
-
-            <section className="space-y-4 lg:col-span-7 lg:row-start-2">
 
               {questions.map((question) => (
                 <QuestionCard
@@ -1136,7 +877,7 @@ export function SubmissionDetailPage() {
               <AddManualQuestionCard onAdd={addManualQuestion} />
             </section>
 
-            <aside className="grid min-w-0 content-start gap-8 [&>*]:min-w-0 lg:col-span-5 lg:row-start-2 lg:sticky lg:top-24">
+            <aside className="grid min-w-0 content-start gap-8 [&>*]:min-w-0 lg:col-span-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1">
               <div className="grid gap-4">
                 <span className={eyebrowClassName}>Stage 1 · Build the set</span>
                 <QuestionSetPanel
@@ -1173,45 +914,47 @@ export function SubmissionDetailPage() {
                   onCheckEquipment={checkEquipment}
                   onStart={startSessionForQuestionSet}
                   questionSetStatus={questionSet.status}
-                  studentId={submission.student_id}
+                  submissionExcerpt={submissionExcerpt}
                   submissionTitle={submission.submission_title}
+                  submittedAt={submission.created_at}
                 />
 
-                {vivaSessionQuery.data ? (
-                  <div>
-                    <Link
-                      to="/submissions/$submissionId/conduct"
-                      params={{ submissionId }}
-                      className={buttonClassName()}
-                    >
-                      Conduct Viva Session
-                    </Link>
-                  </div>
+                {vivaSessionQuery.error instanceof Error ? (
+                  <p className="text-sm leading-6 text-error" role="alert">
+                    {vivaSessionQuery.error.message}
+                  </p>
                 ) : null}
               </div>
 
               {vivaSessionQuery.data ? (
                 <div className="grid gap-4 border-t border-outline-variant pt-8">
-                  <span className={eyebrowClassName}>Stage 3 · Capture the session</span>
-                  <VivaSessionCapturePanel
-                    askedQuestions={askedQuestionsQuery.data ?? []}
-                    plannedQuestions={setQuestions.map((question) => ({
-                      id: question.id,
-                      questionText: question.questionText,
-                    }))}
-                    onApplyEvidenceMarker={applyAskedQuestionEvidenceMarker}
-                    onAskFollowUpQuestion={askFollowUpQuestion}
-                    onAskPlannedQuestion={askPlannedQuestion}
-                    onSaveObservation={saveAskedQuestionObservation}
-                  />
+                  <span className={eyebrowClassName}>
+                    Stage 3 · Conduct and record
+                  </span>
+                  <div className="grid gap-3 border border-primary bg-surface-container-lowest p-6">
+                    <h2 className={subheadClassName}>Not recording yet</h2>
+                    <p className="max-w-[52ch] text-sm leading-6 text-on-surface">
+                      The session is open, but no audio is being captured. Open
+                      Conduct mode and press Start recording to capture the viva.
+                    </p>
+                    <div>
+                      <Link
+                        to="/submissions/$submissionId/conduct"
+                        params={{ submissionId }}
+                        className={buttonClassName({
+                          className: "bg-primary border-primary",
+                        })}
+                      >
+                        Open Conduct mode
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               ) : null}
 
               <div className="grid gap-3 border-t border-outline-variant pt-8">
                 <span className={eyebrowClassName}>Evidence</span>
-                <h2 className="font-display text-[20px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
-                  Oral Examination Audio
-                </h2>
+                <h2 className={subheadClassName}>Oral Examination Audio</h2>
                 <p className={cn(mutedTextClassName, "text-sm leading-6")}>
                   Upload a recorded viva for this submission.
                 </p>
@@ -1230,6 +973,22 @@ export function SubmissionDetailPage() {
                       const file = event.target.files?.[0];
 
                       if (!file) {
+                        return;
+                      }
+
+                      if (!file.type.startsWith("audio/")) {
+                        setVivaUploadErrorMessage(
+                          "That file is not audio. Choose a recording of the viva.",
+                        );
+                        event.target.value = "";
+                        return;
+                      }
+
+                      if (file.size > MAX_VIVA_AUDIO_BYTES) {
+                        setVivaUploadErrorMessage(
+                          `That recording is larger than ${MAX_VIVA_AUDIO_MB}MB. Upload a smaller file or split the recording.`,
+                        );
+                        event.target.value = "";
                         return;
                       }
 
@@ -1253,13 +1012,17 @@ export function SubmissionDetailPage() {
                     }}
                   />
                 </label>
-                {isUploadingViva ? (
-                  <p className={cn(mutedTextClassName, "text-sm")}>
-                    Uploading viva audio…
-                  </p>
-                ) : null}
+                <div role="status">
+                  {isUploadingViva ? (
+                    <p className={cn(mutedTextClassName, "text-sm")}>
+                      Uploading viva audio…
+                    </p>
+                  ) : null}
+                </div>
                 {vivaUploadErrorMessage ? (
-                  <p className="text-sm text-error">{vivaUploadErrorMessage}</p>
+                  <p className="text-sm text-error" role="alert">
+                    {vivaUploadErrorMessage}
+                  </p>
                 ) : null}
                 {vivaAudioRecords.map((record) => (
                   <article
@@ -1287,8 +1050,20 @@ export function SubmissionDetailPage() {
                   </article>
                 ))}
                 {vivaAudioQuery.isLoading ? (
-                  <p className={cn(mutedTextClassName, "text-sm")}>
+                  <p className={cn(mutedTextClassName, "text-sm")} role="status">
                     Loading viva audio…
+                  </p>
+                ) : null}
+                {vivaAudioQuery.error instanceof Error ? (
+                  <p className="text-sm text-error" role="alert">
+                    {vivaAudioQuery.error.message}
+                  </p>
+                ) : null}
+                {!vivaAudioQuery.isLoading &&
+                !vivaAudioQuery.error &&
+                vivaAudioRecords.length === 0 ? (
+                  <p className={cn(mutedTextClassName, "text-sm leading-6")}>
+                    No recording has been uploaded for this submission yet.
                   </p>
                 ) : null}
               </div>

@@ -5,6 +5,7 @@ import {
   eyebrowClassName,
   mutedTextClassName,
   paperPanelClassName,
+  subheadClassName,
 } from "~/lib/class-names";
 import {
   EVIDENCE_MARKER_TYPES,
@@ -43,7 +44,7 @@ type AskedQuestionCaptureCardProps = {
   onSaveObservation: (content: string) => Promise<void>;
 };
 
-type SaveStatus = "error" | "idle" | "saved" | "saving";
+type SaveStatus = "error" | "idle" | "saved" | "saving" | "unsaved";
 
 function AskedQuestionCaptureCard({
   askedQuestion,
@@ -63,36 +64,77 @@ function AskedQuestionCaptureCard({
     string | null
   >(null);
 
-  React.useEffect(() => {
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, []);
+  // Holds the text a debounced save is still owed, so an unmount, a blur, or a
+  // tab close can flush it. An Observation is assessment evidence: losing the
+  // last edit silently is never acceptable.
+  const pendingContentRef = React.useRef<string | null>(null);
 
   const persistObservation = React.useCallback(
     async (value: string) => {
+      pendingContentRef.current = null;
       setSaveStatus("saving");
 
       try {
         await onSaveObservation(value);
         setSaveStatus("saved");
       } catch {
+        pendingContentRef.current = value;
         setSaveStatus("error");
       }
     },
     [onSaveObservation],
   );
 
+  const flushPendingObservation = React.useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+
+    const pending = pendingContentRef.current;
+
+    if (pending === null) {
+      return;
+    }
+
+    void persistObservation(pending);
+  }, [persistObservation]);
+
+  // Flush on unmount: switching to another Asked Question remounts this card.
+  const flushRef = React.useRef(flushPendingObservation);
+  flushRef.current = flushPendingObservation;
+
+  React.useEffect(() => {
+    return () => {
+      flushRef.current();
+    };
+  }, []);
+
+  React.useEffect(() => {
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (pendingContentRef.current === null) {
+        return;
+      }
+
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
   function handleContentChange(value: string) {
     setContent(value);
+    pendingContentRef.current = value;
+    setSaveStatus("unsaved");
 
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
 
     debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
       void persistObservation(value);
     }, AUTOSAVE_DELAY_MS);
   }
@@ -100,6 +142,7 @@ function AskedQuestionCaptureCard({
   function handleRetry() {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
+      debounceRef.current = null;
     }
 
     void persistObservation(content);
@@ -163,17 +206,21 @@ function AskedQuestionCaptureCard({
       </fieldset>
 
       <label className="grid gap-1 text-sm" htmlFor={observationFieldId}>
-        Observation
+        Observation (private to you)
         <textarea
           id={observationFieldId}
           rows={3}
           value={content}
+          onBlur={flushPendingObservation}
           onChange={(event) => handleContentChange(event.target.value)}
           className="border border-outline-variant bg-surface-container-lowest p-2"
         />
       </label>
 
       <div className="flex items-center gap-3 text-sm" role="status">
+        {saveStatus === "unsaved" ? (
+          <span className={mutedTextClassName}>Unsaved changes</span>
+        ) : null}
         {saveStatus === "saving" ? (
           <span className={mutedTextClassName}>Saving…</span>
         ) : null}
@@ -205,15 +252,24 @@ type VivaSessionCapturePanelProps = {
   onAskPlannedQuestion: (plannedQuestionId: string) => Promise<void>;
   onSaveObservation: (askedQuestionId: string, content: string) => Promise<void>;
   plannedQuestions: CapturePlannedQuestion[];
+  /** True while Asked Questions are still loading, so an empty list is not reported as "none asked". */
+  isLoadingAskedQuestions?: boolean;
+  /**
+   * Conduct mode drives asking from its own single-question panel, so it hides
+   * these controls rather than offering a second way to mark a question asked.
+   */
+  showAskControls?: boolean;
 };
 
 export function VivaSessionCapturePanel({
   askedQuestions,
+  isLoadingAskedQuestions = false,
   onApplyEvidenceMarker,
   onAskFollowUpQuestion,
   onAskPlannedQuestion,
   onSaveObservation,
   plannedQuestions,
+  showAskControls = true,
 }: VivaSessionCapturePanelProps) {
   const [selectedAskedQuestionId, setSelectedAskedQuestionId] = React.useState<
     string | null
@@ -295,16 +351,14 @@ export function VivaSessionCapturePanel({
       <div className="grid gap-5">
         <div className="grid gap-2">
           <span className={eyebrowClassName}>Viva Session</span>
-          <h2 className="font-display text-[28px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
-            Observations and Evidence
-          </h2>
+          <h2 className={subheadClassName}>Observations and Evidence</h2>
           <p className={cn(mutedTextClassName, "text-sm leading-6")}>
             Record what you ask, then capture private Observations and
             Evidence Markers against it.
           </p>
         </div>
 
-        {unaskedPlannedQuestions.length > 0 ? (
+        {showAskControls && unaskedPlannedQuestions.length > 0 ? (
           <div className="grid gap-2">
             <span className="text-sm font-bold text-on-surface">
               Planned questions
@@ -332,37 +386,41 @@ export function VivaSessionCapturePanel({
           </div>
         ) : null}
 
-        <div className="grid gap-2">
-          <label className="grid gap-1 text-sm" htmlFor="followUpQuestionText">
-            Unplanned follow-up question
-            <input
-              id="followUpQuestionText"
-              type="text"
-              value={followUpText}
-              onChange={(event) => setFollowUpText(event.target.value)}
-              className="border border-outline-variant bg-surface-container-lowest p-2"
-            />
-          </label>
-          <div>
-            <Button
-              type="button"
-              variant="secondary"
-              isLoading={isAskingFollowUp}
-              disabled={followUpText.trim().length === 0}
-              onClick={() => void handleAskFollowUp()}
-            >
-              Record follow-up as asked
-            </Button>
+        {showAskControls ? (
+          <div className="grid gap-2">
+            <label className="grid gap-1 text-sm" htmlFor="followUpQuestionText">
+              Unplanned follow-up question
+              <input
+                id="followUpQuestionText"
+                type="text"
+                value={followUpText}
+                onChange={(event) => setFollowUpText(event.target.value)}
+                className="border border-outline-variant bg-surface-container-lowest p-2"
+              />
+            </label>
+            <div>
+              <Button
+                type="button"
+                variant="secondary"
+                isLoading={isAskingFollowUp}
+                disabled={followUpText.trim().length === 0}
+                onClick={() => void handleAskFollowUp()}
+              >
+                Record follow-up as asked
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : null}
 
         {actionErrorMessage ? (
           <p className="text-sm text-error">{actionErrorMessage}</p>
         ) : null}
 
         {askedQuestions.length === 0 ? (
-          <p className={cn(mutedTextClassName, "text-sm leading-6")}>
-            No questions have been asked yet.
+          <p className={cn(mutedTextClassName, "text-sm leading-6")} role="status">
+            {isLoadingAskedQuestions
+              ? "Loading asked questions…"
+              : "No questions have been asked yet."}
           </p>
         ) : (
           <div className="grid gap-4">
@@ -378,10 +436,10 @@ export function VivaSessionCapturePanel({
                       aria-pressed={question.id === selectedAskedQuestionId}
                       onClick={() => setSelectedAskedQuestionId(question.id)}
                       className={cn(
-                        "w-full border bg-surface-container-lowest p-2 text-left text-sm",
+                        "w-full border p-2 text-left text-sm transition-colors",
                         question.id === selectedAskedQuestionId
-                          ? "border-dashed border-primary-container"
-                          : "border-outline-variant",
+                          ? "border-primary bg-surface-container font-medium text-on-surface"
+                          : "border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:border-on-surface-variant",
                       )}
                     >
                       {question.questionText}

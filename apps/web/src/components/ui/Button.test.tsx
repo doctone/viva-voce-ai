@@ -20,9 +20,10 @@ describe('Button', () => {
       </Button>,
     )
 
-    const button = screen.getByRole('button', { name: 'Working...' })
+    const button = screen.getByRole('button', { name: /Save/ })
 
     expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-busy', 'true')
     expect(button.className).toContain('w-full')
     expect(buttonClassName({ variant: 'ghost' })).toContain('bg-transparent')
   })

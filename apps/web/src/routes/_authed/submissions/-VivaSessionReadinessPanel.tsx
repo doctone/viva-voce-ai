@@ -5,6 +5,7 @@ import {
   eyebrowClassName,
   mutedTextClassName,
   paperPanelClassName,
+  subheadClassName,
 } from "~/lib/class-names";
 import {
   evaluateReadiness,
@@ -31,16 +32,22 @@ type VivaSessionReadinessPanelProps = {
   onCheckEquipment: () => Promise<EquipmentCheckResult>;
   onStart: (input: VivaSessionStartInput) => Promise<void>;
   questionSetStatus: QuestionSetStatus;
-  studentId: string;
+  submissionExcerpt: string;
   submissionTitle: string;
+  submittedAt: string;
 };
 
 function formatStartedAt(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
-    timeZone: "UTC",
   }).format(new Date(value));
+}
+
+function formatSubmittedAt(value: string) {
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
+    new Date(value),
+  );
 }
 
 export function VivaSessionReadinessPanel({
@@ -49,8 +56,9 @@ export function VivaSessionReadinessPanel({
   onCheckEquipment,
   onStart,
   questionSetStatus,
-  studentId,
+  submissionExcerpt,
   submissionTitle,
+  submittedAt,
 }: VivaSessionReadinessPanelProps) {
   const initialDuration =
     estimatedDurationMinutes > 0 ? estimatedDurationMinutes : null;
@@ -70,11 +78,13 @@ export function VivaSessionReadinessPanel({
   const [accessibilityAdjustments, setAccessibilityAdjustments] =
     React.useState("");
   const [isStarting, setIsStarting] = React.useState(false);
+  const [isConfirmingReset, setIsConfirmingReset] = React.useState(false);
   const [actionErrorMessage, setActionErrorMessage] = React.useState<
     string | null
   >(null);
 
   function resetForm() {
+    setIsConfirmingReset(false);
     setStudentConfirmed(false);
     setConsentState(null);
     setConsentDeclinedReason("");
@@ -145,7 +155,7 @@ export function VivaSessionReadinessPanel({
       >
         <div className="grid gap-3">
           <span className={eyebrowClassName}>Viva Session</span>
-          <h2 className="font-display text-[28px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
+          <h2 className={subheadClassName}>
             Readiness check
           </h2>
           <p className={cn(mutedTextClassName, "text-sm leading-6")}>
@@ -163,7 +173,7 @@ export function VivaSessionReadinessPanel({
       >
         <div className="grid gap-3">
           <span className={eyebrowClassName}>Viva Session</span>
-          <h2 className="font-display text-[28px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
+          <h2 className={subheadClassName}>
             Viva Session in progress
           </h2>
           <p className={cn(mutedTextClassName, "text-sm leading-6")}>
@@ -179,26 +189,50 @@ export function VivaSessionReadinessPanel({
       <div className="grid gap-5">
         <div className="grid gap-2">
           <span className={eyebrowClassName}>Viva Session</span>
-          <h2 className="font-display text-[28px] font-medium leading-[1.3] tracking-[-0.01em] text-primary">
+          <h2 className={subheadClassName}>
             Readiness check
           </h2>
           <p className={cn(mutedTextClassName, "text-sm leading-6")}>
-            Confirm the details below to start a Viva Session for this
-            submission.
+            Confirm the details below to open a Viva Session. This prepares the
+            session record — it does not start recording.
           </p>
         </div>
 
-        <label className="flex items-start gap-3 text-sm leading-6 text-on-surface">
-          <input
-            type="checkbox"
-            checked={studentConfirmed}
-            onChange={(event) => setStudentConfirmed(event.target.checked)}
-          />
-          <span>
-            I&apos;ve confirmed this is the correct student ({studentId}) and
-            submission (&quot;{submissionTitle}&quot;).
-          </span>
-        </label>
+        <div className="grid gap-3 border border-outline-variant bg-surface-container-lowest p-4">
+          <span className={eyebrowClassName}>Check against the work</span>
+          <dl className="grid gap-2 text-sm leading-6">
+            <div className="grid gap-0.5">
+              <dt className={cn(mutedTextClassName, "text-sm")}>Title</dt>
+              <dd className="font-medium text-on-surface">{submissionTitle}</dd>
+            </div>
+            <div className="grid gap-0.5">
+              <dt className={cn(mutedTextClassName, "text-sm")}>Submitted</dt>
+              <dd className="font-medium text-on-surface">
+                {formatSubmittedAt(submittedAt)}
+              </dd>
+            </div>
+            {submissionExcerpt ? (
+              <div className="grid gap-0.5">
+                <dt className={cn(mutedTextClassName, "text-sm")}>Opens with</dt>
+                <dd className="font-serif leading-6 text-on-surface">
+                  “{submissionExcerpt}”
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+          <label className="flex items-start gap-3 text-sm leading-6 text-on-surface">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 shrink-0"
+              checked={studentConfirmed}
+              onChange={(event) => setStudentConfirmed(event.target.checked)}
+            />
+            <span>
+              I have checked this work with the student in front of me, and it is
+              theirs.
+            </span>
+          </label>
+        </div>
 
         <fieldset className="grid gap-2">
           <legend className="text-sm font-bold text-on-surface">
@@ -250,7 +284,15 @@ export function VivaSessionReadinessPanel({
           >
             Run microphone check
           </Button>
-          <span className="text-sm text-on-surface-variant">
+          <span
+            role="status"
+            className={cn(
+              "text-sm",
+              equipmentCheckResult === "failed"
+                ? "text-error"
+                : "text-on-surface-variant",
+            )}
+          >
             {equipmentCheckResult === "passed"
               ? "Microphone check passed"
               : equipmentCheckResult === "failed"
@@ -270,10 +312,15 @@ export function VivaSessionReadinessPanel({
             min={1}
             value={expectedDurationMinutes ?? ""}
             onChange={(event) => {
-              const value = event.target.value;
-              setExpectedDurationMinutes(
-                value.trim().length === 0 ? null : Number(value),
-              );
+              const value = event.target.value.trim();
+
+              if (value.length === 0) {
+                setExpectedDurationMinutes(null);
+                return;
+              }
+
+              const parsed = Number(value);
+              setExpectedDurationMinutes(Number.isFinite(parsed) ? parsed : null);
             }}
             className="border border-outline-variant bg-surface-container-lowest p-2"
           />
@@ -296,11 +343,11 @@ export function VivaSessionReadinessPanel({
         </label>
 
         {!validation.isReady ? (
-          <div className="grid gap-1">
+          <div className="grid gap-1" id="readinessBlockingReasons">
             <span className={cn(mutedTextClassName, "text-sm")}>
               Before you start
             </span>
-            <ul className="grid gap-1 text-sm text-on-surface-variant">
+            <ul className="grid list-disc gap-1 pl-5 text-sm text-on-surface-variant">
               {validation.blockingReasons.map((reason) => (
                 <li key={reason}>{reason}</li>
               ))}
@@ -309,21 +356,55 @@ export function VivaSessionReadinessPanel({
         ) : null}
 
         {actionErrorMessage ? (
-          <p className="text-sm text-error">{actionErrorMessage}</p>
+          <p className="text-sm text-error" role="alert">
+            {actionErrorMessage}
+          </p>
         ) : null}
 
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            disabled={!validation.isReady}
-            isLoading={isStarting}
-            onClick={() => void handleStart()}
-          >
-            Start Viva Session
-          </Button>
-          <Button type="button" variant="secondary" onClick={resetForm}>
-            Cancel
-          </Button>
+        <div className="grid gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              disabled={!validation.isReady}
+              aria-describedby={
+                validation.isReady ? undefined : "readinessBlockingReasons"
+              }
+              isLoading={isStarting}
+              onClick={() => void handleStart()}
+            >
+              Open Viva Session
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsConfirmingReset(true)}
+            >
+              Clear checklist
+            </Button>
+          </div>
+          {isConfirmingReset ? (
+            <div
+              className="grid gap-2 border border-outline-variant bg-surface-container-lowest p-4"
+              role="alertdialog"
+              aria-label="Clear the readiness checklist"
+            >
+              <p className="text-sm leading-6 text-on-surface">
+                Clearing discards everything you have entered on this checklist.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button type="button" onClick={resetForm}>
+                  Clear checklist
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsConfirmingReset(false)}
+                >
+                  Keep my answers
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

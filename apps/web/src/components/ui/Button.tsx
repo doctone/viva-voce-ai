@@ -26,7 +26,7 @@ const buttonVariantClassNames: Record<ButtonVariant, string> = {
 }
 
 const buttonDisabledClassName =
-  "cursor-not-allowed pointer-events-none border-outline-variant bg-surface-container-high text-on-surface-variant opacity-100"
+  "cursor-not-allowed border-outline-variant bg-surface-container-high text-on-surface-variant opacity-100"
 
 const buttonVariants = cva(buttonBaseClassName, {
   variants: {
@@ -80,6 +80,17 @@ function Button({
 }: ButtonProps) {
   const Comp = asChild ? Slot.Root : "button"
   const isDisabled = disabled || isLoading
+  // Slot requires exactly one child, so the loading affordance is only ever
+  // added when this renders a real button element.
+  const content =
+    isLoading && !asChild ? (
+      <>
+        {children}
+        <span aria-hidden="true">…</span>
+      </>
+    ) : (
+      children
+    )
 
   return (
     <Comp
@@ -91,11 +102,12 @@ function Button({
         fullWidth,
         variant,
       })}
+      aria-busy={isLoading || undefined}
       disabled={isDisabled}
       type={type}
       {...props}
     >
-      {isLoading ? "Working..." : children}
+      {content}
     </Comp>
   )
 }

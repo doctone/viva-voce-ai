@@ -31,6 +31,15 @@ export function QuestionCard({
   const [isTogglingSet, setIsTogglingSet] = React.useState(false)
   const [toggleErrorMessage, setToggleErrorMessage] = React.useState<string | null>(null)
 
+  // A background refetch can change the saved question text. While the teacher
+  // is not editing, keep the draft in step so re-opening the editor never shows
+  // stale text that would overwrite the newer value on save.
+  React.useEffect(() => {
+    if (!isEditing) {
+      setDraftText(questionText)
+    }
+  }, [isEditing, questionText])
+
   async function handleToggleInSet(nextIncluded: boolean) {
     if (!onToggleInSet) {
       return
@@ -62,7 +71,7 @@ export function QuestionCard({
       >
         <span
           className={cn(
-            'w-fit px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em]',
+            'w-fit px-2 py-1 text-[12px] font-bold uppercase tracking-[0.08em]',
             isHighlighted
               ? 'bg-tertiary-container text-on-tertiary'
               : 'bg-surface-container text-on-surface-variant',
@@ -127,14 +136,14 @@ export function QuestionCard({
       className={cn(
         paperPanelClassName,
         'group grid gap-3 bg-surface-container-lowest p-5 transition-colors hover:bg-surface-container-low',
-        isHighlighted ? 'border-l-4 border-l-tertiary-container' : '',
+        isHighlighted ? 'border-tertiary-container' : '',
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span
             className={cn(
-              'px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em]',
+              'px-2 py-1 text-[12px] font-bold uppercase tracking-[0.08em]',
               isHighlighted
                 ? 'bg-tertiary-container text-on-tertiary'
                 : 'bg-surface-container text-on-surface-variant',
@@ -142,9 +151,15 @@ export function QuestionCard({
           >
             {label}
           </span>
-          {isHighlighted ? <span className="sr-only">Recommended</span> : null}
+          {isHighlighted ? (
+            <span className="border border-tertiary-container px-2 py-1 text-[12px] font-bold uppercase tracking-[0.08em] text-tertiary">
+              Recommended
+            </span>
+          ) : null}
         </div>
-        <div className="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+        {/* Revealed on focus as well as hover, and always visible on touch
+            widths where there is no hover at all. */}
+        <div className="flex gap-2 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
           <button
             type="button"
             aria-label={`Edit question: ${questionText}`}
@@ -156,13 +171,6 @@ export function QuestionCard({
           >
             Edit
           </button>
-          <button
-            type="button"
-            aria-label={`Star question: ${questionText}`}
-            className="text-sm text-on-surface-variant transition-colors hover:text-primary"
-          >
-            Star
-          </button>
         </div>
       </div>
       <p className="font-sans text-base leading-7 font-medium text-primary">
@@ -170,15 +178,18 @@ export function QuestionCard({
       </p>
       {teacherNote ? (
         <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
+          <span className="font-bold text-on-surface">
+            Teacher note (private):
+          </span>{' '}
           {teacherNote}
         </p>
       ) : null}
       {onToggleInSet ? (
         <div className="grid gap-1">
-          <label className="flex w-fit items-center gap-2 text-sm text-on-surface-variant">
+          <label className="flex min-h-11 w-fit items-center gap-3 text-sm text-on-surface-variant">
             <input
               type="checkbox"
-              className="h-4 w-4"
+              className="h-5 w-5"
               checked={isInSet}
               disabled={isTogglingSet}
               onChange={(event) => {
