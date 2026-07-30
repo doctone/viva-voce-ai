@@ -1,18 +1,14 @@
 import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SubmissionDetailPage } from './submissions.$submissionId'
 import {
-  createTestAskedQuestion,
   createTestQuestion,
   createTestSubmission,
   createTestSubmissionViva,
   createTestVivaQuestionSet,
   createTestVivaSession,
-  type TestAskedQuestion,
-  type TestEvidenceMarker,
-  type TestObservation,
 } from '../../test/factories'
 import {
   signedUrlHandler,
@@ -58,6 +54,13 @@ function createDeferred<T>() {
 }
 
 describe('SubmissionDetailPage', () => {
+  beforeEach(() => {
+    // The page records that it has already tried to generate for a submission,
+    // so a refresh mid-generation cannot start a second run. Tests share one
+    // submission id, so that record has to be cleared between them.
+    window.sessionStorage.clear()
+  })
+
   it('renders the saved viva questions alongside the submission', async () => {
     generateSubmissionVivaSpy.mockReset()
 
@@ -91,22 +94,20 @@ describe('SubmissionDetailPage', () => {
 
     expect(screen.queryByRole('heading', { name: 'Preparing viva questions' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Viva questions unavailable' })).not.toBeInTheDocument()
+
+    // The page opens on the work, not on the reading view: the questions are
+    // what a teacher came here to act on.
     expect(
-      await screen.findByText(/The evolution of mercantile law in the 18th century/),
+      await screen.findByText('Why does the response describe Lord Mansfield as pivotal?'),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: 'Mercantile law response' }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText(/The evolution of mercantile law in the 18th century/),
-    ).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Submission' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Viva Questions' })).toBeInTheDocument()
-
-    expect(screen.queryByText('Viva Questions for this Submission')).not.toBeInTheDocument()
   })
 
-  it('switches the main panel from the submission to viva questions', async () => {
+  it('switches the main panel from viva questions to the submission', async () => {
     generateSubmissionVivaSpy.mockReset()
 
     server.use(
@@ -129,13 +130,15 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
-    expect(await screen.findByText('Body paragraph one.')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('tab', { name: 'Viva Questions' }))
-
+    expect(
+      await screen.findByText('Viva Questions for this Submission'),
+    ).toBeInTheDocument()
     expect(screen.queryByText('Body paragraph one.')).not.toBeInTheDocument()
-    expect(screen.getByText('Viva Questions for this Submission')).toBeInTheDocument()
-    expect(screen.getByText('Why does the response describe Lord Mansfield as pivotal?')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'Submission' }))
+
+    expect(screen.getByText('Body paragraph one.')).toBeInTheDocument()
+    expect(screen.getByText('Body paragraph two.')).toBeInTheDocument()
   })
 
   it('uploads and displays a viva audio recording', async () => {
@@ -197,10 +200,10 @@ describe('SubmissionDetailPage', () => {
       await screen.findByRole('heading', { name: 'Preparing viva questions' }),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('The submission has been saved. Viva questions are being prepared now.'),
+      screen.getByText(/We are reading/),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('This usually takes a few seconds. If it takes longer, you can stay on this page.'),
+      screen.getByText(/This usually takes a few seconds/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'The Submission' })).not.toBeInTheDocument()
 
@@ -285,7 +288,9 @@ describe('SubmissionDetailPage', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Try again' }))
 
-    expect(await screen.findByText('Body text.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Why does the response describe Lord Mansfield as pivotal?'),
+    ).toBeInTheDocument()
   })
 
   it('distinguishes recommended questions, shows category labels, and shows teacher notes only when present', async () => {
@@ -809,7 +814,9 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
-    expect(await screen.findByText('Ok.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Question about a short submission'),
+    ).toBeInTheDocument()
     expect(generateSubmissionVivaSpy).toHaveBeenCalledWith('30420000-0000-0000-0000-000000000000')
   })
 
@@ -939,7 +946,12 @@ describe('SubmissionDetailPage', () => {
 
     await user.click(
       screen.getByRole('button', {
-        name: 'Remove question from set: Why does the response describe Lord Mansfield as pivotal?',
+        name: 'Remove question 1 from the set',
+      }),
+    )
+    await user.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', {
+        name: 'Remove',
       }),
     )
 
@@ -1003,7 +1015,7 @@ describe('SubmissionDetailPage', () => {
     expect(await screen.findByText(/1\. Comprehension And Accuracy/)).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole('button', { name: 'Move question up: Second question' }),
+      screen.getByRole('button', { name: 'Move question 2 up' }),
     )
 
     await screen.findByText(/1\. Argumentation And Reasoning/)
@@ -1081,7 +1093,7 @@ describe('SubmissionDetailPage', () => {
       ),
     ).toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: 'Start Viva Session' }),
+      screen.queryByRole('button', { name: 'Open Viva Session' }),
     ).not.toBeInTheDocument()
   })
 
@@ -1122,7 +1134,7 @@ describe('SubmissionDetailPage', () => {
 
     await user.click(
       await screen.findByRole('checkbox', {
-        name: /I've confirmed this is the correct student/,
+        name: /I have checked this work with the student/,
       }),
     )
     await user.click(
@@ -1131,7 +1143,7 @@ describe('SubmissionDetailPage', () => {
     await user.click(screen.getByRole('button', { name: 'Run microphone check' }))
     await screen.findByText('Microphone check passed')
 
-    await user.click(screen.getByRole('button', { name: 'Start Viva Session' }))
+    await user.click(screen.getByRole('button', { name: 'Open Viva Session' }))
 
     expect(await screen.findByText('Viva Session in progress')).toBeInTheDocument()
     expect(insertCount).toBe(1)
@@ -1140,114 +1152,8 @@ describe('SubmissionDetailPage', () => {
       equipment_check_result: 'passed',
     })
     expect(
-      screen.queryByRole('button', { name: 'Start Viva Session' }),
+      screen.queryByRole('button', { name: 'Open Viva Session' }),
     ).not.toBeInTheDocument()
-  })
-
-  it('captures Observations and Evidence Markers against Asked Questions during an active Viva Session', async () => {
-    generateSubmissionVivaSpy.mockReset()
-    equipmentCheckSpy.mockReset()
-
-    const activeSession = createTestVivaSession()
-    const plannedQuestion = createTestQuestion({ set_position: 0 })
-    const createdAskedQuestion = createTestAskedQuestion({
-      viva_question_id: plannedQuestion.id,
-      question_text: plannedQuestion.question_text,
-    })
-
-    let askedQuestions: TestAskedQuestion[] = []
-    let observations: TestObservation[] = []
-    let evidenceMarkers: TestEvidenceMarker[] = []
-    let observationRequestBody: Record<string, unknown> | null = null
-    let evidenceMarkerRequestBody: Record<string, unknown> | null = null
-
-    server.use(
-      ...submissionWithQuestionsHandlers(testSubmission, [plannedQuestion]),
-      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'ready' })),
-      submissionVivaHandler([]),
-      vivaSessionHandler([activeSession]),
-      http.get(`${SUPABASE_URL}/rest/v1/asked_questions`, () =>
-        HttpResponse.json(askedQuestions),
-      ),
-      http.post(`${SUPABASE_URL}/rest/v1/asked_questions`, async ({ request }) => {
-        const body = (await request.json()) as Record<string, unknown>
-        askedQuestions = [{ ...createdAskedQuestion, ...body }]
-        return HttpResponse.json(askedQuestions, { status: 201 })
-      }),
-      http.get(`${SUPABASE_URL}/rest/v1/observations`, () =>
-        HttpResponse.json(observations),
-      ),
-      http.post(`${SUPABASE_URL}/rest/v1/observations`, async ({ request }) => {
-        observationRequestBody = (await request.json()) as Record<string, unknown>
-        observations = [
-          {
-            asked_question_id: createdAskedQuestion.id,
-            content: observationRequestBody.content as string,
-            teacher_id: '20420000-0000-0000-0000-000000000000',
-            created_at: '2026-07-12T09:10:00.000Z',
-            updated_at: '2026-07-12T09:10:00.000Z',
-          },
-        ]
-        return HttpResponse.json(observations, { status: 201 })
-      }),
-      http.get(`${SUPABASE_URL}/rest/v1/evidence_markers`, () =>
-        HttpResponse.json(evidenceMarkers),
-      ),
-      http.post(`${SUPABASE_URL}/rest/v1/evidence_markers`, async ({ request }) => {
-        evidenceMarkerRequestBody = (await request.json()) as Record<string, unknown>
-        evidenceMarkers = [
-          {
-            asked_question_id: createdAskedQuestion.id,
-            marker_type: evidenceMarkerRequestBody.marker_type as TestEvidenceMarker['marker_type'],
-            teacher_id: '20420000-0000-0000-0000-000000000000',
-            created_at: '2026-07-12T09:15:00.000Z',
-            updated_at: '2026-07-12T09:15:00.000Z',
-          },
-        ]
-        return HttpResponse.json(evidenceMarkers, { status: 201 })
-      }),
-    )
-
-    const user = userEvent.setup()
-
-    renderWithRouter(
-      <SubmissionDetailPage />,
-      '/submissions/30420000-0000-0000-0000-000000000000',
-    )
-
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
-    expect(await screen.findByText('Viva Session in progress')).toBeInTheDocument()
-
-    await user.click(await screen.findByRole('button', { name: 'Mark as asked' }))
-
-    expect(
-      await screen.findByRole('button', { name: plannedQuestion.question_text }),
-    ).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Clear understanding' }))
-
-    await waitFor(() => {
-      expect(evidenceMarkerRequestBody).toMatchObject({
-        marker_type: 'clear_understanding',
-      })
-    })
-
-    await user.type(
-      screen.getByLabelText('Observation'),
-      'Confident and well reasoned.',
-    )
-
-    await waitFor(
-      () => {
-        expect(observationRequestBody).toMatchObject({
-          content: 'Confident and well reasoned.',
-        })
-      },
-      { timeout: 3000 },
-    )
-
-    expect(await screen.findByText('Saved')).toBeInTheDocument()
   })
 
   it('links to Conduct mode once a Viva Session is active', async () => {
@@ -1275,7 +1181,7 @@ describe('SubmissionDetailPage', () => {
     await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
 
     const conductLink = await screen.findByRole('link', {
-      name: 'Conduct Viva Session',
+      name: 'Open Conduct mode',
     })
 
     expect(conductLink).toHaveAttribute(
@@ -1284,7 +1190,7 @@ describe('SubmissionDetailPage', () => {
     )
   })
 
-  it('cancels the readiness checklist without starting a Viva Session', async () => {
+  it('clears the readiness checklist on confirmation, without starting a Viva Session', async () => {
     generateSubmissionVivaSpy.mockReset()
     equipmentCheckSpy.mockReset()
     equipmentCheckSpy.mockResolvedValue('passed')
@@ -1314,14 +1220,25 @@ describe('SubmissionDetailPage', () => {
     await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
 
     const studentConfirmedCheckbox = await screen.findByRole('checkbox', {
-      name: /I've confirmed this is the correct student/,
+      name: /I have checked this work with the student/,
     })
     await user.click(studentConfirmedCheckbox)
     await user.click(
       screen.getByRole('radio', { name: 'Consent given to record this viva' }),
     )
 
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    // Clearing discards a part-filled checklist, so it asks first.
+    await user.click(screen.getByRole('button', { name: 'Clear checklist' }))
+    await user.click(screen.getByRole('button', { name: 'Keep my answers' }))
+
+    expect(studentConfirmedCheckbox).toBeChecked()
+
+    await user.click(screen.getByRole('button', { name: 'Clear checklist' }))
+    await user.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', {
+        name: 'Clear checklist',
+      }),
+    )
 
     expect(studentConfirmedCheckbox).not.toBeChecked()
     expect(

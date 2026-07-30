@@ -195,6 +195,99 @@ describe('ConductVivaSessionPage', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('captures Observations and Evidence Markers against Asked Questions', async () => {
+    const activeSession = createTestVivaSession()
+    let askedQuestions: Array<Record<string, unknown>> = []
+    let observations: Array<Record<string, unknown>> = []
+    let evidenceMarkers: Array<Record<string, unknown>> = []
+    let observationRequestBody: Record<string, unknown> | null = null
+    let evidenceMarkerRequestBody: Record<string, unknown> | null = null
+
+    server.use(
+      ...submissionWithQuestionsHandlers(testSubmission, [questionOne]),
+      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'ready' })),
+      vivaSessionHandler([activeSession]),
+      http.get(`${SUPABASE_URL}/rest/v1/asked_questions`, () =>
+        HttpResponse.json(askedQuestions),
+      ),
+      http.post(`${SUPABASE_URL}/rest/v1/asked_questions`, async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>
+        askedQuestions = [
+          {
+            asked_at: '2026-07-15T09:05:00.000Z',
+            id: 'asked-1',
+            is_unplanned: false,
+            ...body,
+          },
+        ]
+        return HttpResponse.json(askedQuestions, { status: 201 })
+      }),
+      http.get(`${SUPABASE_URL}/rest/v1/observations`, () =>
+        HttpResponse.json(observations),
+      ),
+      http.post(`${SUPABASE_URL}/rest/v1/observations`, async ({ request }) => {
+        observationRequestBody = (await request.json()) as Record<string, unknown>
+        observations = [
+          {
+            asked_question_id: 'asked-1',
+            content: observationRequestBody.content as string,
+          },
+        ]
+        return HttpResponse.json(observations, { status: 201 })
+      }),
+      http.get(`${SUPABASE_URL}/rest/v1/evidence_markers`, () =>
+        HttpResponse.json(evidenceMarkers),
+      ),
+      http.post(`${SUPABASE_URL}/rest/v1/evidence_markers`, async ({ request }) => {
+        evidenceMarkerRequestBody = (await request.json()) as Record<
+          string,
+          unknown
+        >
+        evidenceMarkers = [
+          {
+            asked_question_id: 'asked-1',
+            marker_type: evidenceMarkerRequestBody.marker_type as string,
+          },
+        ]
+        return HttpResponse.json(evidenceMarkers, { status: 201 })
+      }),
+    )
+
+    const user = userEvent.setup()
+    renderConductPage()
+
+    // Conduct mode owns asking; the capture panel below it owns the record.
+    await user.click(
+      await screen.findByRole('button', { name: 'Mark as asked' }),
+    )
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Clear understanding' }),
+    )
+
+    await waitFor(() => {
+      expect(evidenceMarkerRequestBody).toMatchObject({
+        marker_type: 'clear_understanding',
+      })
+    })
+
+    await user.type(
+      screen.getByLabelText(/Observation/),
+      'Confident and well reasoned.',
+    )
+
+    await waitFor(
+      () => {
+        expect(observationRequestBody).toMatchObject({
+          content: 'Confident and well reasoned.',
+        })
+      },
+      { timeout: 3000 },
+    )
+
+    expect(await screen.findByText('Saved')).toBeInTheDocument()
+  })
+
   it('records an unplanned follow-up question', async () => {
     const activeSession = createTestVivaSession()
     let insertedBody: Record<string, unknown> | null = null

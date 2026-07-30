@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react'
+import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render } from '../../../test/router'
@@ -113,7 +113,7 @@ describe('VivaSessionCapturePanel', () => {
       screen.getByRole('button', { name: 'Second question' }),
     ).toHaveAttribute('aria-pressed', 'true')
     expect(
-      screen.getByLabelText('Observation'),
+      screen.getByLabelText(/Observation/),
     ).toBeInTheDocument()
   })
 
@@ -135,7 +135,7 @@ describe('VivaSessionCapturePanel', () => {
     expect(
       screen.getByRole('button', { name: 'First question' }),
     ).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByLabelText('Observation')).toHaveValue('Confident opening.')
+    expect(screen.getByLabelText(/Observation/)).toHaveValue('Confident opening.')
   })
 })
 
@@ -205,7 +205,7 @@ describe('AskedQuestionCaptureCard observation autosave', () => {
     const user = userEvent.setup({ delay: null })
     const props = renderPanel({ askedQuestions: [askedQuestion()] })
 
-    await user.type(screen.getByLabelText('Observation'), 'Confident answer.')
+    await user.type(screen.getByLabelText(/Observation/), 'Confident answer.')
 
     expect(props.onSaveObservation).not.toHaveBeenCalled()
 
@@ -231,7 +231,7 @@ describe('AskedQuestionCaptureCard observation autosave', () => {
       onSaveObservation,
     })
 
-    await user.type(screen.getByLabelText('Observation'), 'Confident answer.')
+    await user.type(screen.getByLabelText(/Observation/), 'Confident answer.')
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1000)
@@ -245,5 +245,46 @@ describe('AskedQuestionCaptureCard observation autosave', () => {
 
     expect(await screen.findByText('Saved')).toBeInTheDocument()
     expect(onSaveObservation).toHaveBeenCalledTimes(2)
+  })
+
+  it('never reports an Observation as saved while it is still unsaved', async () => {
+    const user = userEvent.setup({ delay: null })
+    renderPanel({ askedQuestions: [askedQuestion()] })
+
+    await user.type(screen.getByLabelText(/Observation/), 'First thought.')
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+    expect(await screen.findByText('Saved')).toBeInTheDocument()
+
+    // Typing again must retract the claim immediately, not leave "Saved"
+    // standing over text that has not been written yet.
+    await user.type(screen.getByLabelText(/Observation/), ' Second thought.')
+
+    expect(screen.queryByText('Saved')).not.toBeInTheDocument()
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+  })
+
+  it('saves a pending Observation when the teacher moves to another asked question', async () => {
+    const user = userEvent.setup({ delay: null })
+    const props = renderPanel({
+      askedQuestions: [
+        askedQuestion({ id: 'asked-question-1', questionText: 'First question' }),
+        askedQuestion({ id: 'asked-question-2', questionText: 'Second question' }),
+      ],
+    })
+
+    await user.click(screen.getByRole('button', { name: 'First question' }))
+    await user.type(screen.getByLabelText(/Observation/), 'Hesitant on sources.')
+
+    // Switching unmounts the card mid-debounce. The edit must survive.
+    await user.click(screen.getByRole('button', { name: 'Second question' }))
+
+    await waitFor(() => {
+      expect(props.onSaveObservation).toHaveBeenCalledWith(
+        'asked-question-1',
+        'Hesitant on sources.',
+      )
+    })
   })
 })

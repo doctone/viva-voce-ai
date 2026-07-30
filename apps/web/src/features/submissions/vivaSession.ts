@@ -58,6 +58,7 @@ export function evaluateReadiness(
 
   if (
     checklist.expectedDurationMinutes === null ||
+    !Number.isFinite(checklist.expectedDurationMinutes) ||
     checklist.expectedDurationMinutes <= 0
   ) {
     blockingReasons.push("Enter an expected duration greater than zero.");

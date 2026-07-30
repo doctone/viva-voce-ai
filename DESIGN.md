@@ -26,12 +26,30 @@ typography:
     fontWeight: 500
     lineHeight: 1.3
     letterSpacing: "-0.01em"
+  page-title:
+    fontFamily: "Newsreader, serif"
+    fontSize: "36px"
+    fontWeight: 600
+    lineHeight: 1.2
+    letterSpacing: "-0.02em"
   title:
     fontFamily: "Newsreader, serif"
     fontSize: "30px"
     fontWeight: 500
     lineHeight: 1.2
     letterSpacing: "-0.02em"
+  subhead:
+    fontFamily: "Newsreader, serif"
+    fontSize: "20px"
+    fontWeight: 500
+    lineHeight: 1.3
+    letterSpacing: "-0.01em"
+  lede:
+    fontFamily: "Newsreader, serif"
+    fontSize: "18px"
+    fontWeight: 400
+    lineHeight: 1.7
+    letterSpacing: "-0.01em"
   body:
     fontFamily: "Manrope, sans-serif"
     fontSize: "16px"
@@ -130,7 +148,10 @@ The Archival Paper palette uses warm reading surfaces, dark ink tones, and a sin
 ### Hierarchy
 - **Display** (600, 48px, 1.2): Reserved for page-defining headings such as auth screens, major workspace intros, and design-forward product moments.
 - **Headline** (500, 32px, 1.3): Section headings and substantial content titles inside panels or content views.
+- **Page title** (600, 36px, 1.2): The single `h1` of a working page, one step below Display so app surfaces stay quieter than design-forward moments.
 - **Title** (500, 30px, 1.2): Brand titles and compact high-importance headings where presence matters but full display scale would be excessive.
+- **Subhead** (500, 20px, 1.3): Headings for subordinate panels — sidebars, rails, and utility sections that must read as secondary to the page title. Use this rather than repeating a section-scale heading in every panel, which flattens hierarchy.
+- **Lede** (400, 18px, 1.7): Standfirst copy directly under a page title.
 - **Body** (400, 16px, 1.6): The default reading size for product copy. Prose should generally stay within 65 to 75 characters per line where possible.
 - **Label** (700, 12px, 0.08em tracking, uppercase): Field labels, navigation items, eyebrow text, and compact structural language.
 

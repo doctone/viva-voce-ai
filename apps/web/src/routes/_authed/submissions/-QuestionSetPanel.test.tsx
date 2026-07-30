@@ -73,33 +73,45 @@ describe('QuestionSetPanel', () => {
     renderPanel()
 
     expect(
-      screen.getByRole('button', {
-        name: 'Move question up: Why does the response describe Lord Mansfield as pivotal?',
-      }),
+      screen.getByRole('button', { name: 'Move question 1 up' }),
     ).toBeDisabled()
     expect(
-      screen.getByRole('button', {
-        name: 'Move question down: Which example gives the strongest support for your argument?',
-      }),
+      screen.getByRole('button', { name: 'Move question 2 down' }),
     ).toBeDisabled()
     expect(
-      screen.getByRole('button', {
-        name: 'Move question down: Why does the response describe Lord Mansfield as pivotal?',
-      }),
+      screen.getByRole('button', { name: 'Move question 1 down' }),
     ).toBeEnabled()
   })
 
-  it('calls onRemoveQuestion when Remove is clicked', async () => {
+  it('removes a question from the set only after the teacher confirms', async () => {
     const user = userEvent.setup()
     const props = renderPanel()
 
     await user.click(
-      screen.getByRole('button', {
-        name: 'Remove question from set: Which example gives the strongest support for your argument?',
+      screen.getByRole('button', { name: 'Remove question 2 from the set' }),
+    )
+    expect(props.onRemoveQuestion).not.toHaveBeenCalled()
+
+    await user.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', {
+        name: 'Remove',
       }),
     )
 
     expect(props.onRemoveQuestion).toHaveBeenCalledWith('q2')
+  })
+
+  it('keeps the question when the teacher backs out of removing it', async () => {
+    const user = userEvent.setup()
+    const props = renderPanel()
+
+    await user.click(
+      screen.getByRole('button', { name: 'Remove question 2 from the set' }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Keep' }))
+
+    expect(props.onRemoveQuestion).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 
   it('calls onMarkReady when the set is non-empty and Mark ready is clicked', async () => {

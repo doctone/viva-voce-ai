@@ -3,8 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Breadcrumb, Card, Heading, buttonClassName } from "../../components/ui";
 import {
+  applyEvidenceMarker,
   createSupabaseAskedQuestionRepository,
+  createSupabaseEvidenceMarkerRepository,
+  createSupabaseObservationRepository,
   recordAskedQuestion,
+  saveObservation,
+  type EvidenceMarkerType,
 } from "../../features/submissions/vivaSessionCapture";
 import { createSupabaseVivaSessionRepository } from "../../features/submissions/vivaSession";
 import { sortQuestionsBySetPosition } from "../../features/submissions/vivaQuestionSet";
@@ -20,6 +25,11 @@ import {
   ConductModePanel,
   type ConductModeQuestion,
 } from "./submissions/-ConductModePanel";
+import {
+  VivaSessionCapturePanel,
+  type CaptureAskedQuestion,
+} from "./submissions/-VivaSessionCapturePanel";
+import { fetchCaptureAskedQuestions } from "./submissions/-captureAskedQuestions";
 
 export const Route = createFileRoute(
   "/_authed/submissions/$submissionId/conduct",
@@ -193,15 +203,57 @@ export function ConductVivaSessionPage() {
 
   const capture = useVivaAudioCapture(vivaSession?.id ?? "");
 
+  const captureQuestionsQuery = useQuery({
+    enabled: Boolean(vivaSession),
+    queryFn: () =>
+      fetchCaptureAskedQuestions((vivaSession as { id: string }).id),
+    queryKey: ["asked-questions", vivaSession?.id ?? null],
+  });
+  const captureAskedQuestions: CaptureAskedQuestion[] =
+    captureQuestionsQuery.data ?? [];
+
   const invalidateAskedQuestions = React.useCallback(async () => {
     if (!vivaSession) {
       return;
     }
 
-    await queryClient.invalidateQueries({
-      queryKey: ["asked-viva-question-ids", vivaSession.id],
-    });
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["asked-viva-question-ids", vivaSession.id],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["asked-questions", vivaSession.id],
+      }),
+    ]);
   }, [queryClient, vivaSession]);
+
+  const saveAskedQuestionObservation = React.useCallback(
+    async (askedQuestionId: string, content: string) => {
+      const repository = createSupabaseObservationRepository(
+        getSupabaseBrowserClient(),
+      );
+      const result = await saveObservation(askedQuestionId, content, repository);
+
+      if (result.outcome === "rejected") {
+        throw new Error(result.reason);
+      }
+
+      await invalidateAskedQuestions();
+    },
+    [invalidateAskedQuestions],
+  );
+
+  const applyAskedQuestionEvidenceMarker = React.useCallback(
+    async (askedQuestionId: string, markerType: EvidenceMarkerType) => {
+      const repository = createSupabaseEvidenceMarkerRepository(
+        getSupabaseBrowserClient(),
+      );
+
+      await applyEvidenceMarker(askedQuestionId, markerType, repository);
+      await invalidateAskedQuestions();
+    },
+    [invalidateAskedQuestions],
+  );
 
   const askCurrentQuestion = React.useCallback(async () => {
     const question = conductQuestions[currentIndex];
@@ -336,6 +388,24 @@ export function ConductVivaSessionPage() {
         recordingStatus={capture.status}
         submissionTitle={submissionQuery.data?.submission_title ?? ""}
       />
+      <VivaSessionCapturePanel
+        askedQuestions={captureAskedQuestions}
+        isLoadingAskedQuestions={captureQuestionsQuery.isLoading}
+        onApplyEvidenceMarker={applyAskedQuestionEvidenceMarker}
+        onAskFollowUpQuestion={askFollowUpQuestion}
+        onAskPlannedQuestion={askCurrentQuestion}
+        onSaveObservation={saveAskedQuestionObservation}
+        plannedQuestions={orderedQuestions.map((question) => ({
+          id: question.id,
+          questionText: question.questionText,
+        }))}
+        showAskControls={false}
+      />
+      {captureQuestionsQuery.error instanceof Error ? (
+        <p className="text-sm leading-6 text-error" role="alert">
+          {captureQuestionsQuery.error.message}
+        </p>
+      ) : null}
     </div>
   );
 }
