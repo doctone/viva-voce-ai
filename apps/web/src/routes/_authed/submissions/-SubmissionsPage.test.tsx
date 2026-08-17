@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse, delay } from 'msw'
 import { describe, expect, it } from 'vitest'
@@ -13,6 +13,30 @@ const testSubmission = createTestSubmission({
   submission_title: 'Modernist Poetry Oral Defence',
   created_at: '2026-03-12T09:00:00.000Z',
 })
+
+const threeSubmissions = [
+  { ...testSubmission, vivaQuestionsCount: 0, submissionVivaCount: 0 },
+  {
+    ...createTestSubmission({
+      id: '30420000-0000-0000-0000-000000000001',
+      student_id: 'STU-1098',
+      submission_title: 'Postcolonial Literature Reflection',
+      created_at: '2026-03-10T09:00:00.000Z',
+    }),
+    vivaQuestionsCount: 12,
+    submissionVivaCount: 0,
+  },
+  {
+    ...createTestSubmission({
+      id: '30420000-0000-0000-0000-000000000002',
+      student_id: 'STU-1120',
+      submission_title: 'Victorian Novel Analysis',
+      created_at: '2026-03-08T09:00:00.000Z',
+    }),
+    vivaQuestionsCount: 12,
+    submissionVivaCount: 1,
+  },
+]
 
 describe('SubmissionsPage', () => {
   it('renders a table of submissions with student ID, title, and a human-readable date', async () => {
@@ -53,9 +77,112 @@ describe('SubmissionsPage', () => {
 
     renderWithRouter(<SubmissionsPage />, '/submissions')
 
-    expect(await screen.findByText('Pending Questions')).toBeInTheDocument()
-    expect(screen.getByText('Ready for Viva')).toBeInTheDocument()
-    expect(screen.getByText('Recorded')).toBeInTheDocument()
+    const table = within(await screen.findByRole('table', { name: 'Submissions' }))
+
+    expect(table.getByText('Pending Questions')).toBeInTheDocument()
+    expect(table.getByText('Ready for Viva')).toBeInTheDocument()
+    expect(table.getByText('Recorded')).toBeInTheDocument()
+  })
+
+  it('narrows the list to submissions matching a search term', async () => {
+    server.use(submissionsListHandler(threeSubmissions))
+
+    const user = userEvent.setup()
+
+    renderWithRouter(<SubmissionsPage />, '/submissions')
+
+    expect(await screen.findByText('Victorian Novel Analysis')).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Search'), 'postcolonial')
+
+    expect(
+      screen.getByText('Postcolonial Literature Reflection'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Victorian Novel Analysis')).not.toBeInTheDocument()
+    expect(screen.getByText('Showing 1 of 3 submissions')).toBeInTheDocument()
+  })
+
+  it('narrows the list to a single workflow status', async () => {
+    server.use(submissionsListHandler(threeSubmissions))
+
+    const user = userEvent.setup()
+
+    renderWithRouter(<SubmissionsPage />, '/submissions')
+
+    await user.click(await screen.findByRole('button', { name: /^Recorded/ }))
+
+    expect(screen.getByText('Victorian Novel Analysis')).toBeInTheDocument()
+    expect(
+      screen.queryByText('Modernist Poetry Oral Defence'),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('Showing 1 of 3 submissions')).toBeInTheDocument()
+  })
+
+  it('shows how many submissions sit in each status on the filter controls', async () => {
+    server.use(submissionsListHandler(threeSubmissions))
+
+    renderWithRouter(<SubmissionsPage />, '/submissions')
+
+    expect(await screen.findByRole('button', { name: 'All 3' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Pending Questions 1' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Ready for Viva 1' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Recorded 1' })).toBeInTheDocument()
+  })
+
+  it('offers a way back when the filters match nothing', async () => {
+    server.use(submissionsListHandler(threeSubmissions))
+
+    const user = userEvent.setup()
+
+    renderWithRouter(<SubmissionsPage />, '/submissions')
+
+    await user.type(await screen.findByLabelText('Search'), 'chaucer')
+
+    expect(
+      screen.getByText('No submissions match these filters.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Clear Filters' }))
+
+    expect(await screen.findByRole('table')).toBeInTheDocument()
+    expect(screen.getByText('Modernist Poetry Oral Defence')).toBeInTheDocument()
+  })
+
+  it('lets the teacher retry after a failed load', async () => {
+    let attempts = 0
+
+    server.use(
+      http.get('https://example-project.supabase.co/rest/v1/submissions', () => {
+        attempts += 1
+
+        if (attempts === 1) {
+          return HttpResponse.json({ message: 'Query failed' }, { status: 500 })
+        }
+
+        return HttpResponse.json([
+          {
+            ...testSubmission,
+            viva_questions: [{ count: 0 }],
+            submission_viva: [{ count: 0 }],
+          },
+        ])
+      }),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(<SubmissionsPage />, '/submissions')
+
+    await user.click(await screen.findByRole('button', { name: 'Try Again' }))
+
+    expect(
+      await screen.findByText('Modernist Poetry Oral Defence'),
+    ).toBeInTheDocument()
   })
 
   it('shows a helpful empty state when there are no submissions', async () => {
