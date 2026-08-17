@@ -1,60 +1,96 @@
+import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { buttonClassName, EmptyState, PageFrame } from '../../../components/ui'
-import { SubmissionsTable, type SubmissionRow, type SubmissionStatus } from './-SubmissionsTable'
+import { Button, buttonClassName, EmptyState, PageFrame } from '../../../components/ui'
+import { SubmissionsTable } from './-SubmissionsTable'
+import { SubmissionsToolbar } from './-SubmissionsToolbar'
 import { useSubmissions } from './-useSubmissions'
+import {
+  countSubmissionsByStatus,
+  filterSubmissions,
+  type StatusFilter,
+} from './-submission'
 import { cn } from '~/lib/utils'
-import { mutedTextClassName } from '~/lib/class-names'
+import {
+  eyebrowClassName,
+  mutedTextClassName,
+  paperPanelClassName,
+} from '~/lib/class-names'
 
-const STATUS_SUMMARY_LABEL: Record<SubmissionStatus, string> = {
-  pending: 'Awaiting Questions',
-  questions_ready: 'Set Ready',
-  recorded: 'Viva Recorded',
-}
+const SKELETON_ROW_COUNT = 5
 
-const STATUS_SUMMARY_ORDER: SubmissionStatus[] = ['pending', 'questions_ready', 'recorded']
-
-function SubmissionStatusSummary({ rows }: { rows: SubmissionRow[] }) {
-  const counts: Record<SubmissionStatus, number> = {
-    pending: 0,
-    questions_ready: 0,
-    recorded: 0,
-  }
-
-  for (const row of rows) {
-    counts[row.status] += 1
-  }
-
+function SubmissionsSkeleton() {
   return (
-    <div
-      className="grid grid-cols-1 gap-3 sm:grid-cols-3"
-      aria-label="Submissions by status"
-    >
-      {STATUS_SUMMARY_ORDER.map((status) => (
+    <div className={cn(paperPanelClassName, 'grid')}>
+      <p role="status" className="sr-only">
+        Loading submissions...
+      </p>
+      <div className="hidden border-b border-outline-variant bg-surface-container px-5 py-4 md:block">
+        <div className="h-3 w-40 bg-surface-container-highest" />
+      </div>
+      {Array.from({ length: SKELETON_ROW_COUNT }).map((_, index) => (
         <div
-          key={status}
-          className="grid gap-1 border border-outline-variant bg-surface-container-lowest px-5 py-4"
+          key={index}
+          aria-hidden="true"
+          className="grid animate-pulse gap-3 border-b border-outline-variant px-5 py-5 last:border-b-0 md:grid-cols-[16%_minmax(0,1fr)_18%_22%] md:items-center md:gap-5"
         >
-          <span className="font-display text-[28px] font-medium leading-none text-primary">
-            {counts[status]}
-          </span>
-          <span className={cn(mutedTextClassName, 'text-sm')}>
-            {STATUS_SUMMARY_LABEL[status]}
-          </span>
+          <div className="h-3 w-24 bg-surface-container-high" />
+          <div className="h-3 w-3/4 bg-surface-container-high" />
+          <div className="h-3 w-24 bg-surface-container-high" />
+          <div className="h-6 w-32 bg-surface-container-high" />
         </div>
       ))}
     </div>
   )
 }
 
+function SubmissionsError({
+  message,
+  onRetry,
+}: {
+  message: string
+  onRetry: () => void
+}) {
+  return (
+    <div className={cn(paperPanelClassName, 'grid justify-items-start gap-3 p-8')}>
+      <span className={eyebrowClassName}>Could not load</span>
+      <p className="font-display text-lg font-medium leading-[1.3] text-on-surface">
+        {message}
+      </p>
+      <p className={cn(mutedTextClassName, 'max-w-[52ch] text-sm leading-6')}>
+        Nothing has been changed. Try again, and if the list still will not load,
+        the submissions service may be unavailable.
+      </p>
+      <Button variant="secondary" onClick={onRetry} className="mt-1">
+        Try Again
+      </Button>
+    </div>
+  )
+}
+
 export function SubmissionsPage() {
   const submissionsQuery = useSubmissions()
-  const rows = submissionsQuery.data ?? []
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState<StatusFilter>('all')
+
+  const rows = useMemo(() => submissionsQuery.data ?? [], [submissionsQuery.data])
+  const counts = useMemo(() => countSubmissionsByStatus(rows), [rows])
+  const visibleRows = useMemo(
+    () => filterSubmissions(rows, { search, status }),
+    [rows, search, status],
+  )
+
+  const isFiltered = status !== 'all' || search.trim() !== ''
+
+  const clearFilters = () => {
+    setSearch('')
+    setStatus('all')
+  }
 
   return (
     <PageFrame
       eyebrow="Workspace"
       title="Submissions"
-      description="Review recent submissions before opening an individual submission record."
+      description="Every submission in the workspace, newest first. Filter by where each one sits in the viva workflow, then open a record to work on it."
       actions={
         <Link to="/submissions/new" className={buttonClassName()}>
           New Submission
@@ -62,20 +98,59 @@ export function SubmissionsPage() {
       }
     >
       {submissionsQuery.isLoading ? (
-        <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
-          Loading submissions...
-        </p>
+        <SubmissionsSkeleton />
       ) : submissionsQuery.error instanceof Error ? (
-        <p className="text-sm leading-6 text-error">{submissionsQuery.error.message}</p>
+        <SubmissionsError
+          message={submissionsQuery.error.message}
+          onRetry={() => {
+            void submissionsQuery.refetch()
+          }}
+        />
       ) : rows.length === 0 ? (
         <EmptyState
           title="No submissions yet."
           description="Student submissions will appear here once coursework is ready for review."
+          action={
+            <Link
+              to="/submissions/new"
+              className={buttonClassName({ className: 'mt-1', variant: 'secondary' })}
+            >
+              Create The First Submission
+            </Link>
+          }
         />
       ) : (
-        <div className="grid gap-6">
-          <SubmissionStatusSummary rows={rows} />
-          <SubmissionsTable rows={rows} />
+        <div className="grid gap-5">
+          <SubmissionsToolbar
+            counts={counts}
+            onSearchChange={setSearch}
+            onStatusChange={setStatus}
+            search={search}
+            status={status}
+          />
+
+          <p
+            role="status"
+            className={cn(mutedTextClassName, 'text-sm leading-6')}
+          >
+            {isFiltered
+              ? `Showing ${visibleRows.length} of ${rows.length} submissions`
+              : `${rows.length} ${rows.length === 1 ? 'submission' : 'submissions'}`}
+          </p>
+
+          {visibleRows.length === 0 ? (
+            <EmptyState
+              title="No submissions match these filters."
+              description="Try a different student ID or title, or widen the status filter."
+              action={
+                <Button variant="secondary" onClick={clearFilters} className="mt-1">
+                  Clear Filters
+                </Button>
+              }
+            />
+          ) : (
+            <SubmissionsTable rows={visibleRows} />
+          )}
         </div>
       )}
     </PageFrame>

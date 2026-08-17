@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSupabaseBrowserClient } from '../../../utils/supabase-browser'
-import type { SubmissionRow, SubmissionStatus } from './-SubmissionsTable'
+import type { SubmissionRow, SubmissionStatus } from './-submission'
 
 type VivaRecord = {
   student_id: string
@@ -53,6 +53,7 @@ async function fetchSubmissions(): Promise<SubmissionRow[]> {
     studentId: viva.student_id,
     submissionTitle: viva.submission_title,
     dateSubmitted: formatSubmittedDate(viva.created_at),
+    submittedAt: viva.created_at,
     status: deriveSubmissionStatus(
       viva.viva_questions?.[0]?.count ?? 0,
       viva.submission_viva?.[0]?.count ?? 0,
