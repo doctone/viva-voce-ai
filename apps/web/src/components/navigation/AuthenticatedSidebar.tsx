@@ -13,9 +13,11 @@ export type AuthenticatedNavItem = {
 }
 
 export const authenticatedNavLinkClassName =
-  'px-6 py-4 font-display text-sm font-medium uppercase tracking-[0.16em] text-on-surface-variant transition-[background-color,color] duration-150 ease-out hover:bg-[rgb(244_244_240_/_0.55)] hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]'
+  'px-6 py-4 font-display text-sm font-medium uppercase tracking-[0.16em] transition-[background-color,color] duration-150 ease-out hover:bg-[rgb(244_244_240_/_0.55)] hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]'
 export const authenticatedNavLinkActiveClassName =
   'bg-primary text-on-primary hover:bg-primary hover:text-on-primary'
+
+export const authenticatedNavLinkInactiveClassName = 'text-on-surface-variant'
 
 type AuthenticatedSidebarProps = {
   items: readonly AuthenticatedNavItem[]
@@ -56,6 +58,9 @@ export function AuthenticatedSidebar({
               className={navLinkClassName}
               activeProps={{
                 className: navLinkActiveClassName,
+              }}
+              inactiveProps={{
+                className: authenticatedNavLinkInactiveClassName,
               }}
               activeOptions={{ exact: true }}
             >

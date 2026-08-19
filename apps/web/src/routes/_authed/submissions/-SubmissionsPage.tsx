@@ -90,7 +90,7 @@ export function SubmissionsPage() {
     <PageFrame
       eyebrow="Workspace"
       title="Submissions"
-      description="Every submission in the workspace, newest first. Filter by where each one sits in the viva workflow, then open a record to work on it."
+      description="Every submission in the workspace, newest first. Open one to read it, review its questions, and record the viva."
       actions={
         <Link to="/submissions/new" className={buttonClassName()}>
           New Submission
@@ -129,15 +129,6 @@ export function SubmissionsPage() {
             status={status}
           />
 
-          <p
-            role="status"
-            className={cn(mutedTextClassName, 'text-sm leading-6')}
-          >
-            {isFiltered
-              ? `Showing ${visibleRows.length} of ${rows.length} submissions`
-              : `${rows.length} ${rows.length === 1 ? 'submission' : 'submissions'}`}
-          </p>
-
           {visibleRows.length === 0 ? (
             <EmptyState
               title="No submissions match these filters."
@@ -149,7 +140,14 @@ export function SubmissionsPage() {
               }
             />
           ) : (
-            <SubmissionsTable rows={visibleRows} />
+            <SubmissionsTable
+              rows={visibleRows}
+              summary={
+                isFiltered
+                  ? `Showing ${visibleRows.length} of ${rows.length} submissions`
+                  : `${rows.length} ${rows.length === 1 ? 'submission' : 'submissions'}`
+              }
+            />
           )}
         </div>
       )}

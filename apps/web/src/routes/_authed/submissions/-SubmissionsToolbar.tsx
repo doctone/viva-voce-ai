@@ -1,5 +1,4 @@
 import { cn } from '~/lib/utils'
-import { eyebrowClassName } from '~/lib/class-names'
 import {
   STATUS_FILTER_LABEL,
   STATUS_FILTER_ORDER,
@@ -26,23 +25,34 @@ export function SubmissionsToolbar({
 }: SubmissionsToolbarProps) {
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_auto] lg:items-center lg:justify-between lg:gap-6">
-      <div className="flex h-11 items-center gap-3 border-b border-outline px-1 transition-[border-color,background-color] duration-150 ease-out focus-within:border-primary focus-within:bg-surface-container-lowest">
-        <label htmlFor="submissions-search" className={eyebrowClassName}>
+      <div className="flex h-9 items-center gap-2 border-b border-outline px-1 transition-[border-color,background-color] duration-150 ease-out focus-within:border-primary focus-within:bg-surface-container-lowest">
+        <label htmlFor="submissions-search" className="sr-only">
           Search
         </label>
+        <svg
+          aria-hidden="true"
+          className="size-4 shrink-0 text-on-surface-variant"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          viewBox="0 0 24 24"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+        </svg>
         <input
           id="submissions-search"
           type="search"
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Student ID or title"
+          placeholder="Search submissions"
           className="min-w-0 flex-1 bg-transparent text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none"
         />
         {search === '' ? null : (
           <button
             type="button"
             onClick={() => onSearchChange('')}
-            className="shrink-0 px-1 text-[12px] font-bold uppercase tracking-[0.08em] text-on-surface-variant transition-colors duration-150 ease-out hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]"
+            className="shrink-0 px-1 text-[11px] font-bold uppercase tracking-[0.1em] text-on-surface-variant transition-colors duration-150 ease-out hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]"
           >
             Clear
           </button>
@@ -74,7 +84,7 @@ export function SubmissionsToolbar({
               {STATUS_FILTER_LABEL[filter]}
               <span
                 className={cn(
-                  'font-sans text-[12px] font-bold [font-variant-numeric:tabular-nums]',
+                  'font-sans text-[11px] font-bold [font-variant-numeric:tabular-nums]',
                   isActive ? 'text-on-primary/70' : 'text-on-surface-variant/70',
                 )}
               >

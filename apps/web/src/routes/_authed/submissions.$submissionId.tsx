@@ -1,19 +1,14 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   Breadcrumb,
   Button,
   Card,
   Heading,
   PageFrame,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
   buttonClassName,
 } from "../../components/ui";
-import { useEquipmentCheck } from "../../features/submissions/useEquipmentCheck";
 import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
 import {
   createSupabaseVivaRecordingAccessRepository,
@@ -21,25 +16,14 @@ import {
   type VivaRecordingAccessResult,
 } from "../../features/submissions/vivaRecordingAccess";
 import {
-  computeNextSetPosition,
-  computeSequentialPositions,
   estimateQuestionSetDurationMinutes,
   formatQuestionCategory,
-  moveQuestionInSet,
-  sortQuestionsBySetPosition,
-  summarizeCategoryBalance,
-  type QuestionSetStatus,
 } from "../../features/submissions/vivaQuestionSet";
-import {
-  createSupabaseVivaSessionRepository,
-  startVivaSession,
-} from "../../features/submissions/vivaSession";
 import { cn } from "~/lib/utils";
 import {
   eyebrowClassName,
   mutedTextClassName,
   paperPanelClassName,
-  subheadClassName,
 } from "~/lib/class-names";
 import { getSupabaseBrowserClient } from "../../utils/supabase-browser";
 import {
@@ -47,11 +31,7 @@ import {
   type ManualQuestionInput,
   QuestionCard,
 } from "./submissions/-QuestionCard";
-import { QuestionSetPanel } from "./submissions/-QuestionSetPanel";
-import {
-  VivaSessionReadinessPanel,
-  type VivaSessionStartInput,
-} from "./submissions/-VivaSessionReadinessPanel";
+import { RecordVivaPanel } from "./submissions/-RecordVivaPanel";
 
 export const Route = createFileRoute("/_authed/submissions/$submissionId")({
   component: SubmissionDetailPage,
@@ -85,17 +65,6 @@ type SubmissionQuestion = {
   setPosition: number | null;
   sortOrder: number;
   teacherNote: string;
-};
-
-type VivaQuestionSetRecord = {
-  id: string;
-  status: QuestionSetStatus;
-};
-
-type VivaQuestionSetRow = {
-  id: string;
-  status: QuestionSetStatus;
-  submission_id: string;
 };
 
 type GenerationState = "idle" | "running" | "failed";
@@ -149,86 +118,6 @@ async function fetchSubmissionQuestions(
       teacherNote: question.teacher_note,
     }))
     .sort((left, right) => left.sortOrder - right.sortOrder);
-}
-
-async function fetchOrCreateVivaQuestionSet(
-  submissionId: string,
-): Promise<VivaQuestionSetRecord> {
-  const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from("viva_question_sets")
-    .select("id, submission_id, status")
-    .eq("submission_id", submissionId);
-
-  if (error) {
-    throw new Error("We could not load the Viva Question Set.");
-  }
-
-  const existing = (data as VivaQuestionSetRow[] | null)?.[0];
-
-  if (existing) {
-    return { id: existing.id, status: existing.status };
-  }
-
-  const { data: created, error: insertError } = await supabase
-    .from("viva_question_sets")
-    .insert({ submission_id: submissionId, status: "draft" })
-    .select("id, submission_id, status");
-
-  if (insertError) {
-    throw new Error("We could not create the Viva Question Set.");
-  }
-
-  const createdRow = (created as VivaQuestionSetRow[] | null)?.[0];
-
-  if (!createdRow) {
-    throw new Error("We could not create the Viva Question Set.");
-  }
-
-  return { id: createdRow.id, status: createdRow.status };
-}
-
-async function updateQuestionSetPositions(
-  updates: Array<{ id: string; position: number | null }>,
-) {
-  const supabase = getSupabaseBrowserClient();
-  const results = await Promise.all(
-    updates.map(({ id, position }) =>
-      supabase
-        .from("viva_questions")
-        .update({ set_position: position })
-        .eq("id", id),
-    ),
-  );
-
-  if (results.some((result) => result.error)) {
-    throw new Error("We could not update the Viva Question Set.");
-  }
-}
-
-async function updateVivaQuestionSetStatus(
-  questionSetId: string,
-  status: QuestionSetStatus,
-) {
-  const supabase = getSupabaseBrowserClient();
-  const { error } = await supabase
-    .from("viva_question_sets")
-    .update({
-      ready_at: status === "ready" ? new Date().toISOString() : null,
-      status,
-    })
-    .eq("id", questionSetId);
-
-  if (error) {
-    throw new Error("We could not update the Viva Question Set.");
-  }
-}
-
-async function fetchActiveVivaSession(vivaQuestionSetId: string) {
-  const supabase = getSupabaseBrowserClient();
-  const repository = createSupabaseVivaSessionRepository(supabase);
-
-  return repository.findActiveSession(vivaQuestionSetId);
 }
 
 type SubmissionVivaRecord = {
@@ -397,16 +286,6 @@ function hasGenerationBeenAttempted(submissionId: string) {
 }
 
 /** First sentence or so of the submission, for verifying the work in front of you. */
-function buildSubmissionExcerpt(value: string, maxLength = 120) {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
-
-  return `${normalized.slice(0, maxLength).trimEnd()}…`;
-}
-
 function SubmissionBreadcrumb({ title }: { title?: string }) {
   return (
     <Breadcrumb
@@ -486,6 +365,27 @@ function SubmissionGenerationFailure({
   );
 }
 
+function SectionHeader({
+  id,
+  meta,
+  title,
+}: {
+  id: string;
+  meta?: string;
+  title: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-outline-variant pb-3">
+      <h2 className={eyebrowClassName} id={id}>
+        {title}
+      </h2>
+      {meta ? (
+        <span className={cn(mutedTextClassName, "text-sm")}>{meta}</span>
+      ) : null}
+    </div>
+  );
+}
+
 export function SubmissionDetailPage() {
   const { submissionId } = Route.useParams();
   const queryClient = useQueryClient();
@@ -517,18 +417,6 @@ export function SubmissionDetailPage() {
     queryKey: ["submission-viva", submissionId],
   });
   const vivaAudioRecords = vivaAudioQuery.data ?? [];
-  const questionSetQuery = useQuery({
-    queryFn: () => fetchOrCreateVivaQuestionSet(submissionId),
-    queryKey: ["viva-question-set", submissionId],
-  });
-  const vivaQuestionSetId = questionSetQuery.data?.id;
-  const vivaSessionQuery = useQuery({
-    enabled: Boolean(vivaQuestionSetId),
-    queryFn: () => fetchActiveVivaSession(vivaQuestionSetId as string),
-    queryKey: ["viva-session", vivaQuestionSetId ?? null],
-  });
-  const vivaSessionId = vivaSessionQuery.data?.id;
-  const checkEquipment = useEquipmentCheck();
 
   const saveQuestionText = React.useCallback(
     async (questionId: string, questionText: string) => {
@@ -553,84 +441,6 @@ export function SubmissionDetailPage() {
       });
     },
     [questions, queryClient, submissionId],
-  );
-
-  const toggleQuestionInSet = React.useCallback(
-    async (questionId: string, included: boolean) => {
-      const position = included
-        ? computeNextSetPosition(questions.map((question) => question.setPosition))
-        : null;
-
-      await updateQuestionSetPositions([{ id: questionId, position }]);
-      await queryClient.invalidateQueries({
-        queryKey: ["submission-questions", submissionId],
-      });
-    },
-    [questions, queryClient, submissionId],
-  );
-
-  const moveSetQuestion = React.useCallback(
-    async (questionId: string, direction: "up" | "down") => {
-      const orderedQuestions = sortQuestionsBySetPosition(questions);
-      const reordered = moveQuestionInSet(orderedQuestions, questionId, direction);
-      const positions = computeSequentialPositions(
-        reordered.map((question) => question.id),
-      );
-
-      await updateQuestionSetPositions(positions);
-      await queryClient.invalidateQueries({
-        queryKey: ["submission-questions", submissionId],
-      });
-    },
-    [questions, queryClient, submissionId],
-  );
-
-  const removeQuestionFromSet = React.useCallback(
-    (questionId: string) => toggleQuestionInSet(questionId, false),
-    [toggleQuestionInSet],
-  );
-
-  const updateSetStatus = React.useCallback(
-    async (status: QuestionSetStatus) => {
-      if (!questionSetQuery.data) {
-        return;
-      }
-
-      await updateVivaQuestionSetStatus(questionSetQuery.data.id, status);
-      await queryClient.invalidateQueries({
-        queryKey: ["viva-question-set", submissionId],
-      });
-    },
-    [questionSetQuery.data, queryClient, submissionId],
-  );
-
-  const startSessionForQuestionSet = React.useCallback(
-    async (input: VivaSessionStartInput) => {
-      if (!questionSetQuery.data) {
-        return;
-      }
-
-      const supabase = getSupabaseBrowserClient();
-      const repository = createSupabaseVivaSessionRepository(supabase);
-
-      await startVivaSession(
-        {
-          accessibilityAdjustments: input.accessibilityAdjustments,
-          consentDeclinedReason: input.consentDeclinedReason,
-          consentState: input.consentState,
-          equipmentCheckResult: input.equipmentCheckResult,
-          expectedDurationMinutes: input.expectedDurationMinutes,
-          submissionId,
-          vivaQuestionSetId: questionSetQuery.data.id,
-        },
-        repository,
-      );
-
-      await queryClient.invalidateQueries({
-        queryKey: ["viva-session", questionSetQuery.data.id],
-      });
-    },
-    [questionSetQuery.data, queryClient, submissionId],
   );
 
   const runGeneration = React.useCallback(async () => {
@@ -769,308 +579,186 @@ export function SubmissionDetailPage() {
     );
   }
 
-  if (questionSetQuery.isLoading) {
-    return (
-      <div className="grid gap-8">
-        <SubmissionBreadcrumb title={submission.submission_title} />
-        <Card as="section">
-          <span className={eyebrowClassName}>Submissions</span>
-          <Heading>Loading Viva Question Set</Heading>
-        </Card>
-      </div>
-    );
-  }
-
-  if (questionSetQuery.error instanceof Error) {
-    return (
-      <div className="grid gap-8">
-        <SubmissionBreadcrumb title={submission.submission_title} />
-        <Card as="section">
-          <span className={eyebrowClassName}>Submissions</span>
-          <Heading>Submission unavailable</Heading>
-          <p className="text-sm leading-6 text-error">
-            {questionSetQuery.error.message}
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
-  const questionSet = questionSetQuery.data as VivaQuestionSetRecord;
-  const setQuestions = sortQuestionsBySetPosition(questions);
-  const categoryBalance = summarizeCategoryBalance(setQuestions);
   const estimatedDurationMinutes = estimateQuestionSetDurationMinutes(
-    setQuestions.length,
+    questions.length,
   );
 
   const submissionParagraphs = splitSubmissionTextIntoParagraphs(
     submission.submission_text,
   );
   const submissionWordCount = countSubmissionWords(submission.submission_text);
-  const submissionExcerpt = buildSubmissionExcerpt(submission.submission_text);
 
   return (
     <PageFrame
       breadcrumb={<SubmissionBreadcrumb title={submission.submission_title} />}
       title={submission.submission_title}
-      description={<>Submitted {formatSubmissionDate(submission.created_at)}</>}
+      description={
+        <>
+          Submitted {formatSubmissionDate(submission.created_at)} ·{" "}
+          {submissionWordCount.toLocaleString("en-GB")} words ·{" "}
+          {questions.length}{" "}
+          {questions.length === 1 ? "viva question" : "viva questions"}
+        </>
+      }
     >
-      <Tabs defaultValue="viva-questions" className="gap-6">
-        <TabsList
-          variant="line"
-          aria-label="Submission detail views"
-          className="max-w-[24rem] justify-start self-start gap-6 border-b border-outline-variant px-0 pb-0"
-        >
-          <TabsTrigger
-            value="submission"
-            className="rounded-none border-x-0 border-t-0 px-0 pb-4 pt-0 font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-on-surface-variant data-active:text-primary group-data-[variant=line]/tabs-list:after:bg-primary"
-          >
-            Submission
-          </TabsTrigger>
-          <TabsTrigger
-            value="viva-questions"
-            className="rounded-none border-x-0 border-t-0 px-0 pb-4 pt-0 font-sans text-[12px] font-bold uppercase tracking-[0.08em] text-on-surface-variant data-active:text-primary group-data-[variant=line]/tabs-list:after:bg-primary"
-          >
-            Viva Questions
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="submission" className="mt-0">
-          <article className={cn(paperPanelClassName, "p-8")}>
-            <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-outline-variant pb-4">
-              <span className={eyebrowClassName}>Submission text</span>
-              <span className={cn(mutedTextClassName, "text-sm")}>
-                {submissionWordCount.toLocaleString("en-GB")} words
-              </span>
-            </div>
-            <div className="mt-6 max-w-[70ch] space-y-4 font-serif text-lg leading-relaxed text-on-surface">
-              {submissionParagraphs.map((paragraph, index) => (
-                <p key={`${index}-${paragraph.slice(0, 32)}`}>{paragraph}</p>
-              ))}
-            </div>
-          </article>
-        </TabsContent>
-
-        <TabsContent value="viva-questions" className="mt-0">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
-            <section className="grid gap-4 lg:col-span-7">
-              <Heading level={2}>Viva Questions for this Submission</Heading>
-
-              {questions.map((question) => (
-                <QuestionCard
-                  key={question.id}
-                  id={question.id}
-                  isHighlighted={question.isHighlighted}
-                  isInSet={question.setPosition !== null}
-                  label={question.label}
-                  questionText={question.questionText}
-                  teacherNote={question.teacherNote}
-                  onSave={(questionText) =>
-                    saveQuestionText(question.id, questionText)
-                  }
-                  onToggleInSet={(included) =>
-                    toggleQuestionInSet(question.id, included)
-                  }
-                />
-              ))}
-
-              <AddManualQuestionCard onAdd={addManualQuestion} />
-            </section>
-
-            <aside className="grid min-w-0 content-start gap-8 [&>*]:min-w-0 lg:col-span-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1">
-              <div className="grid gap-4">
-                <span className={eyebrowClassName}>Stage 1 · Build the set</span>
-                <QuestionSetPanel
-                  categoryBalance={categoryBalance}
-                  estimatedDurationMinutes={estimatedDurationMinutes}
-                  status={questionSet.status}
-                  questions={setQuestions.map((question) => ({
-                    category: question.category,
-                    id: question.id,
-                    label: question.label,
-                    questionText: question.questionText,
-                  }))}
-                  onMarkReady={() => updateSetStatus("ready")}
-                  onRevertToDraft={() => updateSetStatus("draft")}
-                  onMoveQuestionUp={(questionId) =>
-                    moveSetQuestion(questionId, "up")
-                  }
-                  onMoveQuestionDown={(questionId) =>
-                    moveSetQuestion(questionId, "down")
-                  }
-                  onRemoveQuestion={removeQuestionFromSet}
-                />
-              </div>
-
-              <div className="grid gap-4 border-t border-outline-variant pt-8">
-                <span className={eyebrowClassName}>Stage 2 · Prepare to conduct</span>
-                <VivaSessionReadinessPanel
-                  activeSession={
-                    vivaSessionQuery.data
-                      ? { startedAt: vivaSessionQuery.data.startedAt }
-                      : null
-                  }
-                  estimatedDurationMinutes={estimatedDurationMinutes}
-                  onCheckEquipment={checkEquipment}
-                  onStart={startSessionForQuestionSet}
-                  questionSetStatus={questionSet.status}
-                  submissionExcerpt={submissionExcerpt}
-                  submissionTitle={submission.submission_title}
-                  submittedAt={submission.created_at}
-                />
-
-                {vivaSessionQuery.error instanceof Error ? (
-                  <p className="text-sm leading-6 text-error" role="alert">
-                    {vivaSessionQuery.error.message}
-                  </p>
-                ) : null}
-              </div>
-
-              {vivaSessionQuery.data ? (
-                <div className="grid gap-4 border-t border-outline-variant pt-8">
-                  <span className={eyebrowClassName}>
-                    Stage 3 · Conduct and record
-                  </span>
-                  <div className="grid gap-3 border border-primary bg-surface-container-lowest p-6">
-                    <h2 className={subheadClassName}>Not recording yet</h2>
-                    <p className="max-w-[52ch] text-sm leading-6 text-on-surface">
-                      The session is open, but no audio is being captured. Open
-                      Conduct mode and press Start recording to capture the viva.
-                    </p>
-                    <div>
-                      <Link
-                        to="/submissions/$submissionId/conduct"
-                        params={{ submissionId }}
-                        className={buttonClassName({
-                          className: "bg-primary border-primary",
-                        })}
-                      >
-                        Open Conduct mode
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="grid gap-3 border-t border-outline-variant pt-8">
-                <span className={eyebrowClassName}>Evidence</span>
-                <h2 className={subheadClassName}>Oral Examination Audio</h2>
-                <p className={cn(mutedTextClassName, "text-sm leading-6")}>
-                  Upload a recorded viva for this submission.
-                </p>
-                <label
-                  className="grid gap-2 text-sm"
-                  htmlFor="submissionVivaUpload"
+      <div className="grid gap-12">
+        <RecordVivaPanel
+          questionCount={questions.length}
+          footer={
+            <>
+              {vivaAudioRecords.map((record) => (
+                <article
+                  key={record.id}
+                  className="grid gap-2 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] sm:items-center sm:gap-4"
                 >
-                  Upload viva audio
-                  <input
-                    aria-label="Upload viva audio"
-                    id="submissionVivaUpload"
-                    type="file"
-                    accept="audio/*"
-                    disabled={isUploadingViva}
-                    onChange={async (event) => {
-                      const file = event.target.files?.[0];
+                  <p className="truncate text-sm font-medium">
+                    {record.file_name}
+                  </p>
+                  {record.access.status === "allowed" ? (
+                    <audio
+                      className="h-9 w-full"
+                      data-testid="submission-viva-player"
+                      controls
+                      src={record.access.signedUrl}
+                    >
+                      <track kind="captions" />
+                    </audio>
+                  ) : (
+                    <p
+                      className="text-sm text-error"
+                      data-testid="submission-viva-unavailable"
+                    >
+                      {describeUnavailableVivaRecording(record.access.status)}
+                    </p>
+                  )}
+                </article>
+              ))}
 
-                      if (!file) {
-                        return;
-                      }
-
-                      if (!file.type.startsWith("audio/")) {
-                        setVivaUploadErrorMessage(
-                          "That file is not audio. Choose a recording of the viva.",
-                        );
-                        event.target.value = "";
-                        return;
-                      }
-
-                      if (file.size > MAX_VIVA_AUDIO_BYTES) {
-                        setVivaUploadErrorMessage(
-                          `That recording is larger than ${MAX_VIVA_AUDIO_MB}MB. Upload a smaller file or split the recording.`,
-                        );
-                        event.target.value = "";
-                        return;
-                      }
-
-                      setIsUploadingViva(true);
-                      setVivaUploadErrorMessage(null);
-
-                      try {
-                        await uploadSubmissionVivaAudio(submissionId, file);
-                        await queryClient.invalidateQueries({
-                          queryKey: ["submission-viva", submissionId],
-                        });
-                      } catch (error) {
-                        setVivaUploadErrorMessage(
-                          error instanceof Error
-                            ? error.message
-                            : "We could not upload viva audio.",
-                        );
-                      } finally {
-                        setIsUploadingViva(false);
-                      }
-                    }}
-                  />
-                </label>
-                <div role="status">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+                <div className="grid gap-1" role="status">
                   {isUploadingViva ? (
-                    <p className={cn(mutedTextClassName, "text-sm")}>
+                    <p className={cn(mutedTextClassName, "text-sm leading-6")}>
                       Uploading viva audio…
+                    </p>
+                  ) : vivaAudioQuery.isLoading ? (
+                    <p className={cn(mutedTextClassName, "text-sm leading-6")}>
+                      Loading viva audio…
+                    </p>
+                  ) : vivaAudioRecords.length === 0 ? (
+                    <p className={cn(mutedTextClassName, "text-sm leading-6")}>
+                      No recording yet.
                     </p>
                   ) : null}
                 </div>
-                {vivaUploadErrorMessage ? (
-                  <p className="text-sm text-error" role="alert">
-                    {vivaUploadErrorMessage}
-                  </p>
-                ) : null}
-                {vivaAudioRecords.map((record) => (
-                  <article
-                    key={record.id}
-                    className="grid gap-2 border border-outline-variant bg-surface-container-lowest p-4"
-                  >
-                    <p className="text-sm font-medium">{record.file_name}</p>
-                    {record.access.status === "allowed" ? (
-                      <audio
-                        className="w-full"
-                        data-testid="submission-viva-player"
-                        controls
-                        src={record.access.signedUrl}
-                      >
-                        <track kind="captions" />
-                      </audio>
-                    ) : (
-                      <p
-                        className="text-sm text-error"
-                        data-testid="submission-viva-unavailable"
-                      >
-                        {describeUnavailableVivaRecording(record.access.status)}
-                      </p>
-                    )}
-                  </article>
-                ))}
-                {vivaAudioQuery.isLoading ? (
-                  <p className={cn(mutedTextClassName, "text-sm")} role="status">
-                    Loading viva audio…
-                  </p>
-                ) : null}
-                {vivaAudioQuery.error instanceof Error ? (
-                  <p className="text-sm text-error" role="alert">
-                    {vivaAudioQuery.error.message}
-                  </p>
-                ) : null}
-                {!vivaAudioQuery.isLoading &&
-                !vivaAudioQuery.error &&
-                vivaAudioRecords.length === 0 ? (
-                  <p className={cn(mutedTextClassName, "text-sm leading-6")}>
-                    No recording has been uploaded for this submission yet.
-                  </p>
-                ) : null}
+
+                <label
+                  className={buttonClassName({
+                    className: "cursor-pointer",
+                    variant: "secondary",
+                  })}
+                  htmlFor="submissionVivaUpload"
+                >
+                  Upload A Recording
+                </label>
+                <input
+                  aria-label="Upload viva audio"
+                  className="sr-only"
+                  id="submissionVivaUpload"
+                  type="file"
+                  accept="audio/*"
+                  disabled={isUploadingViva}
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+
+                    if (!file) {
+                      return;
+                    }
+
+                    if (!file.type.startsWith("audio/")) {
+                      setVivaUploadErrorMessage(
+                        "That file is not audio. Choose a recording of the viva.",
+                      );
+                      event.target.value = "";
+                      return;
+                    }
+
+                    if (file.size > MAX_VIVA_AUDIO_BYTES) {
+                      setVivaUploadErrorMessage(
+                        `That recording is larger than ${MAX_VIVA_AUDIO_MB}MB. Upload a smaller file or split the recording.`,
+                      );
+                      event.target.value = "";
+                      return;
+                    }
+
+                    setIsUploadingViva(true);
+                    setVivaUploadErrorMessage(null);
+
+                    try {
+                      await uploadSubmissionVivaAudio(submissionId, file);
+                      await queryClient.invalidateQueries({
+                        queryKey: ["submission-viva", submissionId],
+                      });
+                    } catch (error) {
+                      setVivaUploadErrorMessage(
+                        error instanceof Error
+                          ? error.message
+                          : "We could not upload viva audio.",
+                      );
+                    } finally {
+                      setIsUploadingViva(false);
+                    }
+                  }}
+                />
               </div>
-            </aside>
+
+              {vivaUploadErrorMessage ? (
+                <p className="text-sm leading-6 text-error" role="alert">
+                  {vivaUploadErrorMessage}
+                </p>
+              ) : null}
+
+              {vivaAudioQuery.error instanceof Error ? (
+                <p className="text-sm leading-6 text-error" role="alert">
+                  {vivaAudioQuery.error.message}
+                </p>
+              ) : null}
+            </>
+          }
+        />
+
+        <article aria-labelledby="submission-text-heading" className="grid gap-6">
+          <SectionHeader id="submission-text-heading" title="Submission" />
+          <div className="max-w-[68ch] space-y-5 font-serif text-[19px] leading-[1.75] text-on-surface">
+            {submissionParagraphs.map((paragraph, index) => (
+              <p key={`${index}-${paragraph.slice(0, 32)}`}>{paragraph}</p>
+            ))}
           </div>
-        </TabsContent>
-      </Tabs>
+        </article>
+
+        <section aria-labelledby="viva-questions-heading" className="grid gap-4">
+          <SectionHeader
+            id="viva-questions-heading"
+            meta={`About ${estimatedDurationMinutes} min of questioning`}
+            title="Questions"
+          />
+
+          {questions.map((question) => (
+            <QuestionCard
+              key={question.id}
+              id={question.id}
+              isHighlighted={question.isHighlighted}
+              label={question.label}
+              questionText={question.questionText}
+              teacherNote={question.teacherNote}
+              onSave={(questionText) =>
+                saveQuestionText(question.id, questionText)
+              }
+            />
+          ))}
+
+          <AddManualQuestionCard onAdd={addManualQuestion} />
+        </section>
+      </div>
     </PageFrame>
   );
 }

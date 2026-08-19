@@ -39,12 +39,12 @@ const threeSubmissions = [
 ]
 
 describe('SubmissionsPage', () => {
-  it('renders a table of submissions with student ID, title, and a human-readable date', async () => {
+  it('renders a table of submissions with title, student reference, and a human-readable date', async () => {
     server.use(submissionsListHandler([testSubmission]))
 
     renderWithRouter(<SubmissionsPage />, '/submissions')
 
-    expect(await screen.findByText('STU-1042')).toBeInTheDocument()
+    expect(await screen.findByText('Student STU-1042')).toBeInTheDocument()
     expect(screen.getByText('Modernist Poetry Oral Defence')).toBeInTheDocument()
     expect(screen.getByText('12 Mar 2026')).toBeInTheDocument()
     expect(screen.queryByText('2026-03-12T09:00:00.000Z')).not.toBeInTheDocument()
@@ -79,8 +79,8 @@ describe('SubmissionsPage', () => {
 
     const table = within(await screen.findByRole('table', { name: 'Submissions' }))
 
-    expect(table.getByText('Pending Questions')).toBeInTheDocument()
-    expect(table.getByText('Ready for Viva')).toBeInTheDocument()
+    expect(table.getByText('Awaiting Questions')).toBeInTheDocument()
+    expect(table.getByText('Ready to Record')).toBeInTheDocument()
     expect(table.getByText('Recorded')).toBeInTheDocument()
   })
 
@@ -125,10 +125,10 @@ describe('SubmissionsPage', () => {
 
     expect(await screen.findByRole('button', { name: 'All 3' })).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Pending Questions 1' }),
+      screen.getByRole('button', { name: 'Awaiting Questions 1' }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Ready for Viva 1' }),
+      screen.getByRole('button', { name: 'Ready to Record 1' }),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Recorded 1' })).toBeInTheDocument()
   })

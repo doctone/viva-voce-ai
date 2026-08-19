@@ -10,7 +10,11 @@ import {
   type SortingState,
 } from '@tanstack/react-table'
 import { cn } from '~/lib/utils'
-import { eyebrowClassName, paperPanelClassName } from '~/lib/class-names'
+import {
+  eyebrowClassName,
+  mutedTextClassName,
+  paperPanelClassName,
+} from '~/lib/class-names'
 import { EmptyState } from '~/components/ui'
 import {
   compareSubmissionStatus,
@@ -23,36 +27,38 @@ export type { SubmissionRow, SubmissionStatus } from './-submission'
 
 type SubmissionsTableProps = {
   rows: SubmissionRow[]
+  /** Row-count line shown in the panel's top strip, e.g. "5 submissions". */
+  summary?: string
 }
 
 /**
- * Only one state carries a filled chip: the one the teacher can act on right
- * now. DESIGN.md reserves the blue for command and state, so the settled and
- * not-yet-started states stay in ink.
+ * Status reads as a dot plus a word, not a filled chip: on a list where most
+ * rows share a state, filled chips turn the table into a wall of colour. The
+ * dot carries the state, and only the actionable one is inked in the primary.
  */
-const STATUS_CHIP_CLASSNAME: Record<SubmissionStatus, string> = {
-  pending: 'border-outline-variant bg-transparent text-on-surface-variant',
-  questions_ready: 'border-primary bg-primary text-on-primary',
-  recorded: 'border-outline-variant bg-surface-container-low text-on-surface-variant',
-}
-
 const STATUS_DOT_CLASSNAME: Record<SubmissionStatus, string> = {
   pending: 'border border-outline bg-transparent',
-  questions_ready: 'bg-on-primary',
-  recorded: 'bg-primary',
+  questions_ready: 'bg-primary',
+  recorded: 'bg-outline',
+}
+
+const STATUS_TEXT_CLASSNAME: Record<SubmissionStatus, string> = {
+  pending: 'text-on-surface-variant',
+  questions_ready: 'text-on-surface',
+  recorded: 'text-on-surface-variant',
 }
 
 function StatusChip({ status }: { status: SubmissionStatus }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-2 border px-2.5 py-1 text-[12px] font-bold uppercase leading-none tracking-[0.08em] whitespace-nowrap',
-        STATUS_CHIP_CLASSNAME[status],
+        'inline-flex items-center gap-2 text-[12px] font-bold uppercase leading-none tracking-[0.08em] whitespace-nowrap',
+        STATUS_TEXT_CLASSNAME[status],
       )}
     >
       <span
         aria-hidden="true"
-        className={cn('size-1.5 shrink-0', STATUS_DOT_CLASSNAME[status])}
+        className={cn('size-2 shrink-0', STATUS_DOT_CLASSNAME[status])}
       />
       {STATUS_LABEL[status]}
     </span>
@@ -61,33 +67,47 @@ function StatusChip({ status }: { status: SubmissionStatus }) {
 
 const columnHelper = createColumnHelper<SubmissionRow>()
 
+/**
+ * `students` has no name or reference number yet, so a submission's only
+ * identity is a UUID. A full UUID is unreadable in a scannable column, so the
+ * first segment is shown and the whole value stays in the title attribute.
+ * Anything that is not UUID-shaped is already human-readable and passes through.
+ */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function formatStudentReference(studentId: string) {
+  return UUID_PATTERN.test(studentId)
+    ? studentId.slice(0, 8).toUpperCase()
+    : studentId
+}
+
 const columns = [
-  columnHelper.accessor('studentId', {
-    header: 'Student ID',
-    cell: (info) => (
-      <span className="font-semibold uppercase tracking-[0.04em] text-on-surface [font-variant-numeric:tabular-nums]">
-        {info.getValue()}
-      </span>
-    ),
-  }),
   columnHelper.accessor('submissionTitle', {
-    header: 'Submission Title',
+    header: 'Submission',
     cell: (info) => {
-      const submissionId = info.row.original.id
+      const { id: submissionId, studentId } = info.row.original
 
       return (
-        <Link
-          to="/submissions/$submissionId"
-          params={{ submissionId }}
-          className="text-base leading-6 font-medium text-on-surface underline-offset-4 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)] md:line-clamp-2 md:text-sm md:leading-6"
-        >
-          {info.getValue()}
-        </Link>
+        <div className="grid gap-1">
+          <Link
+            to="/submissions/$submissionId"
+            params={{ submissionId }}
+            className="text-[15px] font-medium leading-6 text-on-surface underline-offset-4 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)] md:line-clamp-2"
+          >
+            {info.getValue()}
+          </Link>
+          <span
+            className="font-sans text-[12px] leading-5 text-on-surface-variant [font-variant-numeric:tabular-nums]"
+            title={studentId}
+          >
+            Student {formatStudentReference(studentId)}
+          </span>
+        </div>
       )
     },
   }),
   columnHelper.accessor('dateSubmitted', {
-    header: 'Date Submitted',
+    header: 'Submitted',
     // Sort on the raw timestamp — the displayed "12 Mar 2026" would sort
     // alphabetically, which puts August before March.
     sortingFn: (a, b) => a.original.submittedAt.localeCompare(b.original.submittedAt),
@@ -105,10 +125,9 @@ const columns = [
 ]
 
 const HEADER_WIDTH_CLASSNAME: Record<string, string> = {
-  studentId: 'w-[16%]',
   submissionTitle: 'w-auto',
   dateSubmitted: 'w-[18%]',
-  status: 'w-[22%]',
+  status: 'w-[24%]',
 }
 
 /**
@@ -118,16 +137,14 @@ const HEADER_WIDTH_CLASSNAME: Record<string, string> = {
 const MOBILE_CELL: Record<string, { className: string; showLabel: boolean }> = {
   submissionTitle: { className: 'order-1', showLabel: false },
   status: { className: 'order-2 justify-items-start', showLabel: false },
-  studentId: { className: 'order-3', showLabel: true },
-  dateSubmitted: { className: 'order-4', showLabel: true },
+  dateSubmitted: { className: 'order-3', showLabel: true },
 }
 
 const MOBILE_SORT_OPTIONS = [
   { value: 'dateSubmitted:desc', label: 'Newest first' },
   { value: 'dateSubmitted:asc', label: 'Oldest first' },
-  { value: 'studentId:asc', label: 'Student ID' },
-  { value: 'submissionTitle:asc', label: 'Submission title' },
-  { value: 'status:asc', label: 'Workflow status' },
+  { value: 'submissionTitle:asc', label: 'Title A–Z' },
+  { value: 'status:asc', label: 'Status' },
 ]
 
 const DEFAULT_SORTING: SortingState = [{ id: 'dateSubmitted', desc: true }]
@@ -151,7 +168,7 @@ function SortIndicator({ direction }: { direction: SortDirection | false }) {
   )
 }
 
-export function SubmissionsTable({ rows }: SubmissionsTableProps) {
+export function SubmissionsTable({ rows, summary }: SubmissionsTableProps) {
   const navigate = useNavigate()
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING)
 
@@ -206,25 +223,38 @@ export function SubmissionsTable({ rows }: SubmissionsTableProps) {
 
   return (
     <div className={cn(paperPanelClassName, 'grid')}>
-      <div className="flex items-center justify-between gap-3 border-b border-outline-variant px-5 py-3 md:hidden">
-        <label htmlFor="submissions-sort" className={eyebrowClassName}>
-          Sort
-        </label>
-        <select
-          id="submissions-sort"
-          value={`${activeSort.id}:${activeSort.desc ? 'desc' : 'asc'}`}
-          onChange={(event) => {
-            const [id, direction] = event.target.value.split(':')
-            setSorting([{ id, desc: direction === 'desc' }])
-          }}
-          className="border border-outline-variant bg-transparent px-2 py-1 text-sm text-on-surface focus:border-primary focus:outline-none"
-        >
-          {MOBILE_SORT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+      <div className="flex items-center justify-between gap-3 border-b border-outline-variant px-5 py-3">
+        {summary ? (
+          <p
+            role="status"
+            className={cn(mutedTextClassName, 'text-sm leading-6')}
+          >
+            {summary}
+          </p>
+        ) : (
+          <span />
+        )}
+
+        <div className="flex items-center gap-3 md:hidden">
+          <label htmlFor="submissions-sort" className={eyebrowClassName}>
+            Sort
+          </label>
+          <select
+            id="submissions-sort"
+            value={`${activeSort.id}:${activeSort.desc ? 'desc' : 'asc'}`}
+            onChange={(event) => {
+              const [id, direction] = event.target.value.split(':')
+              setSorting([{ id, desc: direction === 'desc' }])
+            }}
+            className="border border-outline-variant bg-transparent px-2 py-1 text-sm text-on-surface focus:border-primary focus:outline-none"
+          >
+            {MOBILE_SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <table aria-label="Submissions" className="w-full border-collapse">
@@ -240,7 +270,7 @@ export function SubmissionsTable({ rows }: SubmissionsTableProps) {
                     scope="col"
                     aria-sort={sortDirection ? ARIA_SORT[sortDirection] : 'none'}
                     className={cn(
-                      'sticky top-0 z-10 border-b border-outline-variant bg-surface-container px-5 py-3 text-left align-middle',
+                      'sticky top-0 z-10 border-b border-outline-variant bg-surface-container-low px-5 py-2.5 text-left align-middle',
                       HEADER_WIDTH_CLASSNAME[header.column.id],
                     )}
                   >
@@ -248,7 +278,7 @@ export function SubmissionsTable({ rows }: SubmissionsTableProps) {
                       <button
                         type="button"
                         onClick={header.column.getToggleSortingHandler()}
-                        className="group inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.08em] text-on-surface-variant transition-colors duration-150 ease-out hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]"
+                        className="group inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.1em] text-on-surface-variant transition-colors duration-150 ease-out hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]"
                       >
                         {flexRender(
                           header.column.columnDef.header,
