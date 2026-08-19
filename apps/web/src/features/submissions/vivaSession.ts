@@ -91,6 +91,7 @@ export type StartVivaSessionInput = {
 };
 
 export type VivaSessionRepository = {
+  endSession: (vivaSessionId: string) => Promise<void>;
   findActiveSession: (
     vivaQuestionSetId: string,
   ) => Promise<VivaSessionRecord | null>;
@@ -102,6 +103,19 @@ export type VivaSessionRepository = {
 export type StartVivaSessionResult =
   | { outcome: "already_active"; session: VivaSessionRecord }
   | { outcome: "started"; session: VivaSessionRecord };
+
+/**
+ * A Viva Session runs until the teacher ends the conversation, so stopping the
+ * recording ends it. Leaving it active would make the next take reuse this
+ * session, restart the chunk sequence at zero, and collide with audio already
+ * in storage.
+ */
+export async function endVivaSession(
+  vivaSessionId: string,
+  repository: VivaSessionRepository,
+): Promise<void> {
+  await repository.endSession(vivaSessionId);
+}
 
 export async function startVivaSession(
   input: StartVivaSessionInput,
@@ -118,6 +132,27 @@ export async function startVivaSession(
   const session = await repository.insertSession(input);
 
   return { outcome: "started", session };
+}
+
+/**
+ * Starts a take, ending any session left active first.
+ *
+ * A session is only ended by the teacher stopping, so a crash, a closed tab or
+ * a lost connection strands one as active forever. The next take would then
+ * reuse it and restart its chunk sequence at zero, colliding with audio already
+ * in storage. Every take gets its own session.
+ */
+export async function startFreshVivaSession(
+  input: StartVivaSessionInput,
+  repository: VivaSessionRepository,
+): Promise<VivaSessionRecord> {
+  const stranded = await repository.findActiveSession(input.vivaQuestionSetId);
+
+  if (stranded) {
+    await repository.endSession(stranded.id);
+  }
+
+  return repository.insertSession(input);
 }
 
 type VivaSessionRow = {
@@ -157,6 +192,16 @@ export function createSupabaseVivaSessionRepository(
   supabase: SupabaseClient,
 ): VivaSessionRepository {
   return {
+    async endSession(vivaSessionId) {
+      const { error } = await supabase
+        .from("viva_sessions")
+        .update({ ended_at: new Date().toISOString(), status: "ended" })
+        .eq("id", vivaSessionId);
+
+      if (error) {
+        throw new Error("We could not end the Viva Session.");
+      }
+    },
     async findActiveSession(vivaQuestionSetId) {
       const { data, error } = await supabase
         .from("viva_sessions")

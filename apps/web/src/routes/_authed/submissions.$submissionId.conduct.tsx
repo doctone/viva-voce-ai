@@ -201,7 +201,11 @@ export function ConductVivaSessionPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const capture = useVivaAudioCapture(vivaSession?.id ?? "");
+  const resolveVivaSessionId = React.useCallback(
+    async () => vivaSession?.id ?? "",
+    [vivaSession?.id],
+  );
+  const capture = useVivaAudioCapture(resolveVivaSessionId);
 
   const captureQuestionsQuery = useQuery({
     enabled: Boolean(vivaSession),
@@ -382,7 +386,9 @@ export function ConductVivaSessionPage() {
         }
         onRetryFailedChunks={capture.retryFailedChunks}
         onStartRecording={capture.start}
-        onStopRecording={capture.stop}
+        onStopRecording={() => {
+              void capture.stop();
+            }}
         onTogglePauseRecording={capture.togglePause}
         questions={conductQuestions}
         recordingStatus={capture.status}

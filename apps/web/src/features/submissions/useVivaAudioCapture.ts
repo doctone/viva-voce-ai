@@ -15,14 +15,38 @@ const CHUNK_TIMESLICE_MS = 15_000;
 
 export type VivaAudioCapture = {
   failedChunkCount: number;
+  /**
+   * Everything captured this run, joined in order. MediaRecorder timeslices are
+   * fragments of one stream, so concatenating them yields a playable file.
+   * Null until the first chunk arrives.
+   */
+  getMediaStream: () => MediaStream | null;
+  getRecordingBlob: () => Blob | null;
   retryFailedChunks: () => void;
   start: () => Promise<void>;
   status: RecordingStatus;
-  stop: () => void;
+  /**
+   * Resolves with the finished recording once the recorder has flushed.
+   *
+   * `MediaRecorder.stop()` emits its final timeslice asynchronously, so reading
+   * the blob straight after stopping loses the last segment — and loses the
+   * whole take when it was shorter than one timeslice and nothing had been
+   * emitted yet.
+   */
+  stop: () => Promise<Blob | null>;
   togglePause: () => void;
 };
 
-export function useVivaAudioCapture(vivaSessionId: string): VivaAudioCapture {
+/**
+ * `resolveVivaSessionId` runs once the microphone is actually available, not
+ * before: a session that exists only because a teacher was asked for the mic
+ * and said no is a session that never happened. Callers that already hold a
+ * session id can resolve immediately.
+ */
+export function useVivaAudioCapture(
+  resolveVivaSessionId: () => Promise<string>,
+  onChunkUploaded?: (vivaSessionId: string, sequence: number) => void,
+): VivaAudioCapture {
   const [status, setStatus] = React.useState<RecordingStatus>("idle");
   const [tracker, setTracker] = React.useState<ChunkUploadTrackerState>(
     INITIAL_CHUNK_UPLOAD_TRACKER_STATE,
@@ -36,12 +60,19 @@ export function useVivaAudioCapture(vivaSessionId: string): VivaAudioCapture {
   const repositoryRef = React.useRef(
     createSupabaseRecordingChunkRepository(getSupabaseBrowserClient()),
   );
+  const vivaSessionIdRef = React.useRef<string | null>(null);
+  // Held in a ref so a caller passing an inline callback cannot detach the
+  // recorder's dataavailable listener mid-viva.
+  const onChunkUploadedRef = React.useRef(onChunkUploaded);
+  onChunkUploadedRef.current = onChunkUploaded;
+  const recordedBlobsRef = React.useRef<Blob[]>([]);
 
   const uploadChunk = React.useCallback(
     (sequence: number, blob: Blob) => {
       const mimeType = mimeTypeRef.current;
+      const vivaSessionId = vivaSessionIdRef.current;
 
-      if (!mimeType) {
+      if (!mimeType || !vivaSessionId) {
         return;
       }
 
@@ -53,6 +84,7 @@ export function useVivaAudioCapture(vivaSessionId: string): VivaAudioCapture {
       ).then((result) => {
         if (result.outcome === "uploaded") {
           pendingBlobsRef.current.delete(sequence);
+          onChunkUploadedRef.current?.(vivaSessionId, sequence);
         }
 
         setTracker((current) =>
@@ -60,10 +92,17 @@ export function useVivaAudioCapture(vivaSessionId: string): VivaAudioCapture {
         );
       });
     },
-    [vivaSessionId],
+    [],
   );
 
   const start = React.useCallback(async () => {
+    // A second start while one is already running would leave the first
+    // recorder alive, emitting chunks into the new session and colliding on
+    // sequence numbers. One recorder at a time.
+    if (recorderRef.current || streamRef.current) {
+      return;
+    }
+
     setStatus((current) =>
       transitionRecordingStatus(current, { type: "start_requested" }),
     );
@@ -86,6 +125,9 @@ export function useVivaAudioCapture(vivaSessionId: string): VivaAudioCapture {
 
       streamRef.current = stream;
       mimeTypeRef.current = mimeType;
+      vivaSessionIdRef.current = await resolveVivaSessionId();
+      sequenceRef.current = 0;
+      recordedBlobsRef.current = [];
 
       const recorder = new MediaRecorder(stream, { mimeType });
       recorder.addEventListener("dataavailable", (event) => {
@@ -95,6 +137,7 @@ export function useVivaAudioCapture(vivaSessionId: string): VivaAudioCapture {
 
         const sequence = sequenceRef.current;
         sequenceRef.current += 1;
+        recordedBlobsRef.current.push(event.data);
         uploadChunk(sequence, event.data);
       });
 
@@ -105,11 +148,13 @@ export function useVivaAudioCapture(vivaSessionId: string): VivaAudioCapture {
         transitionRecordingStatus(current, { type: "permission_granted" }),
       );
     } catch {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
       setStatus((current) =>
         transitionRecordingStatus(current, { type: "permission_denied" }),
       );
     }
-  }, [uploadChunk]);
+  }, [resolveVivaSessionId, uploadChunk]);
 
   const togglePause = React.useCallback(() => {
     const recorder = recorderRef.current;
@@ -133,12 +178,18 @@ export function useVivaAudioCapture(vivaSessionId: string): VivaAudioCapture {
     });
   }, []);
 
-  const stop = React.useCallback(() => {
+  const stop = React.useCallback(async () => {
     const recorder = recorderRef.current;
 
-    if (recorder && recorder.state !== "inactive") {
-      recorder.stop();
-    }
+    const flushed =
+      recorder && recorder.state !== "inactive"
+        ? new Promise<void>((resolve) => {
+            recorder.addEventListener("stop", () => resolve(), { once: true });
+            recorder.stop();
+          })
+        : Promise.resolve();
+
+    await flushed;
 
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
@@ -147,6 +198,8 @@ export function useVivaAudioCapture(vivaSessionId: string): VivaAudioCapture {
     setStatus((current) =>
       transitionRecordingStatus(current, { type: "stop" }),
     );
+
+    return getRecordingBlobRef.current();
   }, []);
 
   const retryFailedChunks = React.useCallback(() => {
@@ -171,8 +224,26 @@ export function useVivaAudioCapture(vivaSessionId: string): VivaAudioCapture {
     };
   }, []);
 
+  const getRecordingBlobRef = React.useRef<() => Blob | null>(() => null);
+
+  const getRecordingBlob = React.useCallback(() => {
+    const blobs = recordedBlobsRef.current;
+
+    if (blobs.length === 0) {
+      return null;
+    }
+
+    return new Blob(blobs, { type: mimeTypeRef.current ?? blobs[0].type });
+  }, []);
+
+  getRecordingBlobRef.current = getRecordingBlob;
+
+  const getMediaStream = React.useCallback(() => streamRef.current, []);
+
   return {
     failedChunkCount: tracker.failedSequences.length,
+    getMediaStream,
+    getRecordingBlob,
     retryFailedChunks,
     start,
     status,
