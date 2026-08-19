@@ -10,6 +10,27 @@ import {
   buttonClassName,
 } from "../../components/ui";
 import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
+import { useLiveTranscription } from "../../features/submissions/useLiveTranscription";
+import { useTranscribeVivaChunk } from "../../features/submissions/useTranscribeVivaChunk";
+import { useVivaAudioCapture } from "../../features/submissions/useVivaAudioCapture";
+import {
+  assembleTranscript,
+  type TranscriptSegment,
+} from "../../features/submissions/vivaTranscription";
+import { selectVisibleTranscript } from "../../features/submissions/liveTranscription";
+import {
+  selectSupersededRecordings,
+  type SubmissionRecordingRef,
+} from "../../features/submissions/submissionRecording";
+import {
+  computeElapsedSeconds,
+  type RecordingStatus,
+} from "../../features/submissions/vivaRecordingCapture";
+import {
+  createSupabaseVivaSessionRepository,
+  endVivaSession,
+  startFreshVivaSession,
+} from "../../features/submissions/vivaSession";
 import {
   createSupabaseVivaRecordingAccessRepository,
   resolveVivaRecordingAccess,
@@ -18,6 +39,7 @@ import {
 import {
   estimateQuestionSetDurationMinutes,
   formatQuestionCategory,
+  type QuestionSetStatus,
 } from "../../features/submissions/vivaQuestionSet";
 import { cn } from "~/lib/utils";
 import {
@@ -179,15 +201,133 @@ async function uploadSubmissionVivaAudio(submissionId: string, file: File) {
     throw new Error("We could not upload viva audio.");
   }
 
-  const { error } = await supabase.from("submission_viva").insert({
-    submission_id: submissionId,
-    audio_path: filePath,
-    file_name: file.name,
-  });
+  const { data, error } = await supabase
+    .from("submission_viva")
+    .insert({
+      submission_id: submissionId,
+      audio_path: filePath,
+      file_name: file.name,
+    })
+    .select("id, audio_path");
 
-  if (error) {
+  const saved = (data as Array<{ audio_path: string; id: string }> | null)?.[0];
+
+  if (error || !saved) {
     throw new Error("We could not save viva audio.");
   }
+
+  return { audioPath: saved.audio_path, id: saved.id };
+}
+
+/**
+ * A submission keeps one recording, so a new one replaces whatever was there.
+ *
+ * Replacement happens after the new recording is durable, never before: a take
+ * that fails to upload must not also destroy the recording it was replacing.
+ */
+async function replaceEarlierRecordings(submissionId: string, keepId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("submission_viva")
+    .select("id, audio_path")
+    .eq("submission_id", submissionId);
+
+  if (error) {
+    return;
+  }
+
+  const recordings: SubmissionRecordingRef[] = (
+    (data as Array<{ audio_path: string; id: string }> | null) ?? []
+  ).map((row) => ({ audioPath: row.audio_path, id: row.id }));
+
+  const superseded = selectSupersededRecordings(recordings, keepId);
+
+  if (superseded.length === 0) {
+    return;
+  }
+
+  await supabase.storage
+    .from("submission-viva-audio")
+    .remove(superseded.map((recording) => recording.audioPath));
+
+  await supabase
+    .from("submission_viva")
+    .delete()
+    .in(
+      "id",
+      superseded.map((recording) => recording.id),
+    );
+}
+
+async function fetchTranscriptSegments(
+  vivaSessionId: string,
+): Promise<TranscriptSegment[]> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("viva_transcript_segments")
+    .select("sequence, text")
+    .eq("viva_session_id", vivaSessionId);
+
+  if (error) {
+    throw new Error("We could not load the transcript.");
+  }
+
+  return (data as TranscriptSegment[] | null) ?? [];
+}
+
+type VivaQuestionSetRow = {
+  id: string;
+  status: QuestionSetStatus;
+  submission_id: string;
+};
+
+/**
+ * The question set is the parent a Viva Session hangs off. Nothing in the
+ * record-first flow asks a teacher to create one, so it is created on demand
+ * the first time they record.
+ */
+async function findOrCreateVivaQuestionSetId(
+  submissionId: string,
+): Promise<string> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("viva_question_sets")
+    .select("id, submission_id, status")
+    .eq("submission_id", submissionId);
+
+  if (error) {
+    throw new Error("We could not prepare this viva for recording.");
+  }
+
+  const existing = (data as VivaQuestionSetRow[] | null)?.[0];
+
+  if (existing) {
+    return existing.id;
+  }
+
+  const { data: created, error: insertError } = await supabase
+    .from("viva_question_sets")
+    .insert({ submission_id: submissionId, status: "ready" })
+    .select("id, submission_id, status");
+
+  const createdRow = (created as VivaQuestionSetRow[] | null)?.[0];
+
+  if (insertError || !createdRow) {
+    throw new Error("We could not prepare this viva for recording.");
+  }
+
+  return createdRow.id;
+}
+
+async function uploadRecordedViva(submissionId: string, blob: Blob) {
+  const extension = blob.type.startsWith("audio/mp4") ? "m4a" : "webm";
+  const recordedAt = new Date().toISOString().replace(/[:.]/g, "-");
+  const file = new File([blob], `viva-${recordedAt}.${extension}`, {
+    type: blob.type,
+  });
+
+  const saved = await uploadSubmissionVivaAudio(submissionId, file);
+  await replaceEarlierRecordings(submissionId, saved.id);
 }
 
 function describeUnavailableVivaRecording(
@@ -401,6 +541,21 @@ export function SubmissionDetailPage() {
   >(null);
   const [hasCompletedGeneration, setHasCompletedGeneration] =
     React.useState(false);
+  const [recordingStartedAt, setRecordingStartedAt] = React.useState<
+    string | null
+  >(null);
+  const [pausedElapsedSeconds, setPausedElapsedSeconds] = React.useState(0);
+  const [now, setNow] = React.useState(() => new Date());
+  const [isSavingRecording, setIsSavingRecording] = React.useState(false);
+  // The last chunks upload and transcribe after the teacher stops, so the
+  // transcript keeps refreshing for a while rather than being fetched once.
+  const [isSettlingTranscript, setIsSettlingTranscript] = React.useState(false);
+  const [failedTranscriptionCount, setFailedTranscriptionCount] =
+    React.useState(0);
+  const [recordingErrorMessage, setRecordingErrorMessage] = React.useState<
+    string | null
+  >(null);
+  const vivaSessionIdRef = React.useRef<string | null>(null);
   const hasTriggeredGenerationRef = React.useRef(false);
   const submissionQuery = useQuery({
     queryFn: () => fetchSubmission(submissionId),
@@ -417,6 +572,197 @@ export function SubmissionDetailPage() {
     queryKey: ["submission-viva", submissionId],
   });
   const vivaAudioRecords = vivaAudioQuery.data ?? [];
+
+  // Runs only once the microphone is available, so a declined prompt never
+  // leaves a Viva Session behind. A granted prompt is the equipment check.
+  const resolveVivaSessionId = React.useCallback(async () => {
+    const vivaQuestionSetId = await findOrCreateVivaQuestionSetId(submissionId);
+    const repository = createSupabaseVivaSessionRepository(
+      getSupabaseBrowserClient(),
+    );
+
+    const session = await startFreshVivaSession(
+      {
+        accessibilityAdjustments: "",
+        consentDeclinedReason: null,
+        consentState: "consent_given",
+        equipmentCheckResult: "passed",
+        expectedDurationMinutes: estimateQuestionSetDurationMinutes(
+          questionsQuery.data?.length ?? 0,
+        ),
+        submissionId,
+        vivaQuestionSetId,
+      },
+      repository,
+    );
+
+    vivaSessionIdRef.current = session.id;
+    setVivaSessionId(session.id);
+
+    return session.id;
+  }, [questionsQuery.data?.length, submissionId]);
+
+  const transcribeVivaChunk = useTranscribeVivaChunk();
+  const [vivaSessionId, setVivaSessionId] = React.useState<string | null>(null);
+
+  const handleChunkUploaded = React.useCallback(
+    (uploadedSessionId: string, sequence: number) => {
+      // A transcription that fails must not disturb a viva in progress — the
+      // audio is already durable — but it must not vanish either, or nobody
+      // can tell a working transcript from a broken one.
+      void transcribeVivaChunk(uploadedSessionId, sequence)
+        .then((result) => {
+          if (result.outcome === "failed" || result.outcome === "chunk_unavailable") {
+            setFailedTranscriptionCount((count) => count + 1);
+          }
+        })
+        .catch(() => setFailedTranscriptionCount((count) => count + 1));
+    },
+    [transcribeVivaChunk],
+  );
+
+  const capture = useVivaAudioCapture(resolveVivaSessionId, handleChunkUploaded);
+  const captureStatus: RecordingStatus = capture.status;
+
+  const transcriptQuery = useQuery({
+    enabled: Boolean(vivaSessionId),
+    queryFn: () => fetchTranscriptSegments(vivaSessionId as string),
+    queryKey: ["viva-transcript", vivaSessionId],
+    // Text trails the conversation by a chunk, so it is polled rather than
+    // fetched once — and only while there is a live viva to trail.
+    refetchInterval:
+      captureStatus === "recording" ||
+      captureStatus === "paused" ||
+      isSettlingTranscript
+        ? 3_000
+        : false,
+  });
+
+  const storedTranscript = assembleTranscript(transcriptQuery.data ?? []);
+  const liveTranscription = useLiveTranscription(
+    capture.getMediaStream,
+    captureStatus === "recording",
+  );
+
+  // While recording, the teacher reads the live feed. Once stopped, the stored
+  // transcript takes over — but only once it has something to show, so the box
+  // never blanks while the last chunks are still being transcribed.
+  const isLive = captureStatus === "recording" || captureStatus === "paused";
+  const transcript = selectVisibleTranscript({
+    isRecording: isLive,
+    liveText: liveTranscription.text,
+    storedText: storedTranscript,
+  });
+
+  // One ticking clock while recording; paused time is banked so the timer does
+  // not jump forward over a pause.
+  React.useEffect(() => {
+    if (captureStatus !== "recording") {
+      return;
+    }
+
+    const timer = window.setInterval(() => setNow(new Date()), 500);
+
+    return () => window.clearInterval(timer);
+  }, [captureStatus]);
+
+  const elapsedSeconds =
+    captureStatus === "recording" && recordingStartedAt
+      ? pausedElapsedSeconds + computeElapsedSeconds(recordingStartedAt, now)
+      : pausedElapsedSeconds;
+
+  const startRecording = React.useCallback(async () => {
+    setRecordingErrorMessage(null);
+    setPausedElapsedSeconds(0);
+
+    try {
+      await capture.start();
+      setRecordingStartedAt(new Date().toISOString());
+      setNow(new Date());
+    } catch (error) {
+      setRecordingErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "We could not start recording this viva.",
+      );
+    }
+  }, [capture]);
+
+  const togglePauseRecording = React.useCallback(() => {
+    if (captureStatus === "recording" && recordingStartedAt) {
+      setPausedElapsedSeconds(
+        (banked) => banked + computeElapsedSeconds(recordingStartedAt, new Date()),
+      );
+      setRecordingStartedAt(null);
+    }
+
+    if (captureStatus === "paused") {
+      setRecordingStartedAt(new Date().toISOString());
+      setNow(new Date());
+    }
+
+    capture.togglePause();
+  }, [capture, captureStatus, recordingStartedAt]);
+
+  const stopRecording = React.useCallback(async () => {
+    if (captureStatus === "recording" && recordingStartedAt) {
+      setPausedElapsedSeconds(
+        (banked) => banked + computeElapsedSeconds(recordingStartedAt, new Date()),
+      );
+    }
+
+    setRecordingStartedAt(null);
+    setIsSavingRecording(true);
+    setRecordingErrorMessage(null);
+
+    // Waits for the recorder to flush its final timeslice, so a take shorter
+    // than one chunk is still saved whole.
+    const blob = await capture.stop();
+
+    setIsSettlingTranscript(true);
+    window.setTimeout(() => setIsSettlingTranscript(false), 45_000);
+
+    if (!blob) {
+      setIsSavingRecording(false);
+      setRecordingErrorMessage(
+        "That recording captured no audio, so nothing was saved.",
+      );
+      return;
+    }
+
+    try {
+      await uploadRecordedViva(submissionId, blob);
+      await queryClient.invalidateQueries({
+        queryKey: ["submission-viva", submissionId],
+      });
+    } catch (error) {
+      setRecordingErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "We could not save this recording.",
+      );
+    } finally {
+      setIsSavingRecording(false);
+    }
+
+    // Ending the session is what lets the next take start its own chunk
+    // sequence. Failing to end it must not lose the recording just saved.
+    const endedSessionId = vivaSessionIdRef.current;
+
+    if (endedSessionId) {
+      try {
+        await endVivaSession(
+          endedSessionId,
+          createSupabaseVivaSessionRepository(getSupabaseBrowserClient()),
+        );
+      } catch {
+        // Left active. The next take will surface the collision rather than
+        // silently overwrite audio that is already evidence.
+      }
+
+      vivaSessionIdRef.current = null;
+    }
+  }, [capture, captureStatus, queryClient, recordingStartedAt, submissionId]);
 
   const saveQuestionText = React.useCallback(
     async (questionId: string, questionText: string) => {
@@ -603,7 +949,69 @@ export function SubmissionDetailPage() {
     >
       <div className="grid gap-12">
         <RecordVivaPanel
+          elapsedSeconds={elapsedSeconds}
+          failedChunkCount={capture.failedChunkCount}
+          getMediaStream={capture.getMediaStream}
+          isSavingRecording={isSavingRecording}
+          onRetryFailedChunks={capture.retryFailedChunks}
+          onStart={() => {
+            void startRecording();
+          }}
+          onStop={() => {
+            void stopRecording();
+          }}
+          onTogglePause={togglePauseRecording}
           questionCount={questions.length}
+          status={captureStatus}
+          transcript={
+            vivaSessionId ? (
+              <>
+                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                  <h3 className={eyebrowClassName}>Transcript</h3>
+                  <span className={cn(mutedTextClassName, "text-sm")}>
+                    {isLive
+                      ? liveTranscription.isConnected
+                        ? "Live"
+                        : "Connecting…"
+                      : "Transcribed from the recording"}
+                  </span>
+                </div>
+                <p
+                  aria-live="polite"
+                  className={cn(
+                    "max-w-[80ch] text-sm leading-7 text-on-surface",
+                    transcript === "" && mutedTextClassName,
+                  )}
+                >
+                  {transcript === ""
+                    ? isLive
+                      ? "Listening…"
+                      : "Nothing transcribed yet."
+                    : transcript}
+                </p>
+                {failedTranscriptionCount > 0 ? (
+                  <p className={cn(mutedTextClassName, "text-sm leading-6")}>
+                    {failedTranscriptionCount}{" "}
+                    {failedTranscriptionCount === 1 ? "part" : "parts"} of this
+                    viva could not be transcribed. The recording itself is
+                    unaffected.
+                  </p>
+                ) : null}
+
+                {liveTranscription.errorMessage && isLive ? (
+                  <p className={cn(mutedTextClassName, "text-sm leading-6")}>
+                    {liveTranscription.errorMessage} The recording and its saved
+                    transcript are unaffected.
+                  </p>
+                ) : null}
+                {transcriptQuery.error instanceof Error ? (
+                  <p className="text-sm leading-6 text-error" role="alert">
+                    {transcriptQuery.error.message}
+                  </p>
+                ) : null}
+              </>
+            ) : null
+          }
           footer={
             <>
               {vivaAudioRecords.map((record) => (
@@ -694,7 +1102,11 @@ export function SubmissionDetailPage() {
                     setVivaUploadErrorMessage(null);
 
                     try {
-                      await uploadSubmissionVivaAudio(submissionId, file);
+                      const saved = await uploadSubmissionVivaAudio(
+                        submissionId,
+                        file,
+                      );
+                      await replaceEarlierRecordings(submissionId, saved.id);
                       await queryClient.invalidateQueries({
                         queryKey: ["submission-viva", submissionId],
                       });
@@ -714,6 +1126,12 @@ export function SubmissionDetailPage() {
               {vivaUploadErrorMessage ? (
                 <p className="text-sm leading-6 text-error" role="alert">
                   {vivaUploadErrorMessage}
+                </p>
+              ) : null}
+
+              {recordingErrorMessage ? (
+                <p className="text-sm leading-6 text-error" role="alert">
+                  {recordingErrorMessage}
                 </p>
               ) : null}
 

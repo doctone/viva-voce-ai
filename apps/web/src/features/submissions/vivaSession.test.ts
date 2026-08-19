@@ -141,6 +141,13 @@ function createFakeRepository(): VivaSessionRepository & {
     get insertCallCount() {
       return insertCallCount;
     },
+    async endSession(vivaSessionId) {
+      const session = sessions.find((candidate) => candidate.id === vivaSessionId);
+
+      if (session) {
+        session.status = "ended";
+      }
+    },
     async findActiveSession(vivaQuestionSetId) {
       return (
         sessions.find(

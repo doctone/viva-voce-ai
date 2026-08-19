@@ -1,4 +1,4 @@
-import { act, screen, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -13,7 +13,10 @@ import {
   storageUploadHandler,
   submissionVivaHandler,
   submissionWithQuestionsHandlers,
+  vivaQuestionSetHandler,
+  vivaSessionHandler,
 } from '../../test/handlers'
+import { createTestVivaQuestionSet } from '../../test/factories'
 import { renderWithRouter } from '../../test/router'
 import { server } from '../../test/server'
 
@@ -42,6 +45,183 @@ function createDeferred<T>() {
   })
 
   return { promise, resolve, reject }
+}
+
+
+const SUPABASE_REST = 'https://example-project.supabase.co/rest/v1'
+
+type FakeRecorderInstance = {
+  emitChunk: (data: Blob) => void
+  state: string
+}
+
+/**
+ * jsdom has neither getUserMedia nor MediaRecorder, so a viva can only be
+ * recorded in a test if both are stood up. The fake emits timeslices on demand
+ * rather than on a timer, so a test can say "15 seconds passed" in one line.
+ */
+function installFakeRecorder({ permission = 'granted' as 'granted' | 'denied' } = {}) {
+  const instances: FakeRecorderInstance[] = []
+  const stoppedTracks: string[] = []
+
+  class FakeMediaRecorder {
+    static isTypeSupported = (mimeType: string) => mimeType === 'audio/webm;codecs=opus'
+
+    state = 'inactive'
+    private dataListeners: Array<(event: { data: Blob }) => void> = []
+    private stopListeners: Array<() => void> = []
+
+    constructor(_stream: MediaStream, _options: { mimeType: string }) {
+      instances.push({
+        emitChunk: (data: Blob) => {
+          for (const listener of this.dataListeners) {
+            listener({ data })
+          }
+        },
+        state: this.state,
+      })
+    }
+
+    addEventListener(
+      type: string,
+      listener: ((event: { data: Blob }) => void) & (() => void),
+    ) {
+      if (type === 'stop') {
+        this.stopListeners.push(listener)
+        return
+      }
+
+      this.dataListeners.push(listener)
+    }
+
+    start() {
+      this.state = 'recording'
+    }
+
+    pause() {
+      this.state = 'paused'
+    }
+
+    resume() {
+      this.state = 'recording'
+    }
+
+    stop() {
+      this.state = 'inactive'
+
+      // The real recorder flushes whatever it is holding and only then fires
+      // `stop`. A take shorter than one timeslice arrives entirely this way.
+      for (const listener of this.dataListeners) {
+        listener({ data: new Blob(['final-flush']) })
+      }
+
+      for (const listener of this.stopListeners) {
+        listener()
+      }
+    }
+  }
+
+  vi.stubGlobal('MediaRecorder', FakeMediaRecorder)
+  vi.stubGlobal('navigator', {
+    ...navigator,
+    mediaDevices: {
+      getUserMedia: async () => {
+        if (permission === 'denied') {
+          throw new Error('Permission denied')
+        }
+
+        return {
+          getTracks: () => [
+            {
+              stop: () => {
+                stoppedTracks.push('audio')
+              },
+            },
+          ],
+        } as unknown as MediaStream
+      },
+    },
+  })
+
+  return { instances, stoppedTracks }
+}
+
+function recordingHandlers({
+  existingRecordings = [] as Array<{ audio_path: string; id: string }>,
+} = {}) {
+  const createdSessions: Array<Record<string, unknown>> = []
+  const uploadedChunks: Array<Record<string, unknown>> = []
+  const savedRecordings: Array<Record<string, unknown>> = []
+  const deletedRecordingRequests: string[] = []
+  const removedStoragePaths: string[] = []
+
+  return {
+    createdSessions,
+    deletedRecordingRequests,
+    removedStoragePaths,
+    savedRecordings,
+    uploadedChunks,
+    handlers: [
+      vivaQuestionSetHandler(createTestVivaQuestionSet()),
+      vivaSessionHandler([]),
+      http.post(`${SUPABASE_REST}/viva_sessions`, async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>
+        createdSessions.push(body)
+
+        return HttpResponse.json([
+          {
+            accessibility_adjustments: '',
+            consent_declined_reason: null,
+            consent_state: body.consent_state,
+            equipment_check_result: body.equipment_check_result,
+            expected_duration_minutes: body.expected_duration_minutes,
+            id: '70420000-0000-0000-0000-000000000000',
+            started_at: '2026-08-19T09:00:00.000Z',
+            status: 'active',
+            submission_id: body.submission_id,
+            viva_question_set_id: body.viva_question_set_id,
+          },
+        ])
+      }),
+      http.post(`${SUPABASE_REST}/viva_recording_chunks`, async ({ request }) => {
+        uploadedChunks.push((await request.json()) as Record<string, unknown>)
+
+        return HttpResponse.json({}, { status: 201 })
+      }),
+      http.get(`${SUPABASE_REST}/viva_transcript_segments`, () =>
+        HttpResponse.json([]),
+      ),
+      http.post(`${SUPABASE_REST}/submission_viva`, async ({ request }) => {
+        savedRecordings.push((await request.json()) as Record<string, unknown>)
+
+        return HttpResponse.json(
+          [{ audio_path: 'submission/new.webm', id: 'saved-recording' }],
+          { status: 201 },
+        )
+      }),
+      http.get(`${SUPABASE_REST}/submission_viva`, () =>
+        HttpResponse.json([
+          ...existingRecordings,
+          { audio_path: 'submission/new.webm', id: 'saved-recording' },
+        ]),
+      ),
+      http.delete(`${SUPABASE_REST}/submission_viva`, ({ request }) => {
+        deletedRecordingRequests.push(new URL(request.url).search)
+
+        return HttpResponse.json([], { status: 204 })
+      }),
+      http.delete(
+        'https://example-project.supabase.co/storage/v1/object/submission-viva-audio',
+        async ({ request }) => {
+          const body = (await request.json()) as { prefixes: string[] }
+          removedStoragePaths.push(...body.prefixes)
+
+          return HttpResponse.json([])
+        },
+      ),
+      storageUploadHandler(),
+    ],
+  }
 }
 
 describe('SubmissionDetailPage', () => {
@@ -131,6 +311,147 @@ describe('SubmissionDetailPage', () => {
       screen.getByText('Why does the response describe Lord Mansfield as pivotal?'),
     ).toBeInTheDocument()
     expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+  })
+
+
+  it('creates a viva session and uploads audio once recording starts', async () => {
+    generateSubmissionVivaSpy.mockReset()
+    const recorder = installFakeRecorder()
+    const recording = recordingHandlers()
+
+    server.use(
+      ...submissionWithQuestionsHandlers(testSubmission, [createTestQuestion()]),
+      submissionVivaHandler([]),
+      ...recording.handlers,
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Record viva' }))
+
+    expect(await screen.findByRole('button', { name: 'Stop Recording' })).toBeInTheDocument()
+    expect(screen.getByText('Recording', { selector: '[role="status"]' })).toBeInTheDocument()
+
+    // The session is only created once the microphone is actually available.
+    await waitFor(() => expect(recording.createdSessions).toHaveLength(1))
+    expect(recording.createdSessions[0]).toMatchObject({
+      consent_state: 'consent_given',
+      equipment_check_result: 'passed',
+    })
+
+    await act(async () => {
+      recorder.instances[0].emitChunk(new Blob(['first-15-seconds']))
+    })
+
+    await waitFor(() => expect(recording.uploadedChunks).toHaveLength(1))
+    expect(recording.uploadedChunks[0]).toMatchObject({ sequence: 0 })
+  })
+
+  it('saves a playable recording against the submission when the teacher stops', async () => {
+    generateSubmissionVivaSpy.mockReset()
+    const recorder = installFakeRecorder()
+    const recording = recordingHandlers()
+
+    server.use(
+      ...submissionWithQuestionsHandlers(testSubmission, [createTestQuestion()]),
+      submissionVivaHandler([]),
+      ...recording.handlers,
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Record viva' }))
+    await screen.findByRole('button', { name: 'Stop Recording' })
+
+    await act(async () => {
+      recorder.instances[0].emitChunk(new Blob(['first-15-seconds']))
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Stop Recording' }))
+
+    await waitFor(() => expect(recording.savedRecordings).toHaveLength(1))
+    expect(recording.savedRecordings[0]).toMatchObject({
+      submission_id: '30420000-0000-0000-0000-000000000000',
+    })
+    expect(recorder.stoppedTracks).toEqual(['audio'])
+  })
+
+
+  it('replaces the previous recording so a submission keeps only the latest', async () => {
+    generateSubmissionVivaSpy.mockReset()
+    const recorder = installFakeRecorder()
+    const recording = recordingHandlers({
+      existingRecordings: [
+        { audio_path: 'submission/earlier-take.webm', id: 'earlier-recording' },
+      ],
+    })
+
+    server.use(
+      ...submissionWithQuestionsHandlers(testSubmission, [createTestQuestion()]),
+      ...recording.handlers,
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Record viva' }))
+    await screen.findByRole('button', { name: 'Stop Recording' })
+    await user.click(screen.getByRole('button', { name: 'Stop Recording' }))
+
+    // The earlier take goes only once the new one is durable.
+    await waitFor(() =>
+      expect(recording.removedStoragePaths).toEqual([
+        'submission/earlier-take.webm',
+      ]),
+    )
+    expect(recording.deletedRecordingRequests).toHaveLength(1)
+    expect(recording.deletedRecordingRequests[0]).toContain('earlier-recording')
+    expect(recording.savedRecordings).toHaveLength(1)
+  })
+
+
+  it('explains how to recover when the microphone is refused', async () => {
+    generateSubmissionVivaSpy.mockReset()
+    installFakeRecorder({ permission: 'denied' })
+    const recording = recordingHandlers()
+
+    server.use(
+      ...submissionWithQuestionsHandlers(testSubmission, [createTestQuestion()]),
+      submissionVivaHandler([]),
+      ...recording.handlers,
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Record viva' }))
+
+    expect(
+      await screen.findByText(
+        'We could not reach the microphone. Allow microphone access in your browser, then try again.',
+      ),
+    ).toBeInTheDocument()
+    // A refused prompt must not leave a Viva Session behind.
+    expect(recording.createdSessions).toEqual([])
+    expect(screen.getByRole('button', { name: 'Record viva' })).toBeInTheDocument()
   })
 
   it('uploads and displays a viva audio recording', async () => {

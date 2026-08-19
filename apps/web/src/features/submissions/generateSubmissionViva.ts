@@ -159,7 +159,10 @@ async function generateStructuredVivaWithAiSdk(
     throw new Error("OPENAI_API_KEY is not configured.");
   }
 
-  const modelName = process.env.AI_VIVA_MODEL ?? "gpt-5.4";
+  // Balanced tier. The schema demands exactly 3 recommended questions per
+  // category, which JSON Schema cannot express — the model has to count, and a
+  // miscount fails the whole response back to the teacher as a retry.
+  const modelName = process.env.AI_VIVA_MODEL ?? "gpt-5.6-terra";
   const { object } = await generateObject({
     model: openai(modelName),
     schema: structuredVivaQuestionsSchema,
