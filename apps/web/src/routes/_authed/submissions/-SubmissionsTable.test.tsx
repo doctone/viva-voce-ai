@@ -28,17 +28,14 @@ describe('SubmissionsTable', () => {
     renderWithRouter(<SubmissionsTable rows={sampleRows} />, '/submissions')
 
     expect(await screen.findByRole('table', { name: 'Submissions' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Student ID' })).toBeInTheDocument()
-    expect(
-      screen.getByRole('columnheader', { name: 'Submission Title' }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Date Submitted' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Submission' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Submitted' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument()
 
-    expect(screen.getByText('STU-1042')).toBeInTheDocument()
+    expect(screen.getByText('Student STU-1042')).toBeInTheDocument()
     expect(screen.getByText('Modernist Poetry Oral Defence')).toBeInTheDocument()
     expect(screen.getByText('10 Mar 2026')).toBeInTheDocument()
-    expect(screen.getByText('Pending Questions')).toBeInTheDocument()
+    expect(screen.getByText('Awaiting Questions')).toBeInTheDocument()
     expect(screen.getByText('Recorded')).toBeInTheDocument()
 
     expect(
@@ -46,7 +43,7 @@ describe('SubmissionsTable', () => {
     ).toHaveAttribute('href', '/submissions/30420000-0000-0000-0000-000000000000')
   })
 
-  it('renders a "Ready for Viva" status once questions exist but no recording has been uploaded', async () => {
+  it('renders a "Ready to Record" status once questions exist but no recording has been uploaded', async () => {
     renderWithRouter(
       <SubmissionsTable
         rows={[
@@ -63,7 +60,7 @@ describe('SubmissionsTable', () => {
       '/submissions',
     )
 
-    expect(await screen.findByText('Ready for Viva')).toBeInTheDocument()
+    expect(await screen.findByText('Ready to Record')).toBeInTheDocument()
   })
 
   it('lists the newest submission first before any sorting is chosen', async () => {
@@ -71,9 +68,9 @@ describe('SubmissionsTable', () => {
 
     const [, firstRow] = await screen.findAllByRole('row')
 
-    expect(within(firstRow).getByText('STU-1042')).toBeInTheDocument()
+    expect(within(firstRow).getByText('Student STU-1042')).toBeInTheDocument()
     expect(
-      screen.getByRole('columnheader', { name: 'Date Submitted' }),
+      screen.getByRole('columnheader', { name: 'Submitted' }),
     ).toHaveAttribute('aria-sort', 'descending')
   })
 
@@ -82,13 +79,13 @@ describe('SubmissionsTable', () => {
 
     renderWithRouter(<SubmissionsTable rows={sampleRows} />, '/submissions')
 
-    await user.click(await screen.findByRole('button', { name: 'Date Submitted' }))
+    await user.click(await screen.findByRole('button', { name: 'Submitted' }))
 
     const [, firstRow] = screen.getAllByRole('row')
 
-    expect(within(firstRow).getByText('STU-1098')).toBeInTheDocument()
+    expect(within(firstRow).getByText('Student STU-1098')).toBeInTheDocument()
     expect(
-      screen.getByRole('columnheader', { name: 'Date Submitted' }),
+      screen.getByRole('columnheader', { name: 'Submitted' }),
     ).toHaveAttribute('aria-sort', 'ascending')
   })
 
@@ -101,7 +98,7 @@ describe('SubmissionsTable', () => {
 
     const [, firstRow, secondRow] = screen.getAllByRole('row')
 
-    expect(within(firstRow).getByText('Pending Questions')).toBeInTheDocument()
+    expect(within(firstRow).getByText('Awaiting Questions')).toBeInTheDocument()
     expect(within(secondRow).getByText('Recorded')).toBeInTheDocument()
   })
 

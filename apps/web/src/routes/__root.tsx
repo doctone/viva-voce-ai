@@ -156,7 +156,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const { publicEnv, user } = Route.useRouteContext();
   const publicEnvScript = JSON.stringify(publicEnv);
   const navLinkClassName =
-    "border border-outline-variant bg-surface-container-lowest px-[14px] py-[10px] text-[13px] font-bold uppercase tracking-[0.05em] text-on-surface-variant";
+    "border border-outline-variant bg-surface-container-lowest px-[14px] py-[10px] text-[13px] font-bold uppercase tracking-[0.05em]";
+  const navLinkInactiveClassName = "text-on-surface-variant";
   const navLinkActiveClassName = "border-primary bg-primary text-on-primary";
   const shouldShowTopbar = useRouterState({
     select: (state) =>
@@ -226,10 +227,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                         to="/"
                         className={navLinkClassName}
                         activeProps={{
-                          className: cn(
-                            navLinkClassName,
-                            navLinkActiveClassName,
-                          ),
+                          className: navLinkActiveClassName,
+                        }}
+                        inactiveProps={{
+                          className: navLinkInactiveClassName,
                         }}
                         activeOptions={{ exact: true }}
                       >
@@ -240,13 +241,19 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                           <span className="border border-outline-variant bg-surface-container-low px-[14px] py-[10px] text-sm text-on-surface-variant">
                             {user.email}{" "}
                           </span>{" "}
-                          <Link to="/logout" className={navLinkClassName}>
+                          <Link
+                            to="/logout"
+                            className={cn(navLinkClassName, navLinkInactiveClassName)}
+                          >
                             {" "}
                             Logout
                           </Link>
                         </>
                       ) : (
-                        <Link to="/login" className={navLinkClassName}>
+                        <Link
+                          to="/login"
+                          className={cn(navLinkClassName, navLinkInactiveClassName)}
+                        >
                           Login
                         </Link>
                       )}

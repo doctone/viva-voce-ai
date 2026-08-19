@@ -18,8 +18,8 @@ export type StatusFilter = 'all' | SubmissionStatus
  * read identically so it is obvious which rows a filter is about to keep.
  */
 export const STATUS_LABEL: Record<SubmissionStatus, string> = {
-  pending: 'Pending Questions',
-  questions_ready: 'Ready for Viva',
+  pending: 'Awaiting Questions',
+  questions_ready: 'Ready to Record',
   recorded: 'Recorded',
 }
 

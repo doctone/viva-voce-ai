@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react'
+import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -7,16 +7,12 @@ import {
   createTestQuestion,
   createTestSubmission,
   createTestSubmissionViva,
-  createTestVivaQuestionSet,
-  createTestVivaSession,
 } from '../../test/factories'
 import {
   signedUrlHandler,
   storageUploadHandler,
   submissionVivaHandler,
   submissionWithQuestionsHandlers,
-  vivaQuestionSetHandler,
-  vivaSessionHandler,
 } from '../../test/handlers'
 import { renderWithRouter } from '../../test/router'
 import { server } from '../../test/server'
@@ -31,14 +27,9 @@ const testSubmission = createTestSubmission({
 })
 
 const generateSubmissionVivaSpy = vi.fn()
-const equipmentCheckSpy = vi.fn()
 
 vi.mock('../../features/submissions/useGenerateSubmissionViva', () => ({
   useGenerateSubmissionViva: () => generateSubmissionVivaSpy,
-}))
-
-vi.mock('../../features/submissions/useEquipmentCheck', () => ({
-  useEquipmentCheck: () => equipmentCheckSpy,
 }))
 
 function createDeferred<T>() {
@@ -103,11 +94,12 @@ describe('SubmissionDetailPage', () => {
     expect(
       screen.getByRole('heading', { name: 'Mercantile law response' }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Submission' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Viva Questions' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Record viva' }),
+    ).toBeInTheDocument()
   })
 
-  it('switches the main panel from viva questions to the submission', async () => {
+  it('leads with the record call to action and shows the full submission below it', async () => {
     generateSubmissionVivaSpy.mockReset()
 
     server.use(
@@ -123,22 +115,22 @@ describe('SubmissionDetailPage', () => {
       submissionVivaHandler([]),
     )
 
-    const user = userEvent.setup()
-
     renderWithRouter(
       <SubmissionDetailPage />,
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
+    // Every part of the page is on screen at once: no tab hides the reading
+    // view behind the questions.
     expect(
-      await screen.findByText('Viva Questions for this Submission'),
+      await screen.findByRole('button', { name: 'Record viva' }),
     ).toBeInTheDocument()
-    expect(screen.queryByText('Body paragraph one.')).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole('tab', { name: 'Submission' }))
-
     expect(screen.getByText('Body paragraph one.')).toBeInTheDocument()
     expect(screen.getByText('Body paragraph two.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Why does the response describe Lord Mansfield as pivotal?'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
   })
 
   it('uploads and displays a viva audio recording', async () => {
@@ -167,8 +159,6 @@ describe('SubmissionDetailPage', () => {
       <SubmissionDetailPage />,
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
-
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
 
     const fileInput = await screen.findByLabelText('Upload viva audio')
     const file = new File(['audio-data'], 'test.webm', { type: 'audio/webm' })
@@ -349,9 +339,9 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
-    const recommendedCard = screen.getByText('Recommended question').closest('article')
+    const recommendedCard = (
+      await screen.findByText('Recommended question')
+    ).closest('article')
     const nonRecommendedCard = screen.getByText('Non-recommended question').closest('article')
     const authenticityCard = screen.getByText('Authenticity question').closest('article')
 
@@ -448,7 +438,6 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
     await user.click(await screen.findByRole('button', { name: 'Add Manual Question' }))
 
     await user.type(screen.getByLabelText('Question text'), 'A brand new manual question')
@@ -508,8 +497,6 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
     await user.click(
       await screen.findByRole('button', { name: 'Edit question: Original question text' }),
     )
@@ -560,8 +547,6 @@ describe('SubmissionDetailPage', () => {
       <SubmissionDetailPage />,
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
-
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
 
     expect(await screen.findByLabelText('Upload viva audio')).toBeInTheDocument()
     expect(screen.queryByTestId('submission-viva-player')).not.toBeInTheDocument()
@@ -615,8 +600,6 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
     const player = await screen.findByTestId('submission-viva-player')
     expect(player).toBeInTheDocument()
     expect(player.getAttribute('src')).toContain('/object/sign/submission-viva-audio/')
@@ -643,8 +626,6 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
     expect(
       await screen.findByText('You do not have permission to play this recording.'),
     ).toBeInTheDocument()
@@ -670,8 +651,6 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
     expect(
       await screen.findByText('Your session has expired. Sign in again to play this recording.'),
     ).toBeInTheDocument()
@@ -696,8 +675,6 @@ describe('SubmissionDetailPage', () => {
       <SubmissionDetailPage />,
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
-
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
 
     expect(
       await screen.findByText('This recording is no longer available.'),
@@ -748,8 +725,6 @@ describe('SubmissionDetailPage', () => {
       <SubmissionDetailPage />,
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
-
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
 
     const fileInput = await screen.findByLabelText('Upload viva audio')
     const file = new File(['audio-data'], 'test.webm', { type: 'audio/webm' })
@@ -855,395 +830,5 @@ describe('SubmissionDetailPage', () => {
       ),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
-  })
-
-  it('selects a question into the Viva Question Set and shows it in the panel', async () => {
-    generateSubmissionVivaSpy.mockReset()
-
-    let question = createTestQuestion({
-      question_text: 'Why does the response describe Lord Mansfield as pivotal?',
-      teacher_note: 'Listen for understanding of legal reform and why it mattered.',
-      set_position: null,
-    })
-
-    server.use(
-      http.get(`${SUPABASE_URL}/rest/v1/submissions`, () =>
-        HttpResponse.json([createTestSubmission({ submission_text: 'Body text.' })]),
-      ),
-      http.get(`${SUPABASE_URL}/rest/v1/viva_questions`, () => HttpResponse.json([question])),
-      http.patch(`${SUPABASE_URL}/rest/v1/viva_questions`, async ({ request }) => {
-        const body = (await request.json()) as { set_position: number | null }
-        question = { ...question, set_position: body.set_position }
-
-        return HttpResponse.json({}, { status: 204 })
-      }),
-      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'draft' })),
-      submissionVivaHandler([]),
-    )
-
-    const user = userEvent.setup()
-
-    renderWithRouter(
-      <SubmissionDetailPage />,
-      '/submissions/30420000-0000-0000-0000-000000000000',
-    )
-
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
-    expect(
-      screen.getByText(
-        'No questions selected yet. Add questions from the list to build your Viva Question Set.',
-      ),
-    ).toBeInTheDocument()
-
-    await user.click(
-      screen.getByLabelText('Add to Viva Question Set', { exact: false }),
-    )
-
-    expect(await screen.findByText(/1\. Comprehension And Accuracy/)).toBeInTheDocument()
-    expect(screen.getByText('2 min')).toBeInTheDocument()
-    expect(
-      screen.queryByText(
-        'No questions selected yet. Add questions from the list to build your Viva Question Set.',
-      ),
-    ).not.toBeInTheDocument()
-  })
-
-  it('removes a question from the Viva Question Set from the panel', async () => {
-    generateSubmissionVivaSpy.mockReset()
-
-    let question = createTestQuestion({
-      question_text: 'Why does the response describe Lord Mansfield as pivotal?',
-      teacher_note: 'Listen for understanding of legal reform and why it mattered.',
-      set_position: 0,
-    })
-
-    server.use(
-      http.get(`${SUPABASE_URL}/rest/v1/submissions`, () =>
-        HttpResponse.json([createTestSubmission({ submission_text: 'Body text.' })]),
-      ),
-      http.get(`${SUPABASE_URL}/rest/v1/viva_questions`, () => HttpResponse.json([question])),
-      http.patch(`${SUPABASE_URL}/rest/v1/viva_questions`, async ({ request }) => {
-        const body = (await request.json()) as { set_position: number | null }
-        question = { ...question, set_position: body.set_position }
-
-        return HttpResponse.json({}, { status: 204 })
-      }),
-      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'draft' })),
-      submissionVivaHandler([]),
-    )
-
-    const user = userEvent.setup()
-
-    renderWithRouter(
-      <SubmissionDetailPage />,
-      '/submissions/30420000-0000-0000-0000-000000000000',
-    )
-
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
-    expect(await screen.findByText(/1\. Comprehension And Accuracy/)).toBeInTheDocument()
-
-    await user.click(
-      screen.getByRole('button', {
-        name: 'Remove question 1 from the set',
-      }),
-    )
-    await user.click(
-      within(screen.getByRole('alertdialog')).getByRole('button', {
-        name: 'Remove',
-      }),
-    )
-
-    expect(
-      await screen.findByText(
-        'No questions selected yet. Add questions from the list to build your Viva Question Set.',
-      ),
-    ).toBeInTheDocument()
-  })
-
-  it('reorders Viva Question Set questions with Move up and Move down', async () => {
-    generateSubmissionVivaSpy.mockReset()
-
-    let questions = [
-      createTestQuestion({
-        id: '40420000-0000-0000-0000-000000000000',
-        category: 'comprehension_and_accuracy',
-        question_text: 'First question',
-        set_position: 0,
-      }),
-      createTestQuestion({
-        id: '40420000-0000-0000-0000-000000000001',
-        category: 'argumentation_and_reasoning',
-        question_text: 'Second question',
-        set_position: 1,
-      }),
-    ]
-
-    server.use(
-      http.get(`${SUPABASE_URL}/rest/v1/submissions`, () =>
-        HttpResponse.json([createTestSubmission({ submission_text: 'Body text.' })]),
-      ),
-      http.get(`${SUPABASE_URL}/rest/v1/viva_questions`, () => HttpResponse.json(questions)),
-      http.patch(`${SUPABASE_URL}/rest/v1/viva_questions`, async ({ request }) => {
-        const body = (await request.json()) as { set_position: number | null }
-        const url = new URL(request.url)
-        const idFilter = url.searchParams.get('id')
-        const id = idFilter?.replace('eq.', '')
-
-        questions = questions.map((existingQuestion) =>
-          existingQuestion.id === id
-            ? { ...existingQuestion, set_position: body.set_position }
-            : existingQuestion,
-        )
-
-        return HttpResponse.json({}, { status: 204 })
-      }),
-      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'draft' })),
-      submissionVivaHandler([]),
-    )
-
-    const user = userEvent.setup()
-
-    renderWithRouter(
-      <SubmissionDetailPage />,
-      '/submissions/30420000-0000-0000-0000-000000000000',
-    )
-
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
-    expect(await screen.findByText(/1\. Comprehension And Accuracy/)).toBeInTheDocument()
-
-    await user.click(
-      screen.getByRole('button', { name: 'Move question 2 up' }),
-    )
-
-    await screen.findByText(/1\. Argumentation And Reasoning/)
-    const reorderedQuestions = questions.slice().sort((left, right) => (left.set_position ?? 0) - (right.set_position ?? 0))
-    expect(reorderedQuestions.map((question) => question.question_text)).toEqual([
-      'Second question',
-      'First question',
-    ])
-  })
-
-  it('marks the Viva Question Set ready and can revert it to draft', async () => {
-    generateSubmissionVivaSpy.mockReset()
-
-    let questionSet = createTestVivaQuestionSet({ status: 'draft' })
-
-    server.use(
-      ...submissionWithQuestionsHandlers(createTestSubmission({ submission_text: 'Body text.' }), [
-        createTestQuestion({ set_position: 0 }),
-      ]),
-      http.get(`${SUPABASE_URL}/rest/v1/viva_question_sets`, () => HttpResponse.json([questionSet])),
-      http.patch(`${SUPABASE_URL}/rest/v1/viva_question_sets`, async ({ request }) => {
-        const body = (await request.json()) as { status: 'draft' | 'ready' }
-        questionSet = { ...questionSet, status: body.status }
-
-        return HttpResponse.json({}, { status: 204 })
-      }),
-      submissionVivaHandler([]),
-    )
-
-    const user = userEvent.setup()
-
-    renderWithRouter(
-      <SubmissionDetailPage />,
-      '/submissions/30420000-0000-0000-0000-000000000000',
-    )
-
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
-    expect(await screen.findByText('Draft')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Mark set ready for viva' }))
-
-    expect(await screen.findByText('Ready for Viva')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Revert set to draft' }))
-
-    expect(await screen.findByText('Draft')).toBeInTheDocument()
-  })
-
-  it('cannot start a Viva Session while the Viva Question Set is a draft', async () => {
-    generateSubmissionVivaSpy.mockReset()
-    equipmentCheckSpy.mockReset()
-
-    server.use(
-      ...submissionWithQuestionsHandlers(testSubmission, [
-        createTestQuestion({ set_position: 0 }),
-      ]),
-      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'draft' })),
-      vivaSessionHandler([]),
-      submissionVivaHandler([]),
-    )
-
-    const user = userEvent.setup()
-
-    renderWithRouter(
-      <SubmissionDetailPage />,
-      '/submissions/30420000-0000-0000-0000-000000000000',
-    )
-
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
-    expect(
-      await screen.findByText(
-        'Mark the Viva Question Set ready before starting a Viva Session.',
-      ),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: 'Open Viva Session' }),
-    ).not.toBeInTheDocument()
-  })
-
-  it('starts a Viva Session once the readiness checklist is complete, and does not allow starting a second one', async () => {
-    generateSubmissionVivaSpy.mockReset()
-    equipmentCheckSpy.mockReset()
-    equipmentCheckSpy.mockResolvedValue('passed')
-
-    let insertedSessionBody: Record<string, unknown> | null = null
-    let insertCount = 0
-    const createdSession = createTestVivaSession()
-
-    server.use(
-      ...submissionWithQuestionsHandlers(testSubmission, [
-        createTestQuestion({ set_position: 0 }),
-      ]),
-      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'ready' })),
-      submissionVivaHandler([]),
-      http.get(`${SUPABASE_URL}/rest/v1/viva_sessions`, () =>
-        HttpResponse.json(insertedSessionBody ? [createdSession] : []),
-      ),
-      http.post(`${SUPABASE_URL}/rest/v1/viva_sessions`, async ({ request }) => {
-        insertCount += 1
-        insertedSessionBody = (await request.json()) as Record<string, unknown>
-
-        return HttpResponse.json([createdSession], { status: 201 })
-      }),
-    )
-
-    const user = userEvent.setup()
-
-    renderWithRouter(
-      <SubmissionDetailPage />,
-      '/submissions/30420000-0000-0000-0000-000000000000',
-    )
-
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
-    await user.click(
-      await screen.findByRole('checkbox', {
-        name: /I have checked this work with the student/,
-      }),
-    )
-    await user.click(
-      screen.getByRole('radio', { name: 'Consent given to record this viva' }),
-    )
-    await user.click(screen.getByRole('button', { name: 'Run microphone check' }))
-    await screen.findByText('Microphone check passed')
-
-    await user.click(screen.getByRole('button', { name: 'Open Viva Session' }))
-
-    expect(await screen.findByText('Viva Session in progress')).toBeInTheDocument()
-    expect(insertCount).toBe(1)
-    expect(insertedSessionBody).toMatchObject({
-      consent_state: 'consent_given',
-      equipment_check_result: 'passed',
-    })
-    expect(
-      screen.queryByRole('button', { name: 'Open Viva Session' }),
-    ).not.toBeInTheDocument()
-  })
-
-  it('links to Conduct mode once a Viva Session is active', async () => {
-    generateSubmissionVivaSpy.mockReset()
-    equipmentCheckSpy.mockReset()
-
-    const activeSession = createTestVivaSession()
-
-    server.use(
-      ...submissionWithQuestionsHandlers(testSubmission, [
-        createTestQuestion({ set_position: 0 }),
-      ]),
-      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'ready' })),
-      submissionVivaHandler([]),
-      vivaSessionHandler([activeSession]),
-    )
-
-    const user = userEvent.setup()
-
-    renderWithRouter(
-      <SubmissionDetailPage />,
-      '/submissions/30420000-0000-0000-0000-000000000000',
-    )
-
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
-    const conductLink = await screen.findByRole('link', {
-      name: 'Open Conduct mode',
-    })
-
-    expect(conductLink).toHaveAttribute(
-      'href',
-      '/submissions/30420000-0000-0000-0000-000000000000/conduct',
-    )
-  })
-
-  it('clears the readiness checklist on confirmation, without starting a Viva Session', async () => {
-    generateSubmissionVivaSpy.mockReset()
-    equipmentCheckSpy.mockReset()
-    equipmentCheckSpy.mockResolvedValue('passed')
-
-    let postCount = 0
-
-    server.use(
-      ...submissionWithQuestionsHandlers(testSubmission, [
-        createTestQuestion({ set_position: 0 }),
-      ]),
-      vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'ready' })),
-      submissionVivaHandler([]),
-      vivaSessionHandler([]),
-      http.post(`${SUPABASE_URL}/rest/v1/viva_sessions`, () => {
-        postCount += 1
-        return HttpResponse.json([createTestVivaSession()], { status: 201 })
-      }),
-    )
-
-    const user = userEvent.setup()
-
-    renderWithRouter(
-      <SubmissionDetailPage />,
-      '/submissions/30420000-0000-0000-0000-000000000000',
-    )
-
-    await user.click(await screen.findByRole('tab', { name: 'Viva Questions' }))
-
-    const studentConfirmedCheckbox = await screen.findByRole('checkbox', {
-      name: /I have checked this work with the student/,
-    })
-    await user.click(studentConfirmedCheckbox)
-    await user.click(
-      screen.getByRole('radio', { name: 'Consent given to record this viva' }),
-    )
-
-    // Clearing discards a part-filled checklist, so it asks first.
-    await user.click(screen.getByRole('button', { name: 'Clear checklist' }))
-    await user.click(screen.getByRole('button', { name: 'Keep my answers' }))
-
-    expect(studentConfirmedCheckbox).toBeChecked()
-
-    await user.click(screen.getByRole('button', { name: 'Clear checklist' }))
-    await user.click(
-      within(screen.getByRole('alertdialog')).getByRole('button', {
-        name: 'Clear checklist',
-      }),
-    )
-
-    expect(studentConfirmedCheckbox).not.toBeChecked()
-    expect(
-      screen.getByRole('radio', { name: 'Consent given to record this viva' }),
-    ).not.toBeChecked()
-    expect(postCount).toBe(0)
   })
 })
