@@ -23,6 +23,20 @@ pnpm build
 pnpm preview
 ```
 
+## Testing
+
+Run the full suite from the repo root:
+
+```sh
+pnpm test
+```
+
+To run only the web app's Vitest suite:
+
+```sh
+pnpm test:web
+```
+
 ## Cloudflare Deploy
 
 The TanStack Start app in `apps/web` is configured for Cloudflare Workers via Wrangler.
