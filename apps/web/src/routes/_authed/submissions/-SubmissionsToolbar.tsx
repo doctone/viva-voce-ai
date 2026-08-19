@@ -1,4 +1,6 @@
 import { cn } from '~/lib/utils'
+import { focusRingClassName } from '~/lib/class-names'
+import { buttonClassName } from '../../../components/ui/Button'
 import {
   STATUS_FILTER_LABEL,
   STATUS_FILTER_ORDER,
@@ -14,7 +16,7 @@ type SubmissionsToolbarProps = {
 }
 
 const filterBaseClassName =
-  'inline-flex h-11 items-center gap-2 border px-4 text-[12px] font-bold uppercase tracking-[0.08em] whitespace-nowrap transition-[background-color,border-color,color] duration-150 ease-out focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]'
+  'inline-flex h-11 items-center gap-2 border px-4 text-[12px] font-bold uppercase tracking-[0.08em] whitespace-nowrap transition-[background-color,border-color,color] duration-150 ease-out focus-visible:relative focus-visible:z-10'
 
 export function SubmissionsToolbar({
   counts,
@@ -52,7 +54,10 @@ export function SubmissionsToolbar({
           <button
             type="button"
             onClick={() => onSearchChange('')}
-            className="shrink-0 px-1 text-[11px] font-bold uppercase tracking-[0.1em] text-on-surface-variant transition-colors duration-150 ease-out hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]"
+            className={cn(
+              'shrink-0 px-1 text-[11px] font-bold uppercase tracking-[0.1em] text-on-surface-variant transition-colors duration-150 ease-out hover:text-primary',
+              focusRingClassName,
+            )}
           >
             Clear
           </button>
@@ -73,13 +78,11 @@ export function SubmissionsToolbar({
               type="button"
               aria-pressed={isActive}
               onClick={() => onStatusChange(filter)}
-              className={cn(
-                filterBaseClassName,
-                '-ml-px first:ml-0',
-                isActive
-                  ? 'border-primary bg-primary text-on-primary'
-                  : 'border-outline-variant bg-transparent text-on-surface-variant hover:border-outline hover:bg-surface-container-low hover:text-on-surface',
-              )}
+              className={buttonClassName({
+                className: cn(filterBaseClassName, '-ml-px first:ml-0'),
+                size: 'sm',
+                variant: isActive ? 'primary' : 'secondary',
+              })}
             >
               {STATUS_FILTER_LABEL[filter]}
               <span

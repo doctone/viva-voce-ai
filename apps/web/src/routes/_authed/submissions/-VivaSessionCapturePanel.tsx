@@ -168,7 +168,7 @@ function AskedQuestionCaptureCard({
   const observationFieldId = `observation-${askedQuestion.id}`;
 
   return (
-    <div className="grid gap-4 border border-outline-variant bg-surface-container-lowest p-4">
+    <div className="grid gap-4 rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest p-4">
       <div className="grid gap-1">
         <span className={eyebrowClassName}>
           {askedQuestion.isUnplanned ? "Unplanned follow-up" : "Asked question"}
@@ -187,6 +187,7 @@ function AskedQuestionCaptureCard({
             <Button
               key={markerType}
               type="button"
+              size="sm"
               variant={
                 askedQuestion.evidenceMarker?.markerType === markerType
                   ? "primary"
@@ -213,7 +214,7 @@ function AskedQuestionCaptureCard({
           value={content}
           onBlur={flushPendingObservation}
           onChange={(event) => handleContentChange(event.target.value)}
-          className="border border-outline-variant bg-surface-container-lowest p-2"
+          className="rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest p-2"
         />
       </label>
 
@@ -232,7 +233,7 @@ function AskedQuestionCaptureCard({
             <span className="text-error">
               We couldn&apos;t save your Observation.
             </span>
-            <Button type="button" variant="secondary" onClick={handleRetry}>
+            <Button type="button" size="sm" variant="secondary" onClick={handleRetry}>
               Retry
             </Button>
           </>
@@ -395,7 +396,7 @@ export function VivaSessionCapturePanel({
                 type="text"
                 value={followUpText}
                 onChange={(event) => setFollowUpText(event.target.value)}
-                className="border border-outline-variant bg-surface-container-lowest p-2"
+                className="rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest p-2"
               />
             </label>
             <div>

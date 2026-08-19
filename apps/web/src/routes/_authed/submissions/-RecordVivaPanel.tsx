@@ -44,6 +44,7 @@ export function RecordVivaPanel({
           aria-label="Record viva"
           className="gap-3 px-7"
           onClick={onRecord}
+          size="lg"
           type="button"
         >
           <span

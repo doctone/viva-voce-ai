@@ -156,7 +156,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const { publicEnv, user } = Route.useRouteContext();
   const publicEnvScript = JSON.stringify(publicEnv);
   const navLinkClassName =
-    "border border-outline-variant bg-surface-container-lowest px-[14px] py-[10px] text-[13px] font-bold uppercase tracking-[0.05em]";
+    "rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest px-[14px] py-[10px] text-[13px] font-bold uppercase tracking-[0.05em]";
   const navLinkInactiveClassName = "text-on-surface-variant";
   const navLinkActiveClassName = "border-primary bg-primary text-on-primary";
   const shouldShowTopbar = useRouterState({
@@ -238,7 +238,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                       </Link>
                       {user ? (
                         <>
-                          <span className="border border-outline-variant bg-surface-container-low px-[14px] py-[10px] text-sm text-on-surface-variant">
+                          <span className="rounded-[var(--radius)] border border-outline-variant bg-surface-container-low px-[14px] py-[10px] text-sm text-on-surface-variant">
                             {user.email}{" "}
                           </span>{" "}
                           <Link

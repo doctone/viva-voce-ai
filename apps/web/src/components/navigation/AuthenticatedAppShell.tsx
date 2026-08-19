@@ -1,15 +1,19 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { Link, useRouterState } from '@tanstack/react-router'
+import { useRouterState } from '@tanstack/react-router'
+import { FileText, Users } from 'lucide-react'
 import { cn } from '~/lib/utils'
-import { eyebrowClassName, mobileNavFooterLinkClassName } from '~/lib/class-names'
-import { AuthenticatedSidebar, type AuthenticatedNavItem } from './AuthenticatedSidebar'
+import {
+  AuthenticatedAccountBlock,
+  AuthenticatedSidebar,
+  type AuthenticatedNavItem,
+} from './AuthenticatedSidebar'
 import { MobileNavDrawer } from './MobileNavDrawer'
 import { MobileNavHeader } from './MobileNavHeader'
 
 const authenticatedAppShellItems = [
-  { label: 'Submissions', to: '/submissions' },
-  { label: 'Student Records', to: '/student-records' },
+  { icon: <FileText />, label: 'Submissions', to: '/submissions' },
+  { icon: <Users />, label: 'Student Records', to: '/student-records' },
 ] as const
 
 type AuthenticatedAppShellProps = {
@@ -50,17 +54,7 @@ export function AuthenticatedAppShell({
         items={items}
         open={isMobileNavOpen}
         onOpenChange={setIsMobileNavOpen}
-        footer={
-          <>
-            <p className={eyebrowClassName}>Signed in as</p>
-            <p className="text-sm text-on-surface [overflow-wrap:anywhere]">
-              {userEmail}
-            </p>
-            <Link to="/logout" className={mobileNavFooterLinkClassName}>
-              Logout
-            </Link>
-          </>
-        }
+        footer={<AuthenticatedAccountBlock userEmail={userEmail} />}
       />
 
       <main className="min-w-0 px-6 pb-16 pt-8">{children}</main>

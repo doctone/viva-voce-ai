@@ -3,7 +3,7 @@ import { cn } from '~/lib/utils'
 import { eyebrowClassName } from '~/lib/class-names'
 
 export const fieldControlClassName =
-  'w-full border border-transparent border-b-outline bg-transparent px-3 py-3 text-on-surface transition-[border-color,background-color,box-shadow] duration-150 ease-out focus:border-primary focus:bg-surface-container-lowest focus:outline-none focus:shadow-[inset_0_-1px_0_var(--color-primary)]'
+  'w-full rounded-[var(--radius)] border border-transparent border-b-outline bg-transparent px-3 py-3 text-on-surface transition-[border-color,background-color,box-shadow] duration-150 ease-out focus:border-primary focus:bg-surface-container-lowest focus:outline-none focus:shadow-[inset_0_-1px_0_var(--color-primary)]'
 
 type FieldShellProps = {
   children: React.ReactNode

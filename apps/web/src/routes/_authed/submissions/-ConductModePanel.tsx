@@ -154,7 +154,7 @@ export function ConductModePanel({
           </div>
         </div>
 
-        <div className="grid gap-3 border border-outline-variant bg-surface-container-lowest p-4">
+        <div className="grid gap-3 rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest p-4">
           <span className="text-sm font-bold text-on-surface">Recording</span>
           <div className="flex flex-wrap gap-2">
             {recordingStatus === "idle" || recordingStatus === "permission_denied" ? (
@@ -178,7 +178,11 @@ export function ConductModePanel({
               </Button>
             ) : null}
             {canStop ? (
-              <Button type="button" variant="secondary" onClick={onStopRecording}>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={onStopRecording}
+              >
                 Stop recording
               </Button>
             ) : null}
@@ -194,7 +198,12 @@ export function ConductModePanel({
               <span className="text-error">
                 {failedChunkCount} recording {failedChunkCount === 1 ? "chunk" : "chunks"} failed to upload.
               </span>
-              <Button type="button" variant="secondary" onClick={onRetryFailedChunks}>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={onRetryFailedChunks}
+              >
                 Retry upload
               </Button>
             </div>
@@ -202,7 +211,7 @@ export function ConductModePanel({
         </div>
 
         {currentQuestion ? (
-          <div className="grid gap-3 border border-outline-variant bg-surface-container-lowest p-4">
+          <div className="grid gap-3 rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest p-4">
             <div className="flex items-center justify-between gap-3">
               <span className={eyebrowClassName}>
                 {currentQuestion.isAsked ? "Asked" : "Not yet asked"}
@@ -261,7 +270,7 @@ export function ConductModePanel({
               type="text"
               value={followUpText}
               onChange={(event) => setFollowUpText(event.target.value)}
-              className="border border-outline-variant bg-surface-container-lowest p-2"
+              className="rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest p-2"
             />
           </label>
           <div>

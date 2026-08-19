@@ -152,7 +152,7 @@ export function QuestionCard({
             {label}
           </span>
           {isHighlighted ? (
-            <span className="border border-tertiary-container px-2 py-1 text-[12px] font-bold uppercase tracking-[0.08em] text-tertiary">
+            <span className="rounded-[var(--radius)] border border-tertiary-container px-2 py-1 text-[12px] font-bold uppercase tracking-[0.08em] text-tertiary">
               Recommended
             </span>
           ) : null}
@@ -242,7 +242,7 @@ export function AddManualQuestionCard({ onAdd }: AddManualQuestionCardProps) {
 
   if (!isOpen) {
     return (
-      <div className="group flex items-center justify-center border border-dashed border-outline-variant bg-transparent px-5 py-6 transition-colors hover:border-primary">
+      <div className="group flex items-center justify-center rounded-[var(--radius)] border border-dashed border-outline-variant bg-transparent px-5 py-6 transition-colors hover:border-primary">
         <button
           type="button"
           className={cn(mutedTextClassName, 'text-sm font-bold uppercase tracking-[0.08em] group-hover:text-primary')}

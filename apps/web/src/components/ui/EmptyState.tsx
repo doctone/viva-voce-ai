@@ -20,7 +20,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'grid justify-items-start gap-3 border border-dashed border-outline bg-surface-container-low px-6 py-8 text-left',
+        'grid justify-items-start gap-3 rounded-[var(--radius)] border border-dashed border-outline bg-surface-container-low px-6 py-8 text-left',
         className,
       )}
     >

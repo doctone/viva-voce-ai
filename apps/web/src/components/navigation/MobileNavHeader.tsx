@@ -1,5 +1,6 @@
 import { cn } from '~/lib/utils'
 import { brandTitleClassName } from '~/lib/class-names'
+import { Button } from '../ui/Button'
 
 type MobileNavHeaderProps = {
   isMenuOpen: boolean
@@ -14,15 +15,17 @@ export function MobileNavHeader({ isMenuOpen, onOpenMenu }: MobileNavHeaderProps
         'sticky top-0 z-30 flex items-center gap-4 px-6 py-3 lg:hidden',
       )}
     >
-      <button
-        type="button"
-        onClick={onOpenMenu}
-        aria-label="Open navigation menu"
+      <Button
         aria-expanded={isMenuOpen}
-        className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-outline-variant text-on-surface transition-colors duration-150 ease-out hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]"
+        aria-label="Open navigation menu"
+        className="shrink-0"
+        iconOnly
+        onClick={onOpenMenu}
+        size="lg"
+        variant="secondary"
       >
         <HamburgerIcon />
-      </button>
+      </Button>
 
       <span className={cn(brandTitleClassName, 'truncate text-[20px]')}>
         Viva Voce AI

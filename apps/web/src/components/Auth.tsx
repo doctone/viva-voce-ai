@@ -69,7 +69,7 @@ export function Auth({
           style={{ backgroundImage: "url('/auth-hero.png')" }}
         >
           <div className="flex min-h-full items-end bg-[linear-gradient(180deg,rgba(0,32,70,0.08),rgba(0,32,70,0.5)),linear-gradient(0deg,rgba(250,249,245,0.05),rgba(250,249,245,0.05))] p-[clamp(24px,4vw,40px)]">
-            <div className="max-w-[28rem] border border-outline-variant bg-[rgb(250_249_245_/_0.82)] p-6 text-on-surface backdrop-blur-[10px]">
+            <div className="max-w-[28rem] rounded-[var(--radius)] border border-outline-variant bg-[rgb(250_249_245_/_0.82)] p-6 text-on-surface backdrop-blur-[10px]">
               <span className={eyebrowClassName}>Paper & Ink</span>
               <Heading level={2} className="mb-2">
                 Evidence-led support for authentic assessment.

@@ -163,7 +163,7 @@ export function QuestionSetPanel({
               return (
                 <li
                   key={question.id}
-                  className="grid gap-2 border border-outline-variant bg-surface-container-lowest p-4"
+                  className="grid gap-2 rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="grid gap-1">

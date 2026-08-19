@@ -198,7 +198,7 @@ export function VivaSessionReadinessPanel({
           </p>
         </div>
 
-        <div className="grid gap-3 border border-outline-variant bg-surface-container-lowest p-4">
+        <div className="grid gap-3 rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest p-4">
           <span className={eyebrowClassName}>Check against the work</span>
           <dl className="grid gap-2 text-sm leading-6">
             <div className="grid gap-0.5">
@@ -269,7 +269,7 @@ export function VivaSessionReadinessPanel({
                 onChange={(event) =>
                   setConsentDeclinedReason(event.target.value)
                 }
-                className="border border-outline-variant bg-surface-container-lowest p-2"
+                className="rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest p-2"
               />
             </label>
           ) : null}
@@ -322,7 +322,7 @@ export function VivaSessionReadinessPanel({
               const parsed = Number(value);
               setExpectedDurationMinutes(Number.isFinite(parsed) ? parsed : null);
             }}
-            className="border border-outline-variant bg-surface-container-lowest p-2"
+            className="rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest p-2"
           />
         </label>
 
@@ -338,7 +338,7 @@ export function VivaSessionReadinessPanel({
             onChange={(event) =>
               setAccessibilityAdjustments(event.target.value)
             }
-            className="border border-outline-variant bg-surface-container-lowest p-2"
+            className="rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest p-2"
           />
         </label>
 
@@ -384,7 +384,7 @@ export function VivaSessionReadinessPanel({
           </div>
           {isConfirmingReset ? (
             <div
-              className="grid gap-2 border border-outline-variant bg-surface-container-lowest p-4"
+              className="grid gap-2 rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest p-4"
               role="alertdialog"
               aria-label="Clear the readiness checklist"
             >

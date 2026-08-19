@@ -1,10 +1,24 @@
+/**
+ * One focus treatment for every interactive control, hand-built or shared:
+ * a crisp outline mixed from the primary blue, never a glow.
+ */
+export const focusRingClassName =
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]"
+
 export const pageShellClassName = "min-h-screen";
 
 export const pageFrameClassName =
   "mx-auto w-full max-w-[1328px] px-6 pb-16 pt-8";
 
+/**
+ * One radius for every control and surface. Buttons rounded on their own would
+ * read as a mistake beside square inputs, chips and panels, so this is the only
+ * place the value is set.
+ */
+export const controlRadiusClassName = "rounded-[var(--radius)]"
+
 export const paperPanelClassName =
-  "border border-outline-variant bg-surface-container-lowest shadow-technical";
+  "rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest shadow-technical";
 
 export const sectionCardClassName = "grid gap-4 p-8";
 
@@ -36,4 +50,4 @@ export const editorialListClassName =
 export const editorialRowClassName = "block py-[18px] font-sans";
 
 export const mobileNavFooterLinkClassName =
-  "inline-flex min-h-11 items-center justify-center border border-outline-variant px-[18px] text-sm font-bold uppercase tracking-[0.08em] text-on-surface transition-[background-color,border-color] duration-150 ease-out hover:border-on-surface-variant hover:bg-surface-container-low";
+  "inline-flex min-h-10 items-center justify-center rounded-[var(--radius)] border border-outline-variant px-[18px] text-sm font-bold uppercase tracking-[0.08em] text-on-surface transition-[background-color,border-color] duration-150 ease-out hover:border-on-surface-variant hover:bg-surface-container-low";

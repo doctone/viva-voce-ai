@@ -12,6 +12,7 @@ import {
 import { cn } from '~/lib/utils'
 import {
   eyebrowClassName,
+  focusRingClassName,
   mutedTextClassName,
   paperPanelClassName,
 } from '~/lib/class-names'
@@ -92,7 +93,10 @@ const columns = [
           <Link
             to="/submissions/$submissionId"
             params={{ submissionId }}
-            className="text-[15px] font-medium leading-6 text-on-surface underline-offset-4 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)] md:line-clamp-2"
+            className={cn(
+              'text-[15px] font-medium leading-6 text-on-surface underline-offset-4 hover:text-primary hover:underline md:line-clamp-2',
+              focusRingClassName,
+            )}
           >
             {info.getValue()}
           </Link>
@@ -246,7 +250,7 @@ export function SubmissionsTable({ rows, summary }: SubmissionsTableProps) {
               const [id, direction] = event.target.value.split(':')
               setSorting([{ id, desc: direction === 'desc' }])
             }}
-            className="border border-outline-variant bg-transparent px-2 py-1 text-sm text-on-surface focus:border-primary focus:outline-none"
+            className="rounded-[var(--radius)] border border-outline-variant bg-transparent px-2 py-1 text-sm text-on-surface focus:border-primary focus:outline-none"
           >
             {MOBILE_SORT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -278,7 +282,10 @@ export function SubmissionsTable({ rows, summary }: SubmissionsTableProps) {
                       <button
                         type="button"
                         onClick={header.column.getToggleSortingHandler()}
-                        className="group inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.1em] text-on-surface-variant transition-colors duration-150 ease-out hover:text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]"
+                        className={cn(
+                          'group inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.1em] text-on-surface-variant transition-colors duration-150 ease-out hover:text-on-surface',
+                          focusRingClassName,
+                        )}
                       >
                         {flexRender(
                           header.column.columnDef.header,

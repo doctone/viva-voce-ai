@@ -3,12 +3,16 @@ import { Link } from '@tanstack/react-router'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { cn } from '~/lib/utils'
 import { eyebrowClassName, paperPanelClassName } from '~/lib/class-names'
+import { Button } from '../ui/Button'
 import {
   authenticatedNavLinkActiveClassName,
   authenticatedNavLinkClassName,
+  authenticatedNavLinkInactiveClassName,
 } from './AuthenticatedSidebar'
 
-export type MobileNavItem = { label: string; to: string } | { label: string; href: string }
+export type MobileNavItem =
+  | { icon?: ReactNode; label: string; to: string }
+  | { icon?: ReactNode; label: string; href: string }
 
 type MobileNavDrawerProps = {
   items: readonly MobileNavItem[]
@@ -64,20 +68,35 @@ export function MobileNavDrawer({
                 Viva Voce AI
               </span>
             </div>
-            <DialogPrimitive.Close
-              aria-label="Close navigation menu"
-              className="inline-flex h-11 w-11 items-center justify-center border border-outline-variant text-on-surface transition-colors duration-150 ease-out hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]"
-            >
-              <CloseIcon />
+            <DialogPrimitive.Close asChild>
+              <Button
+                aria-label="Close navigation menu"
+                iconOnly
+                size="lg"
+                variant="secondary"
+              >
+                <CloseIcon />
+              </Button>
             </DialogPrimitive.Close>
           </div>
 
           <nav
-            className="-mx-8 grid content-start justify-items-stretch gap-1"
+            className="-mx-8 grid content-start justify-items-stretch"
             aria-label="Primary"
           >
-            {items.map((item) =>
-              'to' in item ? (
+            {items.map((item) => {
+              const content = (
+                <>
+                  {item.icon ? (
+                    <span aria-hidden="true" className="shrink-0 [&>svg]:size-4">
+                      {item.icon}
+                    </span>
+                  ) : null}
+                  {item.label}
+                </>
+              )
+
+              return 'to' in item ? (
                 <Link
                   key={item.label}
                   to={item.to}
@@ -85,22 +104,28 @@ export function MobileNavDrawer({
                   activeProps={{
                     className: authenticatedNavLinkActiveClassName,
                   }}
+                  inactiveProps={{
+                    className: authenticatedNavLinkInactiveClassName,
+                  }}
                   activeOptions={{ exact: true }}
                   onClick={closeMenu}
                 >
-                  {item.label}
+                  {content}
                 </Link>
               ) : (
                 <a
                   key={item.label}
                   href={item.href}
-                  className={authenticatedNavLinkClassName}
+                  className={cn(
+                    authenticatedNavLinkClassName,
+                    authenticatedNavLinkInactiveClassName,
+                  )}
                   onClick={closeMenu}
                 >
-                  {item.label}
+                  {content}
                 </a>
-              ),
-            )}
+              )
+            })}
           </nav>
 
           {footer ? (

@@ -61,7 +61,9 @@ typography:
     fontWeight: 700
     lineHeight: 1
     letterSpacing: "0.08em"
-rounded: {}
+rounded:
+  control: "3px"   # buttons, inputs, chips, badges, panels — every surface
+
 spacing:
   xs: "12px"
   sm: "18px"
@@ -169,13 +171,21 @@ This system is flat by default. Depth comes from warm tonal separation, visible 
 ## Components
 
 ### Buttons
-- **Shape:** Square-edged, no visible rounding (`0px`).
-- **Primary:** Reserve Navy background with white text, 44px minimum height, 18px horizontal padding, uppercase label styling.
-- **Hover / Focus:** Hover deepens to Institutional Navy. Focus uses a visible outline mixed from the primary blue. Active state moves by a single pixel to feel mechanical rather than playful.
+- **Shape:** A single hairline radius of `3px`, taken from the `--radius` token. Enough to take the hard edge off a control without reading as a soft consumer app — the radius is felt, not seen. Never round one kind of control on its own: buttons, inputs, chips, badges and panels all share this value.
+- **Primary:** Reserve Navy background with white text, 16px horizontal padding, uppercase label styling.
+- **Hover / Focus:** Hover deepens to Institutional Navy. Focus uses a visible outline mixed from the primary blue — the shared `focusRingClassName` token, so hand-built controls match the shared button. Active state moves by a single pixel to feel mechanical rather than playful.
 - **Secondary / Ghost / Tertiary:** Secondary buttons stay transparent with a structural border and pick up a quiet paper fill on hover.
+- **Destructive:** System red fill with white text, darkening on hover. Reserved for the action that ends or removes something — stopping a recording, deleting evidence. Never more than one in a group, and it takes the trailing position beside a secondary escape.
+- **Sizes:** Three steps, all sharing one label vocabulary so a pair of buttons always lines up.
+  - `sm` — 32px, 11px label. Dense rows: toolbars, table rows, panel headers, chip groups.
+  - `md` — 40px, 13px label. The default for page-level actions.
+  - `lg` — 44px, 14px label. Reserved for touch-first controls (mobile nav) and the single hero action on a page, where the comfortable touch target is worth the extra weight.
+
+  Controls are sized to the content they act on, not inflated to feel important — a button that outweighs its own row reads as louder, not more usable. 32px is the floor; nothing interactive goes below it.
+- **Icons and loading:** Icons sit inside the button and inherit its colour at 16px; the button owns the gap. A loading button shows a spinner before its label, keeps the label readable, and is disabled with `aria-busy`. Icon-only buttons keep equal width and height, and must carry an `aria-label`.
 
 ### Cards / Containers
-- **Corner Style:** Square (`0px`).
+- **Corner Style:** The shared `3px` control radius, matching buttons and fields.
 - **Background:** Panel Surface on top of Archival Paper or Reading Surface.
 - **Shadow Strategy:** Technical Edge only. No ambient blur by default.
 - **Border:** Rule Line or structural outline, always visible enough to separate reading zones.
@@ -200,7 +210,7 @@ This system is flat by default. Depth comes from warm tonal separation, visible 
 ### Do:
 - **Do** keep the page atmosphere on warm neutrals like `#faf9f5` and `#f4f4f0`, with `#ffffff` reserved for focused content panels and fields.
 - **Do** use `#002046` and `#1b365d` for command, active state, and high-importance emphasis only.
-- **Do** keep controls square-edged, label-driven, and mechanically precise.
+- **Do** keep controls label-driven and mechanically precise, with the one shared `3px` radius applied consistently — precision comes from the hairline structure and the uppercase labels, not from hard corners.
 - **Do** preserve visible structure through hairline rules, borders, and tonal layers before adding any extra depth.
 - **Do** let serif typography establish tone in headings while keeping UI controls, labels, and utility copy in Manrope.
 
