@@ -10,6 +10,17 @@ import {
   buttonClassName,
 } from "../../components/ui";
 import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
+import {
+  claimVivaGenerationRun,
+  describeVivaGenerationFailure,
+  isVivaGenerationRecordStale,
+  readVivaGenerationRecord,
+  startVivaGenerationRun,
+  writeVivaGenerationRecord,
+  GENERATION_STALE_AFTER_MS,
+  RECOVERED_GENERATION_POLL_MS,
+  type VivaGenerationResult,
+} from "../../features/submissions/vivaGenerationRun";
 import { useLiveTranscription } from "../../features/submissions/useLiveTranscription";
 import { useTranscribeVivaChunk } from "../../features/submissions/useTranscribeVivaChunk";
 import { useVivaAudioCapture } from "../../features/submissions/useVivaAudioCapture";
@@ -399,65 +410,8 @@ function countSubmissionWords(value: string) {
 const MAX_VIVA_AUDIO_MB = 500;
 const MAX_VIVA_AUDIO_BYTES = MAX_VIVA_AUDIO_MB * 1024 * 1024;
 
-const GENERATION_RECORD_KEY_PREFIX = "viva-generation:";
-
-/**
- * How long a `running` record stays believable. A reload abandons the client
- * promise but the server function keeps writing questions, so a run in this
- * window is recovered by polling rather than restarted. Past it, assume the
- * run died and let the teacher start a fresh one.
- */
-const GENERATION_STALE_AFTER_MS = 3 * 60 * 1000;
-
-/** Poll cadence while waiting on a run this page life cannot await. */
-const RECOVERED_GENERATION_POLL_MS = 2000;
-
-type GenerationRecord =
-  | { startedAt: number; status: "running" }
-  | { status: "completed" }
-  | { errorMessage: string | null; status: "failed" };
-
-function generationRecordKey(submissionId: string) {
-  return `${GENERATION_RECORD_KEY_PREFIX}${submissionId}`;
-}
-
-function writeGenerationRecord(submissionId: string, record: GenerationRecord) {
-  try {
-    window.sessionStorage.setItem(
-      generationRecordKey(submissionId),
-      JSON.stringify(record),
-    );
-  } catch {
-    // Storage can be unavailable (private mode, blocked cookies). The record is
-    // an optimisation against duplicate generation, never a correctness gate.
-  }
-}
-
-function readGenerationRecord(submissionId: string): GenerationRecord | null {
-  try {
-    const raw = window.sessionStorage.getItem(generationRecordKey(submissionId));
-
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw) as GenerationRecord;
-
-    if (parsed.status === "running" && typeof parsed.startedAt !== "number") {
-      return null;
-    }
-
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function isGenerationRecordStale(record: GenerationRecord, now: number) {
-  return (
-    record.status === "running" && now - record.startedAt > GENERATION_STALE_AFTER_MS
-  );
-}
+// Generation-run bookkeeping lives in the feature module so the new-submission
+// page and this page share one source of truth for a run's state.
 
 /** First sentence or so of the submission, for verifying the work in front of you. */
 function SubmissionBreadcrumb({ title }: { title?: string }) {
@@ -830,36 +784,39 @@ export function SubmissionDetailPage() {
     [questions, queryClient, submissionId],
   );
 
+  /**
+   * Awaits a run whether this page started it or the new-submission page did.
+   * The registry writes the durable record; this only reflects it in the UI.
+   */
+  const awaitGeneration = React.useCallback(
+    async (run: Promise<VivaGenerationResult>) => {
+      hasTriggeredGenerationRef.current = true;
+      setIsRecoveringGeneration(false);
+      setGenerationState("running");
+      setGenerationErrorMessage(null);
+
+      const result = await run;
+
+      if (result.status === "failed") {
+        setGenerationState("failed");
+        setGenerationErrorMessage(describeVivaGenerationFailure(result));
+        return;
+      }
+
+      setGenerationState("idle");
+      setHasCompletedGeneration(true);
+      await queryClient.invalidateQueries({
+        queryKey: ["submission-questions", submissionId],
+      });
+    },
+    [queryClient, submissionId],
+  );
+
   const runGeneration = React.useCallback(async () => {
-    hasTriggeredGenerationRef.current = true;
-    setIsRecoveringGeneration(false);
-    writeGenerationRecord(submissionId, {
-      startedAt: Date.now(),
-      status: "running",
-    });
-    setGenerationState("running");
-    setGenerationErrorMessage(null);
-
-    const result = await generateSubmissionViva(submissionId);
-
-    if (result.status === "failed") {
-      const errorMessage =
-        result.errorMessage ??
-        "We saved the submission, but could not generate viva questions.";
-
-      writeGenerationRecord(submissionId, { errorMessage, status: "failed" });
-      setGenerationState("failed");
-      setGenerationErrorMessage(errorMessage);
-      return;
-    }
-
-    writeGenerationRecord(submissionId, { status: "completed" });
-    setGenerationState("idle");
-    setHasCompletedGeneration(true);
-    await queryClient.invalidateQueries({
-      queryKey: ["submission-questions", submissionId],
-    });
-  }, [generateSubmissionViva, queryClient, submissionId]);
+    await awaitGeneration(
+      startVivaGenerationRun(submissionId, generateSubmissionViva),
+    );
+  }, [awaitGeneration, generateSubmissionViva, submissionId]);
 
   React.useEffect(() => {
     if (
@@ -878,11 +835,21 @@ export function SubmissionDetailPage() {
       return;
     }
 
+    // The new-submission page starts generation before navigating here, so the
+    // run is usually already in flight and still awaitable — that path keeps the
+    // real error message, which a reload cannot.
+    const inFlight = claimVivaGenerationRun(submissionId);
+
+    if (inFlight) {
+      void awaitGeneration(inFlight);
+      return;
+    }
+
     // A refresh remounts this component and resets the ref, so without a record
     // of the previous run a reload would start a second, duplicate generation.
-    const record = readGenerationRecord(submissionId);
+    const record = readVivaGenerationRecord(submissionId);
 
-    if (record && !isGenerationRecordStale(record, Date.now())) {
+    if (record && !isVivaGenerationRecordStale(record, Date.now())) {
       hasTriggeredGenerationRef.current = true;
 
       if (record.status === "running") {
@@ -921,7 +888,7 @@ export function SubmissionDetailPage() {
       return;
     }
 
-    const record = readGenerationRecord(submissionId);
+    const record = readVivaGenerationRecord(submissionId);
 
     if (!record || record.status !== "running") {
       return;
@@ -947,7 +914,7 @@ export function SubmissionDetailPage() {
   React.useEffect(() => {
     if (isRecoveringGeneration && questions.length > 0) {
       setIsRecoveringGeneration(false);
-      writeGenerationRecord(submissionId, { status: "completed" });
+      writeVivaGenerationRecord(submissionId, { status: "completed" });
     }
   }, [isRecoveringGeneration, questions.length, submissionId]);
 

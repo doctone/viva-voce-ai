@@ -13,6 +13,8 @@ import {
   PageFrame,
 } from '../../components/ui'
 import { useMutation } from '../../hooks/useMutation'
+import { useGenerateSubmissionViva } from '../../features/submissions/useGenerateSubmissionViva'
+import { startVivaGenerationRun } from '../../features/submissions/vivaGenerationRun'
 import { getSupabaseBrowserClient } from '../../utils/supabase-browser'
 import { cn } from '~/lib/utils'
 import { mutedTextClassName } from '~/lib/class-names'
@@ -101,12 +103,18 @@ export function NewSubmissionPage() {
     queryFn: fetchStudents,
     queryKey: ['students'],
   })
+  const generateSubmissionViva = useGenerateSubmissionViva()
   const createSubmissionMutation = useMutation<
     CreateSubmissionInput,
     CreateSubmissionResult
   >({
     fn: createSubmission,
     onSuccess: async ({ data }) => {
+      // Start generating before navigating, so the model call runs while the
+      // route changes and the detail page's queries settle rather than queuing
+      // behind them. The detail page picks the run up from the registry.
+      startVivaGenerationRun(data.submissionId, generateSubmissionViva)
+
       await queryClient.invalidateQueries({ queryKey: ['submissions'] })
       await router.navigate({
         params: {
