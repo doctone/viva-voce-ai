@@ -10,6 +10,17 @@ import {
   buttonClassName,
 } from "../../components/ui";
 import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
+import {
+  claimVivaGenerationRun,
+  describeVivaGenerationFailure,
+  isVivaGenerationRecordStale,
+  readVivaGenerationRecord,
+  startVivaGenerationRun,
+  writeVivaGenerationRecord,
+  GENERATION_STALE_AFTER_MS,
+  RECOVERED_GENERATION_POLL_MS,
+  type VivaGenerationResult,
+} from "../../features/submissions/vivaGenerationRun";
 import { useLiveTranscription } from "../../features/submissions/useLiveTranscription";
 import { useTranscribeVivaChunk } from "../../features/submissions/useTranscribeVivaChunk";
 import { useVivaAudioCapture } from "../../features/submissions/useVivaAudioCapture";
@@ -46,6 +57,7 @@ import {
   eyebrowClassName,
   mutedTextClassName,
   paperPanelClassName,
+  readingClassName,
 } from "~/lib/class-names";
 import { getSupabaseBrowserClient } from "../../utils/supabase-browser";
 import {
@@ -399,31 +411,8 @@ function countSubmissionWords(value: string) {
 const MAX_VIVA_AUDIO_MB = 500;
 const MAX_VIVA_AUDIO_BYTES = MAX_VIVA_AUDIO_MB * 1024 * 1024;
 
-const GENERATION_ATTEMPT_KEY_PREFIX = "viva-generation-attempted:";
-
-function markGenerationAttempted(submissionId: string) {
-  try {
-    window.sessionStorage.setItem(
-      `${GENERATION_ATTEMPT_KEY_PREFIX}${submissionId}`,
-      "1",
-    );
-  } catch {
-    // Storage can be unavailable (private mode, blocked cookies). The guard is
-    // an optimisation against duplicate generation, never a correctness gate.
-  }
-}
-
-function hasGenerationBeenAttempted(submissionId: string) {
-  try {
-    return (
-      window.sessionStorage.getItem(
-        `${GENERATION_ATTEMPT_KEY_PREFIX}${submissionId}`,
-      ) !== null
-    );
-  } catch {
-    return false;
-  }
-}
+// Generation-run bookkeeping lives in the feature module so the new-submission
+// page and this page share one source of truth for a run's state.
 
 /** First sentence or so of the submission, for verifying the work in front of you. */
 function SubmissionBreadcrumb({ title }: { title?: string }) {
@@ -541,6 +530,10 @@ export function SubmissionDetailPage() {
   >(null);
   const [hasCompletedGeneration, setHasCompletedGeneration] =
     React.useState(false);
+  // A run started in a previous page life: no promise to await, so the questions
+  // are recovered by polling.
+  const [isRecoveringGeneration, setIsRecoveringGeneration] =
+    React.useState(false);
   const [recordingStartedAt, setRecordingStartedAt] = React.useState<
     string | null
   >(null);
@@ -564,6 +557,9 @@ export function SubmissionDetailPage() {
   const questionsQuery = useQuery({
     queryFn: () => fetchSubmissionQuestions(submissionId),
     queryKey: ["submission-questions", submissionId],
+    refetchInterval: isRecoveringGeneration
+      ? RECOVERED_GENERATION_POLL_MS
+      : false,
   });
 
   const questions = questionsQuery.data ?? [];
@@ -789,29 +785,39 @@ export function SubmissionDetailPage() {
     [questions, queryClient, submissionId],
   );
 
+  /**
+   * Awaits a run whether this page started it or the new-submission page did.
+   * The registry writes the durable record; this only reflects it in the UI.
+   */
+  const awaitGeneration = React.useCallback(
+    async (run: Promise<VivaGenerationResult>) => {
+      hasTriggeredGenerationRef.current = true;
+      setIsRecoveringGeneration(false);
+      setGenerationState("running");
+      setGenerationErrorMessage(null);
+
+      const result = await run;
+
+      if (result.status === "failed") {
+        setGenerationState("failed");
+        setGenerationErrorMessage(describeVivaGenerationFailure(result));
+        return;
+      }
+
+      setGenerationState("idle");
+      setHasCompletedGeneration(true);
+      await queryClient.invalidateQueries({
+        queryKey: ["submission-questions", submissionId],
+      });
+    },
+    [queryClient, submissionId],
+  );
+
   const runGeneration = React.useCallback(async () => {
-    hasTriggeredGenerationRef.current = true;
-    markGenerationAttempted(submissionId);
-    setGenerationState("running");
-    setGenerationErrorMessage(null);
-
-    const result = await generateSubmissionViva(submissionId);
-
-    if (result.status === "failed") {
-      setGenerationState("failed");
-      setGenerationErrorMessage(
-        result.errorMessage ??
-          "We saved the submission, but could not generate viva questions.",
-      );
-      return;
-    }
-
-    setGenerationState("idle");
-    setHasCompletedGeneration(true);
-    await queryClient.invalidateQueries({
-      queryKey: ["submission-questions", submissionId],
-    });
-  }, [generateSubmissionViva, queryClient, submissionId]);
+    await awaitGeneration(
+      startVivaGenerationRun(submissionId, generateSubmissionViva),
+    );
+  }, [awaitGeneration, generateSubmissionViva, submissionId]);
 
   React.useEffect(() => {
     if (
@@ -830,10 +836,37 @@ export function SubmissionDetailPage() {
       return;
     }
 
-    // A refresh remounts this component and resets the ref. Without this guard a
-    // reload mid-generation starts a second, duplicate generation run.
-    if (hasGenerationBeenAttempted(submissionId)) {
+    // The new-submission page starts generation before navigating here, so the
+    // run is usually already in flight and still awaitable — that path keeps the
+    // real error message, which a reload cannot.
+    const inFlight = claimVivaGenerationRun(submissionId);
+
+    if (inFlight) {
+      void awaitGeneration(inFlight);
+      return;
+    }
+
+    // A refresh remounts this component and resets the ref, so without a record
+    // of the previous run a reload would start a second, duplicate generation.
+    const record = readVivaGenerationRecord(submissionId);
+
+    if (record && !isVivaGenerationRecordStale(record, Date.now())) {
       hasTriggeredGenerationRef.current = true;
+
+      if (record.status === "running") {
+        // The reload abandoned the client promise, but the server keeps writing
+        // questions. Poll for them rather than restarting or claiming failure.
+        setIsRecoveringGeneration(true);
+        return;
+      }
+
+      if (record.status === "failed") {
+        setGenerationState("failed");
+        setGenerationErrorMessage(record.errorMessage);
+        return;
+      }
+
+      // Genuinely finished and produced nothing.
       setHasCompletedGeneration(true);
       return;
     }
@@ -848,6 +881,43 @@ export function SubmissionDetailPage() {
     submissionId,
     submissionQuery.data,
   ]);
+
+  // A recovered run has no promise to await, so the stale cutoff is what ends
+  // the wait if the server never lands the questions.
+  React.useEffect(() => {
+    if (!isRecoveringGeneration) {
+      return;
+    }
+
+    const record = readVivaGenerationRecord(submissionId);
+
+    if (!record || record.status !== "running") {
+      return;
+    }
+
+    const remainingMs =
+      record.startedAt + GENERATION_STALE_AFTER_MS - Date.now();
+
+    if (remainingMs <= 0) {
+      setIsRecoveringGeneration(false);
+      setHasCompletedGeneration(true);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setIsRecoveringGeneration(false);
+      setHasCompletedGeneration(true);
+    }, remainingMs);
+
+    return () => clearTimeout(timeout);
+  }, [isRecoveringGeneration, submissionId]);
+
+  React.useEffect(() => {
+    if (isRecoveringGeneration && questions.length > 0) {
+      setIsRecoveringGeneration(false);
+      writeVivaGenerationRecord(submissionId, { status: "completed" });
+    }
+  }, [isRecoveringGeneration, questions.length, submissionId]);
 
   if (submissionQuery.isLoading) {
     return (
@@ -1146,7 +1216,7 @@ export function SubmissionDetailPage() {
 
         <article aria-labelledby="submission-text-heading" className="grid gap-6">
           <SectionHeader id="submission-text-heading" title="Submission" />
-          <div className="max-w-[68ch] space-y-5 font-serif text-[19px] leading-[1.75] text-on-surface">
+          <div className={cn(readingClassName, "max-w-[68ch] space-y-5")}>
             {submissionParagraphs.map((paragraph, index) => (
               <p key={`${index}-${paragraph.slice(0, 32)}`}>{paragraph}</p>
             ))}

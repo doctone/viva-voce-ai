@@ -23,6 +23,32 @@ pnpm build
 pnpm preview
 ```
 
+## Testing
+
+Run the full suite from the repo root:
+
+```sh
+pnpm test
+```
+
+To run only the web app's Vitest suite:
+
+```sh
+pnpm test:web
+```
+
+### Mutation testing
+
+Mutation testing (via [Stryker](https://stryker-mutator.io/)) checks whether the
+test suite actually catches regressions, not just whether lines are executed.
+
+```sh
+pnpm test:mutate
+```
+
+Config lives at `apps/web/stryker.config.mjs`. After a run, open
+`apps/web/reports/mutation/mutation.html` to see surviving mutants.
+
 ## Cloudflare Deploy
 
 The TanStack Start app in `apps/web` is configured for Cloudflare Workers via Wrangler.

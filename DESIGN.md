@@ -50,6 +50,11 @@ typography:
     fontWeight: 400
     lineHeight: 1.7
     letterSpacing: "-0.01em"
+  reading:
+    fontFamily: "Newsreader, serif"
+    fontSize: "19px"
+    fontWeight: 400
+    lineHeight: 1.75
   body:
     fontFamily: "Manrope, sans-serif"
     fontSize: "16px"
@@ -154,6 +159,7 @@ The Archival Paper palette uses warm reading surfaces, dark ink tones, and a sin
 - **Title** (500, 30px, 1.2): Brand titles and compact high-importance headings where presence matters but full display scale would be excessive.
 - **Subhead** (500, 20px, 1.3): Headings for subordinate panels — sidebars, rails, and utility sections that must read as secondary to the page title. Use this rather than repeating a section-scale heading in every panel, which flattens hierarchy.
 - **Lede** (400, 18px, 1.7): Standfirst copy directly under a page title.
+- **Reading** (400, 19px, 1.75): Continuous long-form prose the teacher actually reads through — the student's submission text, and any future surface presenting sustained writing for judgement. One step above `lede` because it is read for minutes rather than glanced at, with the extra leading that sustained reading needs. Always paired with a measure in the 65 to 75 character band. It is not a heading step and never leads a section.
 - **Body** (400, 16px, 1.6): The default reading size for product copy. Prose should generally stay within 65 to 75 characters per line where possible.
 - **Label** (700, 12px, 0.08em tracking, uppercase): Field labels, navigation items, eyebrow text, and compact structural language.
 
