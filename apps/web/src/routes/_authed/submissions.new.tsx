@@ -245,7 +245,7 @@ export function NewSubmissionPage() {
               </Button>
               {isSubmitting ? (
                 <p className={cn(mutedTextClassName, 'text-sm leading-6')}>
-                  Saving the submission.
+                  Saving the submission and starting question generation.
                 </p>
               ) : null}
             </div>
