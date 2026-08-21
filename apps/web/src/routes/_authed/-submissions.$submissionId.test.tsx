@@ -16,7 +16,10 @@ import {
   vivaQuestionSetHandler,
   vivaSessionHandler,
 } from '../../test/handlers'
-import { createTestVivaQuestionSet } from '../../test/factories'
+import {
+  createTestVivaQuestionSet,
+  createTestVivaSession,
+} from '../../test/factories'
 import { renderWithRouter } from '../../test/router'
 import { server } from '../../test/server'
 
@@ -526,6 +529,42 @@ describe('SubmissionDetailPage', () => {
 
       await deferredGeneration.promise
     })
+  })
+
+  it('shows the stored transcript on a fresh visit, without a recording being started', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    // Nothing in this page life starts a recording, so the only way to the
+    // transcript is looking the submission's session up from the database —
+    // which is what navigating back from the submissions table does.
+    server.use(
+      ...submissionWithQuestionsHandlers(testSubmission, [
+        createTestQuestion({ sort_order: 1 }),
+      ]),
+      submissionVivaHandler([
+        createTestSubmissionViva({ file_name: 'viva.webm' }),
+      ]),
+      vivaQuestionSetHandler(),
+      vivaSessionHandler([createTestVivaSession({ status: 'ended' })]),
+      http.get(`${SUPABASE_REST}/viva_transcript_segments`, () =>
+        HttpResponse.json([
+          { sequence: 1, text: 'and that is why I chose that opening line.' },
+          { sequence: 0, text: 'I wanted to start with the storm' },
+        ]),
+      ),
+      signedUrlHandler(),
+    )
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    expect(
+      await screen.findByText(
+        /I wanted to start with the storm and that is why I chose that opening line\./,
+      ),
+    ).toBeInTheDocument()
   })
 
   it('keeps waiting when a reload interrupts a generation run, then shows the questions', async () => {
