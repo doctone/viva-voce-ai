@@ -28,6 +28,15 @@ export const eyebrowClassName =
 export const brandTitleClassName =
   "font-display text-[30px] font-medium leading-[1.2] tracking-[-0.02em] text-primary";
 
+/**
+ * The largest step, and the only one above `page-title`. DESIGN.md reserves it
+ * for design-forward moments — the landing hero, auth screens — never for a
+ * working page's `h1`, which stays at `headingOneClassName` so app surfaces read
+ * quieter than the marketing ones.
+ */
+export const displayClassName =
+  "font-display text-[36px] font-semibold leading-[1.15] tracking-[-0.02em] text-primary sm:text-[48px] sm:leading-[1.2]";
+
 export const headingOneClassName =
   "font-display text-[36px] font-semibold leading-[1.2] tracking-[-0.02em] text-primary";
 

@@ -206,9 +206,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
                   <div className="hidden lg:contents">
                     <div className="grid gap-1">
-                      <span className={eyebrowClassName}>
-                        Academic Minimalist
-                      </span>
                       <Link to="/" className={brandTitleClassName}>
                         Viva Voce AI
                       </Link>
