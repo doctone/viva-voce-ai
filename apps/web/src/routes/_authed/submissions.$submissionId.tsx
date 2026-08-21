@@ -57,6 +57,7 @@ import {
   eyebrowClassName,
   mutedTextClassName,
   paperPanelClassName,
+  readingClassName,
 } from "~/lib/class-names";
 import { getSupabaseBrowserClient } from "../../utils/supabase-browser";
 import {
@@ -1215,7 +1216,7 @@ export function SubmissionDetailPage() {
 
         <article aria-labelledby="submission-text-heading" className="grid gap-6">
           <SectionHeader id="submission-text-heading" title="Submission" />
-          <div className="max-w-[68ch] space-y-5 font-serif text-[19px] leading-[1.75] text-on-surface">
+          <div className={cn(readingClassName, "max-w-[68ch] space-y-5")}>
             {submissionParagraphs.map((paragraph, index) => (
               <p key={`${index}-${paragraph.slice(0, 32)}`}>{paragraph}</p>
             ))}

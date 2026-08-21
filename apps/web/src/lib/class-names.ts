@@ -44,6 +44,16 @@ export const mutedTextClassName = "font-sans text-on-surface-variant";
 export const ledeClassName =
   "font-display text-[18px] leading-[1.7] tracking-[-0.01em] text-on-surface";
 
+/**
+ * Sustained reading rather than glancing: the student's submission text and any
+ * future surface presenting long-form writing for judgement. Pair it with a
+ * measure in the 65-75 character band — the size only works with the line
+ * length. `font-display` is deliberate: `font-serif` has no token behind it and
+ * falls back to the browser's serif rather than Newsreader.
+ */
+export const readingClassName =
+  "font-display text-[19px] leading-[1.75] text-on-surface";
+
 export const editorialListClassName =
   "m-0 grid list-none divide-y divide-outline-variant p-0";
 
