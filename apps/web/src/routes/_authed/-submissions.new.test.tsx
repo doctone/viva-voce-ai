@@ -1,13 +1,30 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NewSubmissionPage } from "./submissions.new";
 import { submissionCreateHandler } from "../../test/handlers";
 import { renderWithRouter } from "../../test/router";
 import { server } from "../../test/server";
+import {
+  readVivaGenerationRecord,
+  resetVivaGenerationRuns,
+} from "../../features/submissions/vivaGenerationRun";
+
+const generateSubmissionVivaSpy = vi.fn();
+
+vi.mock("../../features/submissions/useGenerateSubmissionViva", () => ({
+  useGenerateSubmissionViva: () => generateSubmissionVivaSpy,
+}));
 
 describe("NewSubmissionPage", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+    resetVivaGenerationRuns();
+    generateSubmissionVivaSpy.mockReset();
+    generateSubmissionVivaSpy.mockReturnValue(new Promise(() => {}));
+  });
+
   it("requests students and renders the submission form fields", async () => {
     let requestedStudents = false;
 
@@ -171,6 +188,52 @@ describe("NewSubmissionPage", () => {
     });
 
     expect(await screen.findByText("Submission detail")).toBeInTheDocument();
+  });
+
+  it("starts generating questions before it leaves the form", async () => {
+    server.use(
+      http.get("https://example-project.supabase.co/rest/v1/students", () => {
+        return HttpResponse.json([
+          { id: "10420000-0000-0000-0000-000000000000" },
+        ]);
+      }),
+      submissionCreateHandler(),
+    );
+
+    const user = userEvent.setup();
+
+    // The detail route is stubbed, so any generation observed here was started
+    // by this page rather than by the page being navigated to.
+    renderWithRouter(<NewSubmissionPage />, "/submissions/new", {
+      "/submissions/$submissionId": <div>Submission detail</div>,
+    });
+
+    await screen.findByRole("option", {
+      name: "10420000-0000-0000-0000-000000000000",
+    });
+
+    await user.selectOptions(
+      await screen.findByLabelText("Student"),
+      "10420000-0000-0000-0000-000000000000",
+    );
+    await user.type(screen.getByLabelText("Title"), "Economic policy reflection");
+    await user.type(
+      screen.getByLabelText("Submission text"),
+      "This submission examines monetary policy and public argument.",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Generate viva questions" }),
+    );
+
+    await waitFor(() => {
+      expect(generateSubmissionVivaSpy).toHaveBeenCalledWith(
+        "30420000-0000-0000-0000-000000000000",
+      );
+    });
+
+    expect(
+      readVivaGenerationRecord("30420000-0000-0000-0000-000000000000"),
+    ).toEqual({ startedAt: expect.any(Number), status: "running" });
   });
 
   it("shows an inline error when submission creation fails", async () => {

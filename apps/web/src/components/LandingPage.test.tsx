@@ -56,23 +56,28 @@ describe('LandingPage', () => {
       ).toBeInTheDocument()
     })
 
-    it('gives each step a description and an image placeholder', async () => {
+    it('gives each step a description', async () => {
       renderWithRouter(<LandingPage />, '/')
 
       await screen.findByRole('heading', { name: 'Submit student work' })
 
-      expect(
-        screen.getByText(/paste or upload/i),
-      ).toBeInTheDocument()
-      expect(
-        screen.getByAltText(/illustration: submit student work/i),
-      ).toBeInTheDocument()
-      expect(
-        screen.getByAltText(/illustration: ai generates tailored questions/i),
-      ).toBeInTheDocument()
-      expect(
-        screen.getByAltText(/illustration: review, edit, and record/i),
-      ).toBeInTheDocument()
+      expect(screen.getByText(/paste or upload/i)).toBeInTheDocument()
+      expect(screen.getByText(/questions across comprehension/i)).toBeInTheDocument()
+      expect(screen.getByText(/edit any question/i)).toBeInTheDocument()
+    })
+
+    it('numbers the steps in the order they happen', async () => {
+      renderWithRouter(<LandingPage />, '/')
+
+      const steps = within(
+        await screen.findByRole('list', { name: 'How it works' }),
+      ).getAllByRole('listitem')
+
+      expect(steps).toHaveLength(3)
+      expect(steps[0]).toHaveTextContent('Step 01')
+      expect(steps[0]).toHaveTextContent('Submit student work')
+      expect(steps[2]).toHaveTextContent('Step 03')
+      expect(steps[2]).toHaveTextContent('Review, edit, and record')
     })
   })
 

@@ -528,6 +528,121 @@ describe('SubmissionDetailPage', () => {
     })
   })
 
+  it('keeps waiting when a reload interrupts a generation run, then shows the questions', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    // A reload abandons the client promise, but the server keeps writing. The
+    // page has to recover by polling rather than claiming the run produced
+    // nothing — and it must not start a duplicate run.
+    window.sessionStorage.setItem(
+      'viva-generation:30420000-0000-0000-0000-000000000000',
+      JSON.stringify({ startedAt: Date.now(), status: 'running' }),
+    )
+
+    let questionRequestCount = 0
+
+    server.use(
+      http.get(`${SUPABASE_REST}/submissions`, () =>
+        HttpResponse.json([createTestSubmission({ submission_text: 'Body text.' })]),
+      ),
+      http.get(`${SUPABASE_REST}/viva_questions`, () => {
+        questionRequestCount += 1
+
+        return HttpResponse.json(
+          questionRequestCount > 1
+            ? [
+                createTestQuestion({
+                  category: 'comprehension_and_accuracy',
+                  question_text: 'Why does the response describe Lord Mansfield as pivotal?',
+                  sort_order: 1,
+                }),
+              ]
+            : [],
+        )
+      }),
+      submissionVivaHandler([]),
+      vivaQuestionSetHandler(null),
+    )
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Preparing viva questions' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: 'Viva questions unavailable' }),
+    ).not.toBeInTheDocument()
+
+    expect(
+      await screen.findByText(
+        'Why does the response describe Lord Mansfield as pivotal?',
+        undefined,
+        { timeout: 5000 },
+      ),
+    ).toBeInTheDocument()
+
+    expect(generateSubmissionVivaSpy).not.toHaveBeenCalled()
+  })
+
+  it('reports a finished run that produced no questions', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    window.sessionStorage.setItem(
+      'viva-generation:30420000-0000-0000-0000-000000000000',
+      JSON.stringify({ status: 'completed' }),
+    )
+
+    server.use(
+      ...submissionWithQuestionsHandlers(createTestSubmission({ submission_text: 'Body text.' }), []),
+      submissionVivaHandler([]),
+    )
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Viva questions unavailable' }),
+    ).toBeInTheDocument()
+    expect(generateSubmissionVivaSpy).not.toHaveBeenCalled()
+  })
+
+  it('restores the recorded error when a reload follows a failed run', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    window.sessionStorage.setItem(
+      'viva-generation:30420000-0000-0000-0000-000000000000',
+      JSON.stringify({
+        errorMessage: 'Expected exactly 3 recommended questions in comprehension_and_accuracy.',
+        status: 'failed',
+      }),
+    )
+
+    server.use(
+      ...submissionWithQuestionsHandlers(createTestSubmission({ submission_text: 'Body text.' }), []),
+      submissionVivaHandler([]),
+    )
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Viva questions unavailable' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Expected exactly 3 recommended questions in comprehension_and_accuracy.',
+      ),
+    ).toBeInTheDocument()
+    expect(generateSubmissionVivaSpy).not.toHaveBeenCalled()
+  })
+
   it('shows an in-place retry state when viva question generation fails', async () => {
     generateSubmissionVivaSpy.mockResolvedValue({
       status: 'failed',
