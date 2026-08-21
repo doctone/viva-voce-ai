@@ -271,6 +271,30 @@ async function replaceEarlierRecordings(submissionId: string, keepId: string) {
     );
 }
 
+/**
+ * The submission's most recent Viva Session, so a transcript recorded in an
+ * earlier page life can be read back. A submission keeps one recording, and
+ * only one session per question set can be active at a time, so the latest
+ * session is the one whose transcript belongs beside that recording.
+ */
+async function fetchLatestVivaSessionId(
+  submissionId: string,
+): Promise<string | null> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("viva_sessions")
+    .select("id")
+    .eq("submission_id", submissionId)
+    .order("started_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw new Error("We could not load the viva session.");
+  }
+
+  return (data as Array<{ id: string }> | null)?.[0]?.id ?? null;
+}
+
 async function fetchTranscriptSegments(
   vivaSessionId: string,
 ): Promise<TranscriptSegment[]> {
@@ -593,13 +617,25 @@ export function SubmissionDetailPage() {
     );
 
     vivaSessionIdRef.current = session.id;
-    setVivaSessionId(session.id);
+    setStartedVivaSessionId(session.id);
 
     return session.id;
   }, [questionsQuery.data?.length, submissionId]);
 
   const transcribeVivaChunk = useTranscribeVivaChunk();
-  const [vivaSessionId, setVivaSessionId] = React.useState<string | null>(null);
+  const [startedVivaSessionId, setStartedVivaSessionId] = React.useState<
+    string | null
+  >(null);
+  // Without this the page would only ever know a session it created itself, so
+  // leaving for the submissions table and coming back would blank a transcript
+  // that is sitting in the database.
+  const vivaSessionQuery = useQuery({
+    queryFn: () => fetchLatestVivaSessionId(submissionId),
+    queryKey: ["viva-session", submissionId],
+  });
+  // A session started in this page life is newer than anything the query has
+  // seen, so it takes precedence until the query catches up.
+  const vivaSessionId = startedVivaSessionId ?? vivaSessionQuery.data ?? null;
 
   const handleChunkUploaded = React.useCallback(
     (uploadedSessionId: string, sequence: number) => {
