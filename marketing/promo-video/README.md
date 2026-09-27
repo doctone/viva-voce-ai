@@ -16,23 +16,33 @@ synthesized soundtrack (`score.py`).
 | 1:02 | Not a detector. Not an AI verdict. A conversation — at scale. |
 | 1:09 | *Know what they know.* |
 
-## Watch / preview
+## Watch
 
-Open `film.html` in a browser. It plays in a loop with scrub controls. The page
-looks for `score.m4a` next to it for sound.
+The finished film is `viva-voce-ai-film.mp4` (1920 × 1080, 30 fps, H.264 + AAC, 1:15).
+
+To preview the animation live, open `film.html` in a browser. It loops and has
+scrub controls. For sound it needs `score.m4a` next to it (see below).
 
 ## Re-render
 
 ```sh
 cd marketing/promo-video
-npm i playwright-core@1.56 && pip install numpy imageio-ffmpeg
-python3 score.py                                    # -> score.wav
-FFMPEG=$(python3 -c "import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())") \
-  node capture.mjs video                            # -> video.mp4 (silent, 1080p30)
-$FFMPEG -i video.mp4 -i score.wav -c:v copy -c:a aac -b:a 192k -shortest viva-voce-ai-film.mp4
+npm i playwright-core@1.56
+pip install numpy imageio-ffmpeg
+export FFMPEG=$(python3 -c "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())")
+
+python3 score.py            # original score -> score.wav
+node capture.mjs video      # silent picture -> video.mp4
+$FFMPEG -y -i video.mp4 -i score.wav -map 0:v -map 1:a -c:v copy -c:a aac -b:a 192k \
+  -shortest -movflags +faststart viva-voce-ai-film.mp4
+$FFMPEG -y -i score.wav -c:a aac -b:a 192k score.m4a    # sound for the live preview
 ```
 
-`capture.mjs stills 5 21 46` renders PNG stills at the given timestamps for quick review.
+The film and the score share one timeline (seconds), so a change to a scene's timing in
+`film.html` needs the matching cue moved in `score.py`.
+
+`node capture.mjs stills 5 21 46` renders PNG stills at the given timestamps into `stills/`
+(create the folder first) for quick review.
 `capture.mjs` launches Chromium from `/opt/pw-browsers`. To use another install,
 change `executablePath`.
 

@@ -500,6 +500,7 @@ function drawWave(t, speaking) {
 }
 
 /* ------- render ------- */
+const SIG_LEN = Math.ceil($('sigpath').getTotalLength()) + 2;
 const scenes = ['s1','s2','s3','s4','s5','s6','s7','s8','s9'].map($);
 function show(el, o, extra = '') { el.style.opacity = o; el.style.visibility = o <= 0.001 ? 'hidden' : 'visible'; if (extra !== null) el.style.transform = extra; }
 
@@ -640,7 +641,7 @@ function render(t) {
         c.style.transform = `translateX(${(1 - co) * 30}px)`;
       });
       const cnt = Math.round(eOut(prog(t, 34.4, 38.2)) * 12);
-      $('count5').textContent = `${cnt} questions · ${Math.round(cnt * 0.75)} recommended`;
+      $('count5').textContent = t < 34.4 ? 'Reading submission…' : `${cnt} questions · ${Math.round(cnt * 0.75)} recommended`;
     }
   }
   // ---------- S6: 41.6 – 54.2
@@ -716,7 +717,7 @@ function render(t) {
       $('o1').style.color = sel > 0.5 ? 'var(--ink)' : 'var(--quiet)';
       $('o1').style.background = sel > 0.5 ? '#eef3ef' : 'var(--paper)';
       const path = $('sigpath');
-      const L = 760;
+      const L = SIG_LEN;
       path.style.strokeDasharray = L;
       path.style.strokeDashoffset = L * (1 - eIO(prog(t, 57.8, 59.6)));
       const se = eOut(prog(t, 59.7, 60.1));
@@ -727,9 +728,9 @@ function render(t) {
   // ---------- S8: 62.4 – 69.4
   {
     const s = $('s8');
-    const o = Math.min(eOut(prog(t, 62.4, 62.9)), 1 - eIn(prog(t, 69.0, 69.5)));
-    show(s, (t >= 62.4 && t < 69.5) ? o : 0, null);
-    if (t >= 62.4 && t < 69.5) {
+    const o = eOut(prog(t, 62.4, 62.9));
+    show(s, (t >= 62.4 && t < 70.0) ? o : 0, null);
+    if (t >= 62.4 && t < 70.0) {
       rise($('n1'), t, 62.6, 65.6, 20, 0.5, 0.4);
       rise($('n2'), t, 63.2, 65.6, 20, 0.5, 0.4);
       $('n1s').style.width = `${eIO(prog(t, 63.6, 64.0)) * 104}%`;
@@ -755,6 +756,7 @@ function render(t) {
   }
   // global: flash on "Ask them." cut, fade to black at end
   const light = (t >= 16.3 && t < 62.4) || t >= 69.6;
+  $('stage').style.background = (t >= 17.0 && t < 62.9) || t >= 70.0 ? '#f4f4f0' : 'var(--night)';
   $('vig').style.opacity = light ? 0.28 : 1;
   $('black').style.opacity = eIn(prog(t, 74.0, 75.0)) + (1 - eOut(prog(t, 0, 0.4)));
 }

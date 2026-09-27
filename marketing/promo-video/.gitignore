@@ -1,0 +1,8 @@
+# render intermediates (see README for how to regenerate)
+node_modules/
+package.json
+package-lock.json
+stills/
+video.mp4
+score.wav
+score.m4a
