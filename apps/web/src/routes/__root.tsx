@@ -155,8 +155,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const { publicEnv, user } = Route.useRouteContext();
   const publicEnvScript = JSON.stringify(publicEnv);
   const navLinkClassName =
-    "rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest px-[14px] py-[10px] text-[13px] font-bold uppercase tracking-[0.05em]";
-  const navLinkInactiveClassName = "text-on-surface-variant";
+    "rounded-[var(--radius)] border px-[14px] py-[10px] text-[13px] font-bold uppercase tracking-[0.05em]";
+  // Border and background live only in the state classes: TanStack's
+  // activeProps append rather than merge, so a colour in the base class would
+  // compete with the active one and win on stylesheet order.
+  const navLinkInactiveClassName =
+    "border-outline-variant bg-surface-container-lowest text-on-surface-variant";
   const navLinkActiveClassName = "border-primary bg-primary text-on-primary";
   const shouldShowTopbar = useRouterState({
     select: (state) =>
