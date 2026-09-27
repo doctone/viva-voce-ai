@@ -6,6 +6,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "~": resolve(__dirname, "./src"),
+      // Only exists inside workerd; see src/test/cloudflare-workers.ts.
+      "cloudflare:workers": resolve(__dirname, "./src/test/cloudflare-workers.ts"),
     },
   },
   test: {

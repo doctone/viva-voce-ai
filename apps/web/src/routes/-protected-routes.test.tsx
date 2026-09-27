@@ -230,14 +230,11 @@ describe("protected route access and redirects", () => {
         "/",
       );
       expect(
+        within(dialog).getByRole("link", { name: "Watch the film" }),
+      ).toHaveAttribute("href", "#film");
+      expect(
         within(dialog).getByRole("link", { name: "How it works" }),
       ).toHaveAttribute("href", "#how-it-works");
-      expect(
-        within(dialog).getByRole("link", { name: "Built for teachers" }),
-      ).toHaveAttribute("href", "#built-for-teachers");
-      expect(
-        within(dialog).getByRole("link", { name: "Why it matters" }),
-      ).toHaveAttribute("href", "#why-it-matters");
       expect(within(dialog).getByRole("link", { name: "Login" })).toHaveAttribute(
         "href",
         "/login",

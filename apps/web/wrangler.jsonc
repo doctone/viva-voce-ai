@@ -9,6 +9,11 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  // Lets server routes read files from `public/`, e.g. /film.mp4 serving the
+  // landing film in byte ranges. The Vite plugin fills in the directory.
+  "assets": {
+    "binding": "ASSETS"
+  },
   "vars": {
     "SUPABASE_URL": "https://fbpgwluiblrmcmqfjaem.supabase.co"
   }

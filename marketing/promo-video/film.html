@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viva Voce AI — Film</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  :root {
+    --paper: #faf9f5;
+    --reading: #f4f4f0;
+    --panel: #ffffff;
+    --rule: #c4c6cf;
+    --ink: #1a1c1a;
+    --quiet: #44474e;
+    --navy: #002046;
+    --reserve: #1b365d;
+    --stone: #74777f;
+    --umber: #6b4410;
+    --red: #ba1a1a;
+    --green: #2f5d46;
+    --night: #070d16;
+    --serif: 'Newsreader', Georgia, serif;
+    --sans: 'Manrope', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+  #stage {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    transform-origin: 0 0; overflow: hidden; background: var(--night);
+    font-family: var(--sans); color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  .scene { position: absolute; inset: 0; opacity: 0; will-change: opacity, transform; }
+  .abs { position: absolute; }
+  .label { font-family: var(--sans); font-weight: 700; font-size: 15px; letter-spacing: 0.14em; text-transform: uppercase; }
+  .serif { font-family: var(--serif); }
+
+  /* ---------- Scene 1: the eleven-second essay ---------- */
+  #s1 { background: var(--night); }
+  #s1 .prompt {
+    left: 50%; top: 50%; width: 1160px; transform: translate(-50%, -50%);
+    font-family: var(--mono); font-size: 34px; color: #d9dee8; line-height: 1.5;
+  }
+  #s1 .prompt .caret { display: inline-block; width: 16px; height: 40px; background: #d9dee8; vertical-align: -8px; margin-left: 4px; }
+  #s1 .prompt .chev { color: #6b86b3; margin-right: 18px; }
+  #s1 .essay {
+    left: 50%; top: 0; width: 1160px; transform: translateX(-50%);
+    font-family: var(--serif); font-size: 25px; line-height: 1.62; color: #b9c1cf;
+    text-align: justify; hyphens: auto;
+  }
+  #s1 .essay h3 { font-family: var(--serif); font-weight: 600; font-size: 38px; color: #e8ecf2; margin-bottom: 22px; text-align: left; }
+  #s1 .essay p { margin-bottom: 20px; }
+  #s1 .hud {
+    right: 64px; top: 56px; font-family: var(--mono); font-size: 22px; color: #8fa0bd; text-align: right; line-height: 1.7;
+  }
+  #s1 .hud b { color: #e8ecf2; font-weight: 600; }
+  #s1 .fadeTop { left: 0; right: 0; top: 0; height: 260px; background: linear-gradient(var(--night), rgba(7,13,22,0)); }
+  #s1 .fadeBot { left: 0; right: 0; bottom: 0; height: 380px; background: linear-gradient(rgba(7,13,22,0), var(--night) 70%); }
+  #s1 .caption {
+    left: 0; right: 0; bottom: 120px; text-align: center; font-family: var(--serif);
+    font-size: 64px; color: #f2f4f8; font-weight: 500; letter-spacing: -0.02em;
+  }
+  #s1 .caption em { color: #9fb6dc; }
+
+  /* ---------- Scene 2: detectors guess ---------- */
+  #s2 { background: var(--night); }
+  #s2 .grid { left: 50%; top: 150px; width: 1500px; transform: translateX(-50%); display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; }
+  #s2 .card {
+    height: 300px; background: #0f1a2a; border: 1px solid #22324b; border-radius: 3px; padding: 26px 26px 20px;
+    position: relative; overflow: hidden;
+  }
+  #s2 .card .name { font-family: var(--sans); font-size: 15px; font-weight: 700; letter-spacing: .12em; color: #7c8ba5; text-transform: uppercase; }
+  #s2 .card .title { font-family: var(--serif); font-size: 24px; color: #d9dee8; margin-top: 10px; line-height: 1.25; height: 60px; }
+  #s2 .card .lines { margin-top: 18px; }
+  #s2 .card .lines i { display: block; height: 7px; background: #1e2c42; border-radius: 2px; margin-bottom: 11px; }
+  #s2 .card .meter { position: absolute; left: 26px; right: 26px; bottom: 22px; }
+  #s2 .card .meter .row { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 17px; color: #8fa0bd; }
+  #s2 .card .meter .pct { font-weight: 600; color: #e8ecf2; font-size: 22px; }
+  #s2 .card .bar { height: 6px; background: #1e2c42; margin-top: 10px; border-radius: 2px; overflow: hidden; }
+  #s2 .card .bar i { display: block; height: 100%; background: #c9a15a; }
+  #s2 .card .verdict { font-family: var(--sans); font-weight: 800; font-size: 13px; letter-spacing: .14em; margin-top: 10px; }
+  #s2 .say { left: 0; right: 0; text-align: center; font-family: var(--serif); color: #f2f4f8; letter-spacing: -0.02em; }
+  #s2 .say1 { top: 830px; font-size: 56px; }
+  #s2 .stampWrap { left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; }
+  #s2 .stamp {
+    background: var(--night); padding: 54px 90px; border: 2px solid #3b4d6b; text-align: center; border-radius: 3px;
+  }
+  #s2 .stamp .k { color: #8fa0bd; }
+  #s2 .stamp .h { font-family: var(--serif); font-size: 70px; color: #f2f4f8; letter-spacing: -0.02em; line-height: 1.12; margin-top: 18px; font-weight: 500; }
+  #s2 .stamp .h em { color: #e3b46a; }
+
+  /* ---------- Scene 3: ask them ---------- */
+  #s3 { background: var(--paper); }
+  #s3 .lede { left: 0; right: 0; top: 380px; text-align: center; font-family: var(--serif); font-size: 50px; color: var(--quiet); letter-spacing: -0.01em; font-style: italic; }
+  #s3 .big { left: 0; right: 0; top: 430px; text-align: center; font-family: var(--serif); font-size: 190px; color: var(--navy); font-weight: 500; letter-spacing: -0.035em; line-height: 1; }
+  #s3 .gloss { left: 0; right: 0; top: 700px; text-align: center; }
+  #s3 .gloss .latin { font-family: var(--serif); font-style: italic; font-size: 44px; color: var(--ink); }
+  #s3 .gloss .def { margin-top: 16px; color: var(--stone); }
+  #s3 .rule { left: 50%; top: 670px; height: 1px; background: var(--rule); transform: translateX(-50%); }
+
+  /* ---------- Scene 4: wordmark ---------- */
+  #s4 { background: var(--paper); }
+  #s4 .mark { left: 0; right: 0; top: 380px; text-align: center; }
+  #s4 .mark .wm { font-family: var(--serif); font-size: 150px; font-weight: 500; color: var(--navy); letter-spacing: -0.035em; line-height: 1; display: inline-flex; align-items: flex-start; gap: 26px; }
+  #s4 .mark .ai { font-family: var(--sans); font-size: 26px; font-weight: 800; letter-spacing: .18em; color: #fff; background: var(--reserve); padding: 10px 14px 9px 17px; border-radius: 3px; margin-top: 22px; }
+  #s4 .rule { left: 50%; top: 588px; height: 1px; background: var(--ink); transform: translateX(-50%); }
+  #s4 .tag { left: 0; right: 0; top: 626px; text-align: center; font-family: var(--serif); font-size: 42px; color: var(--quiet); font-style: italic; }
+
+  /* ---------- App chrome (scenes 5–7) ---------- */
+  .scene.app { background: var(--reading); }
+  .appwin {
+    position: absolute; left: 110px; top: 160px; width: 1700px; height: 850px; background: var(--paper);
+    border: 1px solid var(--rule); border-radius: 3px; box-shadow: 0 0 0 1px rgb(26 28 26 / .06), 0 40px 90px -40px rgb(0 32 70 / .35);
+    overflow: hidden;
+  }
+  .appbar { height: 64px; border-bottom: 1px solid var(--rule); display: flex; align-items: center; padding: 0 32px; gap: 28px; background: var(--paper); }
+  .appbar .brand { font-family: var(--serif); font-size: 26px; font-weight: 600; color: var(--navy); letter-spacing: -0.02em; }
+  .appbar .brand span { font-family: var(--sans); font-size: 11px; font-weight: 800; letter-spacing: .16em; background: var(--reserve); color: #fff; padding: 4px 6px 3px 8px; border-radius: 3px; margin-left: 8px; vertical-align: 5px; }
+  .appbar .nav { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--stone); }
+  .appbar .nav.on { color: var(--navy); }
+  .appbar .sp { flex: 1; }
+  .appbar .who { font-size: 14px; color: var(--quiet); }
+  .kicker { position: absolute; left: 110px; top: 58px; }
+  .kicker .k { color: var(--stone); }
+  .kicker .h { font-family: var(--serif); font-size: 50px; color: var(--ink); letter-spacing: -0.02em; margin-top: 6px; font-weight: 500; }
+  .kicker .h em { color: var(--navy); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 16px; border-radius: 3px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .btn.pri { background: var(--reserve); color: #fff; }
+  .btn.sec { border: 1px solid var(--rule); color: var(--ink); background: transparent; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 3px; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; border: 1px solid var(--rule); color: var(--quiet); background: var(--panel); }
+
+  /* Scene 5: preparation */
+  #s5 .doc { position: absolute; left: 0; top: 64px; width: 760px; bottom: 0; border-right: 1px solid var(--rule); padding: 40px 52px; background: var(--panel); overflow: hidden; }
+  #s5 .doc .meta { color: var(--stone); }
+  #s5 .doc h2 { font-family: var(--serif); font-size: 34px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; margin: 12px 0 8px; color: var(--ink); }
+  #s5 .doc .by { font-size: 14px; color: var(--quiet); margin-bottom: 26px; }
+  #s5 .doc p { font-family: var(--serif); font-size: 19px; line-height: 1.75; color: var(--ink); margin-bottom: 16px; }
+  #s5 .doc mark { background: transparent; background-image: linear-gradient(rgb(27 54 93 / .16), rgb(27 54 93 / .16)); background-repeat: no-repeat; background-size: 0% 100%; color: inherit; padding: 1px 0; }
+  #s5 .scan { position: absolute; left: 0; width: 760px; height: 140px; background: linear-gradient(rgba(27,54,93,0), rgba(27,54,93,.08) 60%, rgba(27,54,93,.25)); border-bottom: 2px solid var(--reserve); top: 64px; }
+  #s5 .qs { position: absolute; left: 760px; right: 0; top: 64px; bottom: 0; padding: 36px 44px; background: var(--paper); }
+  #s5 .qs .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  #s5 .qs .top .h { font-family: var(--serif); font-size: 30px; font-weight: 500; letter-spacing: -0.02em; }
+  #s5 .qs .count { font-family: var(--mono); font-size: 15px; color: var(--quiet); }
+  #s5 .cat { margin-top: 18px; }
+  #s5 .cat .cl { color: var(--reserve); font-size: 12px; display: flex; align-items: center; gap: 12px; }
+  #s5 .cat .cl:after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  #s5 .q { background: var(--panel); border: 1px solid var(--rule); border-radius: 3px; padding: 14px 18px; margin-top: 10px; display: grid; grid-template-columns: 1fr auto; gap: 6px 18px; }
+  #s5 .q .t { font-family: var(--serif); font-size: 20px; line-height: 1.35; color: var(--ink); }
+  #s5 .q .n { grid-column: 1 / -1; font-size: 13.5px; color: var(--quiet); line-height: 1.45; }
+  #s5 .q .n b { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--stone); margin-right: 6px; }
+  #s5 .q .rec { font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--reserve); border: 1px solid var(--reserve); border-radius: 3px; padding: 4px 7px; height: fit-content; }
+
+  /* Scene 6: conduct */
+  #s6 .rail { position: absolute; left: 0; top: 64px; bottom: 0; width: 430px; border-right: 1px solid var(--rule); background: var(--reading); padding: 30px 28px; }
+  #s6 .rail .rl { color: var(--stone); font-size: 11px; margin-bottom: 14px; }
+  #s6 .rail .item { display: flex; gap: 14px; padding: 13px 0; border-bottom: 1px solid #e2e2dc; font-size: 14.5px; line-height: 1.4; color: var(--quiet); }
+  #s6 .rail .item .num { font-family: var(--mono); font-size: 13px; color: var(--stone); width: 22px; flex: none; padding-top: 1px; }
+  #s6 .rail .item.done { color: var(--stone); }
+  #s6 .rail .item.done .num:before { content: "✓"; color: var(--green); }
+  #s6 .rail .item.now { color: var(--ink); font-weight: 600; }
+  #s6 .rail .item .state { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 800; margin-top: 5px; display: block; }
+  #s6 .main { position: absolute; left: 430px; right: 0; top: 64px; bottom: 0; padding: 30px 48px; }
+  #s6 .recbar { display: flex; align-items: center; gap: 18px; background: var(--panel); border: 1px solid var(--rule); border-radius: 3px; padding: 14px 20px; }
+  #s6 .recbar .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--red); }
+  #s6 .recbar .rt { font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--red); }
+  #s6 .recbar .time { font-family: var(--mono); font-size: 18px; color: var(--ink); }
+  #s6 .recbar canvas { flex: 1; height: 40px; }
+  #s6 .qcard { margin-top: 22px; background: var(--panel); border: 1px solid var(--rule); border-left: 3px solid var(--reserve); border-radius: 3px; padding: 22px 28px; }
+  #s6 .qcard .ql { color: var(--reserve); font-size: 11px; }
+  #s6 .qcard .qt { font-family: var(--serif); font-size: 32px; line-height: 1.3; letter-spacing: -0.01em; margin-top: 8px; }
+  #s6 .qcard .qn { font-size: 14px; color: var(--quiet); margin-top: 10px; }
+  #s6 .qcard .qn b { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--stone); margin-right: 6px; }
+  #s6 .tx { margin-top: 22px; }
+  #s6 .tx .tl { color: var(--stone); font-size: 11px; display: flex; gap: 10px; align-items: center; }
+  #s6 .tx .tl i { width: 7px; height: 7px; border-radius: 50%; background: var(--red); display: inline-block; }
+  #s6 .tx .line { font-family: var(--serif); font-size: 23px; line-height: 1.6; color: var(--ink); margin-top: 10px; min-height: 37px; }
+  #s6 .tx .line .spk { font-family: var(--sans); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--stone); margin-right: 12px; }
+  #s6 .tx .line.t { color: var(--quiet); font-style: italic; }
+  #s6 .markers { position: absolute; left: 48px; right: 48px; bottom: 34px; display: flex; gap: 14px; align-items: center; }
+  #s6 .markers .ml { color: var(--stone); font-size: 11px; margin-right: 6px; }
+  #s6 .mk { height: 44px; padding: 0 20px; font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; border-radius: 3px; border: 1px solid var(--rule); background: var(--panel); display: inline-flex; align-items: center; gap: 10px; color: var(--ink); }
+  #s6 .mk i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  #s6 .obs { position: absolute; right: 48px; bottom: 100px; width: 520px; background: var(--panel); border: 1px solid var(--rule); border-radius: 3px; padding: 16px 20px; font-size: 15px; color: var(--quiet); line-height: 1.5; }
+  #s6 .obs .ol { color: var(--stone); font-size: 10.5px; margin-bottom: 6px; }
+  .cursor { position: absolute; width: 30px; height: 30px; left: 0; top: 0; z-index: 50; pointer-events: none; }
+
+  /* Scene 7: record */
+  #s7 .record { position: absolute; left: 50%; top: 64px; bottom: 0; width: 1100px; transform: translateX(-50%); padding: 44px 64px; background: var(--panel); border-left: 1px solid var(--rule); border-right: 1px solid var(--rule); }
+  #s7 .record .rk { color: var(--stone); font-size: 12px; }
+  #s7 .record h2 { font-family: var(--serif); font-size: 42px; font-weight: 600; letter-spacing: -0.02em; margin-top: 8px; }
+  #s7 .fields { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin-top: 24px; }
+  #s7 .fields div { padding: 16px 0; }
+  #s7 .fields .fl { font-size: 10.5px; color: var(--stone); }
+  #s7 .fields .fv { font-family: var(--serif); font-size: 22px; margin-top: 6px; }
+  #s7 .ev { display: flex; gap: 32px; margin-top: 22px; font-size: 15px; color: var(--quiet); align-items: center; }
+  #s7 .ev span { display: inline-flex; align-items: center; gap: 9px; }
+  #s7 .ev i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  #s7 .ev b { font-family: var(--mono); color: var(--ink); font-size: 17px; }
+  #s7 .concl { margin-top: 28px; }
+  #s7 .concl .cl { font-size: 11px; color: var(--stone); margin-bottom: 12px; }
+  #s7 .opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  #s7 .opt { border: 1px solid var(--rule); border-radius: 3px; padding: 16px 20px; display: flex; align-items: center; gap: 14px; font-family: var(--serif); font-size: 23px; color: var(--quiet); background: var(--paper); }
+  #s7 .opt .rb { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--stone); flex: none; position: relative; }
+  #s7 .opt .rb i { position: absolute; inset: 4px; border-radius: 50%; background: var(--green); }
+  #s7 .sig { margin-top: 30px; display: flex; align-items: flex-end; justify-content: space-between; }
+  #s7 .sig .sl { font-size: 11px; color: var(--stone); }
+  #s7 .sig .line { width: 460px; border-bottom: 1px solid var(--ink); height: 92px; position: relative; }
+  #s7 .sig svg { position: absolute; left: 10px; bottom: 4px; }
+  #s7 .sig .date { font-family: var(--mono); font-size: 15px; color: var(--quiet); text-align: right; line-height: 1.6; }
+  #s7 .seal { position: absolute; right: 64px; top: 46px; border: 1.5px solid var(--green); color: var(--green); border-radius: 3px; padding: 10px 14px; font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+
+  /* ---------- Scene 8: manifesto ---------- */
+  #s8 { background: var(--navy); }
+  #s8 .m { left: 0; right: 0; text-align: center; font-family: var(--serif); color: #f2f4f8; letter-spacing: -0.03em; font-weight: 500; }
+  #s8 .no { font-size: 92px; }
+  #s8 .no s { text-decoration: none; position: relative; }
+  #s8 .no s i { position: absolute; left: -2%; top: 55%; height: 5px; background: #e3b46a; }
+  #s8 .yes { font-size: 110px; color: #fff; }
+  #s8 .yes em { color: #e3b46a; }
+  #s8 .pair { font-size: 84px; line-height: 1.2; }
+  #s8 .pair .dim { color: #7f93b5; }
+
+  /* ---------- Scene 9: end card ---------- */
+  #s9 { background: var(--paper); }
+  #s9 .wm { left: 0; right: 0; top: 330px; text-align: center; font-family: var(--serif); font-size: 120px; font-weight: 500; color: var(--navy); letter-spacing: -0.035em; }
+  #s9 .wm span { font-family: var(--sans); font-size: 22px; font-weight: 800; letter-spacing: .18em; color: #fff; background: var(--reserve); padding: 8px 12px 7px 15px; border-radius: 3px; vertical-align: 62px; margin-left: 18px; }
+  #s9 .rule { left: 50%; top: 520px; height: 1px; background: var(--ink); transform: translateX(-50%); }
+  #s9 .line { left: 0; right: 0; top: 556px; text-align: center; font-family: var(--serif); font-size: 64px; font-style: italic; color: var(--ink); letter-spacing: -0.02em; }
+  #s9 .sub { left: 0; right: 0; top: 690px; text-align: center; color: var(--stone); }
+
+  /* grain + vignette */
+  #vig { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,.22) 100%); z-index: 90; }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 95; }
+  #black { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 96; }
+  #letterbox { position: absolute; inset: 0; pointer-events: none; z-index: 97; }
+
+  /* player controls (interactive mode only) */
+  #ctl { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); display: none; gap: 10px; align-items: center; z-index: 200;
+    background: rgba(10,16,26,.82); color: #e8ecf2; padding: 8px 12px; border-radius: 3px; font: 600 12px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; }
+  #ctl button { background: none; border: 1px solid #3b4d6b; color: inherit; font: inherit; padding: 7px 10px; border-radius: 3px; cursor: pointer; min-height: 32px; }
+  #ctl input { width: min(46vw, 420px); }
+  body.interactive #ctl { display: flex; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- S1 -->
+  <section class="scene" id="s1">
+    <div class="abs essay" id="essay">
+      <h3>The Causes of the First World War</h3>
+      <p>The outbreak of the First World War in 1914 cannot be attributed to a single cause; rather, it emerged from a complex interplay of militarism, alliances, imperialism and nationalism. Historians have long debated the relative weight of each factor, yet it is clear that the assassination of Archduke Franz Ferdinand in Sarajevo acted as a catalyst rather than a root cause.</p>
+      <p>Firstly, the system of alliances transformed a regional dispute into a continental conflict. The Triple Alliance and the Triple Entente bound the great powers together in a web of obligations, meaning that Austria-Hungary's ultimatum to Serbia rapidly drew in Russia, Germany, France and ultimately Britain. Furthermore, the rigidity of mobilisation timetables, most notably the Schlieffen Plan, reduced the space available for diplomacy.</p>
+      <p>Secondly, militarism fostered a culture in which war was seen as both inevitable and desirable. The Anglo-German naval race, beginning with the launch of HMS Dreadnought in 1906, heightened mutual suspicion. Military leaders exercised considerable influence over civilian governments, and public opinion was shaped by a press that frequently glorified conflict.</p>
+      <p>Moreover, imperial rivalry created flashpoints across the globe. The Moroccan Crises of 1905 and 1911 demonstrated the fragility of great-power relations and deepened the antagonism between Germany and the Entente powers. In the Balkans, the decline of the Ottoman Empire left a vacuum that Austria-Hungary and Russia each sought to fill.</p>
+      <p>In conclusion, while the assassination provided the spark, the underlying tensions of the period had already created a situation in which a general war was highly likely. It is therefore reasonable to argue that responsibility was shared, though some historians, notably Fritz Fischer, have placed particular emphasis on German war aims.</p>
+      <p>Nationalism, too, played a decisive role. Pan-Slavism encouraged Russian support for Serbia, while in France the desire to recover Alsace-Lorraine lingered after 1871. Within Austria-Hungary, competing nationalities threatened the integrity of the empire, making its leaders more willing to gamble on a decisive confrontation.</p>
+    </div>
+    <div class="abs fadeTop"></div>
+    <div class="abs fadeBot"></div>
+    <div class="abs prompt" id="prompt"><span class="chev">›</span><span id="ptext"></span><span class="caret" id="caret"></span></div>
+    <div class="abs hud" id="hud">WORDS <b id="wc">0</b><br>TIME <b id="tc">00:00</b></div>
+    <div class="abs caption" id="cap1">An essay now takes <em>eleven seconds.</em></div>
+  </section>
+
+  <!-- S2 -->
+  <section class="scene" id="s2">
+    <div class="abs grid" id="grid"></div>
+    <div class="abs say say1" id="say1"></div>
+    <div class="abs stampWrap" id="stampWrap">
+      <div class="stamp" id="stamp">
+        <div class="label k">The problem</div>
+        <div class="h">A written essay can no longer<br>prove <em>who understands it.</em></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- S3 -->
+  <section class="scene" id="s3">
+    <div class="abs lede" id="lede">There is an older test. One you can't outsource.</div>
+    <div class="abs big" id="big">Ask them.</div>
+    <div class="abs rule" id="rule3"></div>
+    <div class="abs gloss" id="gloss">
+      <div class="latin">viva voce</div>
+      <div class="label def">Latin · “by the living voice”</div>
+    </div>
+  </section>
+
+  <!-- S4 -->
+  <section class="scene" id="s4">
+    <div class="abs mark"><div class="wm" id="wm4"><span>Viva Voce</span><span class="ai">AI</span></div></div>
+    <div class="abs rule" id="rule4"></div>
+    <div class="abs tag" id="tag4">The oral examination, rebuilt for every classroom.</div>
+  </section>
+
+  <!-- S5 -->
+  <section class="scene app" id="s5">
+    <div class="kicker" id="k5"><div class="label k">01 · Prepare</div><div class="h">Upload the work. <em>Get a viva built from it.</em></div></div>
+    <div class="appwin" id="w5">
+      <div class="appbar"><div class="brand">Viva Voce<span>AI</span></div><div class="nav on">Submissions</div><div class="nav">Student records</div><div class="sp"></div><div class="who">Ms. R. Hale · History</div></div>
+      <div class="doc" id="doc5">
+        <div class="label meta">Submission · Year 12 History</div>
+        <h2>Was the Treaty of Versailles the main cause of the Second World War?</h2>
+        <div class="by">Student: Daniel Okoro · Submitted 14 March</div>
+        <p>The Treaty of Versailles created a <mark id="m1">resentment so deep that German democracy never recovered from it.</mark> The War Guilt Clause, Article 231, was felt as a national humiliation, and the reparations of 132 billion gold marks were, <mark id="m2">in Keynes's words, economically impossible.</mark></p>
+        <p>However, it would be too simple to argue that Versailles alone made war inevitable. <mark id="m3">The Great Depression, rather than the treaty,</mark> gave the Nazi party its mass support after 1930, and the policy of appeasement allowed Hitler to dismantle the settlement piece by piece.</p>
+        <p>Ultimately, <mark id="m4">Versailles was a necessary but not sufficient cause:</mark> it created the grievance, but it took economic collapse and diplomatic weakness to turn that grievance into war.</p>
+      </div>
+      <div class="scan" id="scan5"></div>
+      <div class="qs">
+        <div class="top"><div class="h">Viva question set</div><div class="count" id="count5">0 questions · 0 recommended</div></div>
+        <div class="cat" data-c="0"><div class="label cl">Comprehension &amp; accuracy</div>
+          <div class="q"><div class="t">What did Keynes actually mean by “economically impossible”, and do you agree with him?</div><div class="rec">Recommended</div><div class="n"><b>Listen for</b>Knowledge of <i>The Economic Consequences of the Peace</i>; awareness later historians challenged it.</div></div>
+        </div>
+        <div class="cat" data-c="1"><div class="label cl">Argumentation &amp; reasoning</div>
+          <div class="q"><div class="t">You call Versailles “necessary but not sufficient”. What would have to be true for it to be sufficient?</div><div class="rec">Recommended</div><div class="n"><b>Listen for</b>Can reason about causation beyond the essay's own sentences.</div></div>
+        </div>
+        <div class="cat" data-c="2"><div class="label cl">Authenticity &amp; ownership</div>
+          <div class="q"><div class="t">Which source changed your mind while writing this — and what did you believe before?</div><div class="rec">Recommended</div><div class="n"><b>Listen for</b>A specific, lived account of the research process.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- S6 -->
+  <section class="scene app" id="s6">
+    <div class="kicker" id="k6"><div class="label k">02 · Conduct</div><div class="h">Ask. Listen. <em>Mark the evidence as it happens.</em></div></div>
+    <div class="appwin" id="w6">
+      <div class="appbar"><div class="brand">Viva Voce<span>AI</span></div><div class="nav on">Conduct viva</div><div class="sp"></div><div class="who">Daniel Okoro · Treaty of Versailles essay</div></div>
+      <div class="rail">
+        <div class="label rl">Question set · 6 of 12</div>
+        <div class="item done"><span class="num"></span><div>What did Keynes actually mean by “economically impossible”?<span class="state" style="color:var(--green)">Asked · Clear understanding</span></div></div>
+        <div class="item now" id="railNow"><span class="num">2</span><div>“Necessary but not sufficient” — what would make it sufficient?<span class="state" style="color:var(--reserve)" id="railState">Asking now</span></div></div>
+        <div class="item"><span class="num">3</span><div>Which source changed your mind while writing this?<span class="state" style="color:var(--stone)">Not yet asked</span></div></div>
+        <div class="item"><span class="num">4</span><div>How did the Depression change who voted for the Nazis?<span class="state" style="color:var(--stone)">Not yet asked</span></div></div>
+        <div class="item"><span class="num">5</span><div>Explain appeasement to someone who has never heard of it.<span class="state" style="color:var(--stone)">Not yet asked</span></div></div>
+      </div>
+      <div class="main">
+        <div class="recbar"><span class="dot" id="dot"></span><span class="rt">Recording</span><span class="time" id="rtime">04:12</span><canvas id="wave" width="900" height="80"></canvas></div>
+        <div class="qcard">
+          <div class="label ql">Argumentation &amp; reasoning · Question 2</div>
+          <div class="qt">You call Versailles “necessary but not sufficient.” What would have to be true for it to be <i>sufficient</i>?</div>
+          <div class="qn"><b>Listen for</b>Reasoning about causation that goes beyond the essay's own sentences.</div>
+        </div>
+        <div class="tx">
+          <div class="label tl"><i id="livedot"></i>Live transcript</div>
+          <div class="line" id="tx1"></div>
+          <div class="line" id="tx2"></div>
+        </div>
+        <div class="obs" id="obs"><div class="label ol">Observation · private</div><span id="obsText"></span></div>
+        <div class="markers">
+          <span class="label ml">Evidence</span>
+          <span class="mk" id="mkA"><i style="background:var(--green)"></i>Clear understanding</span>
+          <span class="mk" id="mkB"><i style="background:#c9a15a"></i>Probe further</span>
+          <span class="mk" id="mkC"><i style="background:var(--red)"></i>Concern</span>
+        </div>
+      </div>
+    </div>
+    <svg class="cursor" id="cur6" viewBox="0 0 30 30"><path d="M3 2 L3 24 L9 18.5 L13 27 L17 25.2 L13 16.8 L21 16.8 Z" fill="#1a1c1a" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+  </section>
+
+  <!-- S7 -->
+  <section class="scene app" id="s7">
+    <div class="kicker" id="k7"><div class="label k">03 · Conclude</div><div class="h">The teacher decides. <em>Every judgement, on the record.</em></div></div>
+    <div class="appwin" id="w7">
+      <div class="appbar"><div class="brand">Viva Voce<span>AI</span></div><div class="nav on">Viva record</div><div class="sp"></div><div class="who">Ms. R. Hale · History</div></div>
+      <div class="record">
+        <div class="seal" id="seal">Signed record</div>
+        <div class="label rk">Viva record</div>
+        <h2>Daniel Okoro — Treaty of Versailles</h2>
+        <div class="fields">
+          <div><div class="label fl">Duration</div><div class="fv">11 min 40 s</div></div>
+          <div><div class="label fl">Questions asked</div><div class="fv">6 + 2 follow-ups</div></div>
+          <div><div class="label fl">Observations</div><div class="fv">5 notes</div></div>
+          <div><div class="label fl">Recording</div><div class="fv">Audio · attached</div></div>
+        </div>
+        <div class="ev">
+          <span class="label" style="font-size:11px;color:var(--stone)">Evidence</span>
+          <span><i style="background:var(--green)"></i>Clear understanding <b id="e1">0</b></span>
+          <span><i style="background:#c9a15a"></i>Probe further <b id="e2">0</b></span>
+          <span><i style="background:var(--red)"></i>Concern <b id="e3">0</b></span>
+        </div>
+        <div class="concl">
+          <div class="label cl">Viva conclusion · teacher's determination</div>
+          <div class="opts">
+            <div class="opt" id="o1"><span class="rb"><i id="o1i"></i></span>Understanding demonstrated</div>
+            <div class="opt"><span class="rb"></span>Further review required</div>
+            <div class="opt"><span class="rb"></span>Authenticity concern</div>
+            <div class="opt"><span class="rb"></span>Unable to conclude</div>
+          </div>
+        </div>
+        <div class="sig">
+          <div>
+            <div class="label sl">Signed by teacher</div>
+            <div class="line"><svg width="420" height="90" viewBox="0 0 420 90"><path id="sigpath" d="M8 62 C 22 20, 40 18, 38 50 C 36 76, 20 80, 30 58 C 42 34, 64 30, 70 52 C 74 66, 80 70, 92 50 C 102 34, 110 36, 112 54 C 114 66, 124 64, 134 46 L 140 34 C 146 60, 150 70, 164 52 C 178 34, 188 40, 196 56 C 202 66, 214 62, 226 44 C 236 30, 246 34, 250 50 C 254 64, 268 64, 290 40 C 310 22, 330 30, 402 26" fill="none" stroke="#1b365d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          </div>
+          <div class="date">R. Hale<br>21 March · 14:32</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- S8 -->
+  <section class="scene" id="s8">
+    <div class="abs m no" id="n1" style="top:300px"><s>Not a detector.<i id="n1s"></i></s></div>
+    <div class="abs m no" id="n2" style="top:430px"><s>Not an AI verdict.<i id="n2s"></i></s></div>
+    <div class="abs m yes" id="n3" style="top:600px">A <em>conversation</em> — at scale.</div>
+    <div class="abs m pair" id="pair8" style="top:380px"><span class="dim">Stop guessing who wrote it.</span><br>Find out who <em style="color:#e3b46a">understands</em> it.</div>
+  </section>
+
+  <!-- S9 -->
+  <section class="scene" id="s9">
+    <div class="abs wm" id="wm9">Viva Voce<span>AI</span></div>
+    <div class="abs rule" id="rule9"></div>
+    <div class="abs line" id="line9">Know what they know.</div>
+    <div class="abs label sub" id="sub9" style="font-size:16px">Prepare · Conduct · Conclude — oral assessment for every student</div>
+  </section>
+
+  <div id="vig"></div>
+  <div id="flash"></div>
+  <div id="black"></div>
+</div>
+
+<div id="ctl"><button id="play" aria-label="Play or pause">Pause</button><input id="scrub" type="range" min="0" max="75" step="0.01" value="0" aria-label="Scrub timeline"><span id="clock">0:00</span><button id="snd" aria-label="Toggle sound">Sound off</button></div>
+
+<script>
+const DURATION = 75;
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const eOut = (x) => 1 - Math.pow(1 - x, 3);
+const eIn = (x) => x * x * x;
+const eIO = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const eExpo = (x) => (x === 1 ? 1 : 1 - Math.pow(2, -10 * x));
+const lerp = (a, b, x) => a + (b - a) * x;
+// fade-in over [a, a+fi], hold, fade-out over [b-fo, b]
+const window_ = (t, a, b, fi = 0.5, fo = 0.5) => Math.min(eOut(prog(t, a, a + fi)), 1 - eIn(prog(t, b - fo, b)));
+function rise(el, t, a, b, dy = 24, fi = 0.7, fo = 0.5) {
+  const o = window_(t, a, b, fi, fo);
+  const y = (1 - eOut(prog(t, a, a + fi))) * dy - eIn(prog(t, b - fo, b)) * dy * 0.4;
+  el.style.opacity = o;
+  el.style.transform = (el.dataset.base || '') + ` translateY(${y}px)`;
+  el.style.filter = o < 1 && o > 0.001 ? `blur(${(1 - o) * 6}px)` : 'none';
+  el.style.visibility = o <= 0.001 ? 'hidden' : 'visible';
+}
+function hash(n) { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
+function typed(str, x) { return str.slice(0, Math.round(str.length * clamp(x))); }
+
+/* ------- setup ------- */
+const PROMPT = "write me a 2,000 word essay on the causes of WW1. make it sound like a 17 year old wrote it";
+const essays = [
+  ["Student 04", "Causes of the First World War", 0.71, 0.18, 0.44],
+  ["Student 11", "Macbeth and the Supernatural", 0.12, 0.83, 0.39],
+  ["Student 17", "Photosynthesis Lab Report", 0.56, 0.21, 0.92],
+  ["Student 22", "Is Utilitarianism Defensible?", 0.34, 0.67, 0.08],
+  ["Student 23", "Climate Policy in the EU", 0.88, 0.49, 0.27],
+  ["Student 29", "The Great Gatsby: Wealth", 0.05, 0.62, 0.77],
+  ["Student 31", "Origins of the Cold War", 0.47, 0.93, 0.15],
+  ["Student 36", "Rates of Reaction", 0.29, 0.38, 0.81],
+];
+$('grid').innerHTML = essays.map((e, i) => `
+  <div class="card" id="c${i}">
+    <div class="name">${e[0]}</div>
+    <div class="title">${e[1]}</div>
+    <div class="lines">${[92, 100, 84, 62].map((w) => `<i style="width:${w}%"></i>`).join('')}</div>
+    <div class="meter">
+      <div class="row"><span>AI-likelihood</span><span class="pct" id="p${i}">—</span></div>
+      <div class="bar"><i id="b${i}"></i></div>
+      <div class="verdict" id="v${i}"></div>
+    </div>
+  </div>`).join('');
+$('essay').dataset.base = 'translateX(-50%)';
+$('prompt').dataset.base = 'translate(-50%, -50%)';
+
+const SAYS2 = [
+  [8.9, 10.6, "Detectors <em style='color:#e3b46a'>guess.</em>"],
+  [10.6, 12.2, "Honest students get <em style='color:#e3b46a'>accused.</em>"],
+  [12.2, 13.7, "Teachers are left <em style='color:#e3b46a'>unsure.</em>"],
+];
+
+const TX1 = "If Britain and France had enforced it in 1936 — the Rhineland — then maybe, but they didn't. So I'd say it only becomes sufficient if the Depression still happens and nobody stands up to Hitler…";
+const TX2 = "Actually, no — then it's the appeasement doing the work, not the treaty. That's kind of my point.";
+const OBS = "Reasoned counterfactually without notes; revised own claim unprompted. Strong ownership.";
+
+/* waveform */
+const wave = $('wave'); const wctx = wave.getContext('2d');
+function drawWave(t, speaking) {
+  wctx.clearRect(0, 0, 900, 80);
+  const n = 90;
+  for (let i = 0; i < n; i++) {
+    const k = Math.floor(t * 14) - (n - i);
+    const env = speaking(k / 14);
+    const a = (0.12 + 0.88 * hash(k) * env) * (0.35 + 0.65 * Math.abs(Math.sin(k * 0.37)));
+    const h = Math.max(3, a * 70);
+    wctx.fillStyle = i > n - 4 ? '#1b365d' : 'rgba(27,54,93,.55)';
+    wctx.fillRect(i * 10, 40 - h / 2, 5, h);
+  }
+}
+
+/* ------- render ------- */
+const SIG_LEN = Math.ceil($('sigpath').getTotalLength()) + 2;
+const scenes = ['s1','s2','s3','s4','s5','s6','s7','s8','s9'].map($);
+function show(el, o, extra = '') { el.style.opacity = o; el.style.visibility = o <= 0.001 ? 'hidden' : 'visible'; if (extra !== null) el.style.transform = extra; }
+
+function render(t) {
+  // ---------- S1: 0 – 8.4
+  {
+    const s = $('s1');
+    const o = 1 - eIn(prog(t, 8.0, 8.6));
+    show(s, t < 8.6 ? o : 0);
+    if (t < 8.6) {
+      // prompt typing 0.5 – 3.0
+      $('ptext').textContent = typed(PROMPT, prog(t, 0.5, 3.0));
+      $('caret').style.opacity = (Math.floor(t * 2.2) % 2 === 0 || (t > 0.5 && t < 3.0)) ? 1 : 0;
+      // prompt rises & fades at 3.3
+      const pe = eIO(prog(t, 3.2, 3.9));
+      const po = 1 - eIn(prog(t, 3.3, 4.0));
+      $('prompt').style.opacity = po;
+      $('prompt').style.transform = `translate(-50%, calc(-50% - ${pe * 320}px)) scale(${1 - pe * 0.15})`;
+      // essay flood 3.5 – 6.3: scrolls upward fast
+      const ef = prog(t, 3.5, 7.2);
+      const eo = eOut(prog(t, 3.5, 3.9)) * (1 - 0.55 * eOut(prog(t, 5.6, 6.6)));
+      const scrollY = 1080 - eExpo(ef) * 1380;
+      $('essay').style.opacity = eo;
+      $('essay').style.transform = `translateX(-50%) translateY(${scrollY}px)`;
+      $('essay').style.filter = `blur(${(1 - eOut(prog(t, 3.5, 4.6))) * 5 + eOut(prog(t, 5.6, 6.6)) * 2.2}px)`;
+      // HUD
+      const wcP = eOut(prog(t, 3.5, 5.6));
+      $('hud').style.opacity = window_(t, 3.4, 8.2, 0.4, 0.6);
+      $('wc').textContent = Math.round(wcP * 2014).toLocaleString('en-GB');
+      const secs = Math.min(11, Math.floor(wcP * 11 + 0.0001));
+      $('tc').textContent = '00:' + String(secs).padStart(2, '0');
+      rise($('cap1'), t, 5.8, 8.4, 30, 0.8, 0.5);
+    }
+  }
+  // ---------- S2: 8.4 – 16
+  {
+    const s = $('s2');
+    const o = Math.min(eOut(prog(t, 8.4, 9.0)), 1 - eIn(prog(t, 15.4, 16.0)));
+    show(s, (t >= 8.4 && t < 16) ? o : 0, null);
+    if (t >= 8.4 && t < 16) {
+      essays.forEach((e, i) => {
+        const a = 8.5 + i * 0.09;
+        const c = $('c' + i);
+        const co = eOut(prog(t, a, a + 0.6));
+        const dim = 1 - 0.72 * eOut(prog(t, 13.4, 14.0));
+        c.style.opacity = co * dim;
+        c.style.transform = `translateY(${(1 - co) * 40}px) scale(${1 - 0.03 * eOut(prog(t, 13.4, 14.2))})`;
+        // flickering detector score: three "runs" of the detector disagree
+        const run = Math.floor(clamp((t - 9.2) / 1.5, 0, 2.999));
+        const settle = prog(t, 9.2 + run * 1.5, 9.2 + run * 1.5 + 0.55);
+        const target = e[2 + run];
+        const jitter = settle < 1 ? hash(i * 31 + Math.floor(t * 24)) : target;
+        const v = t < 9.2 ? 0 : lerp(jitter, target, eOut(settle));
+        const pct = Math.round(v * 100);
+        $('p' + i).textContent = t < 9.2 ? '—' : pct + '%';
+        $('b' + i).style.width = pct + '%';
+        $('b' + i).style.background = v > 0.6 ? '#d06b5b' : v > 0.3 ? '#c9a15a' : '#6f9a84';
+        const vd = $('v' + i);
+        vd.textContent = t < 9.2 ? '' : v > 0.6 ? 'LIKELY AI' : v > 0.3 ? 'UNCERTAIN' : 'LIKELY HUMAN';
+        vd.style.color = v > 0.6 ? '#e49585' : v > 0.3 ? '#d9b577' : '#8fbba5';
+        c.style.borderColor = v > 0.6 && settle >= 1 ? '#6b3a36' : '#22324b';
+      });
+      const say = $('say1');
+      const cur = SAYS2.find((x) => t >= x[0] && t < x[1]);
+      if (cur) {
+        say.innerHTML = cur[2];
+        const lo = window_(t, cur[0], cur[1], 0.35, 0.3);
+        say.style.opacity = lo;
+        say.style.transform = `translateY(${(1 - eOut(prog(t, cur[0], cur[0] + 0.35))) * 18}px)`;
+      } else say.style.opacity = 0;
+      const st = $('stampWrap');
+      const so = eOut(prog(t, 13.7, 14.2));
+      st.style.opacity = so;
+      $('stamp').style.transform = `scale(${lerp(1.18, 1, eOut(prog(t, 13.7, 14.15)))})`;
+    }
+  }
+  // ---------- S3: 16 – 24
+  {
+    const s = $('s3');
+    const inT = prog(t, 16.0, 16.9);
+    const o = Math.min(eOut(inT), 1 - eIn(prog(t, 23.4, 24.0)));
+    show(s, (t >= 16 && t < 24) ? o : 0, null);
+    if (t >= 16 && t < 24) {
+      s.style.clipPath = `inset(${(1 - eIO(inT)) * 50}% 0 ${(1 - eIO(inT)) * 50}% 0)`;
+      rise($('lede'), t, 16.7, 19.3, 18, 0.8, 0.5);
+      const bo = window_(t, 19.4, 23.6, 0.9, 0.5);
+      $('big').style.opacity = bo;
+      $('big').style.letterSpacing = `${lerp(0.02, -0.035, eOut(prog(t, 19.4, 21.5)))}em`;
+      $('big').style.transform = `scale(${lerp(1.06, 1, eOut(prog(t, 19.4, 21.8)))})`;
+      $('big').style.filter = `blur(${(1 - eOut(prog(t, 19.4, 20.1))) * 10}px)`;
+      $('rule3').style.width = `${eIO(prog(t, 20.8, 21.9)) * 520}px`;
+      $('rule3').style.opacity = 1 - eIn(prog(t, 23.2, 23.6));
+      rise($('gloss'), t, 21.3, 23.6, 16, 0.8, 0.4);
+    }
+  }
+  // ---------- S4: 24 – 29.4
+  {
+    const s = $('s4');
+    const o = Math.min(eOut(prog(t, 24.0, 24.3)), 1 - eIn(prog(t, 28.9, 29.4)));
+    show(s, (t >= 24 && t < 29.4) ? o : 0, null);
+    if (t >= 24 && t < 29.4) {
+      const wm = $('wm4');
+      const wo = eOut(prog(t, 24.2, 25.4));
+      wm.style.opacity = wo;
+      wm.style.transform = `translateY(${(1 - wo) * 26}px)`;
+      wm.style.filter = `blur(${(1 - wo) * 8}px)`;
+      $('rule4').style.width = `${eIO(prog(t, 25.0, 26.2)) * 980}px`;
+      rise($('tag4'), t, 25.7, 29.4, 16, 0.9, 0.5);
+      s.style.transform = `scale(${lerp(1, 1.035, prog(t, 24, 29.4))})`;
+    }
+  }
+  // ---------- S5: 29.4 – 41.6
+  {
+    const s = $('s5');
+    const inT = prog(t, 29.4, 30.3);
+    const o = Math.min(eOut(inT), 1 - eIn(prog(t, 41.0, 41.6)));
+    show(s, (t >= 29.4 && t < 41.6) ? o : 0, null);
+    if (t >= 29.4 && t < 41.6) {
+      rise($('k5'), t, 29.6, 41.6, 14, 0.8, 0.4);
+      const w = $('w5');
+      const wi = eOut(prog(t, 29.5, 30.6));
+      const push = eIO(prog(t, 30.6, 41.6));
+      w.style.transform = `translateY(${(1 - wi) * 60}px) scale(${1 + push * 0.025})`;
+      w.style.opacity = wi;
+      // scanning 31.0 – 34.4
+      const sc = prog(t, 31.0, 34.4);
+      $('scan5').style.opacity = window_(t, 31.0, 34.6, 0.3, 0.5);
+      $('scan5').style.transform = `translateY(${eIO(sc) * 640}px)`;
+      [['m1', 31.7], ['m2', 32.4], ['m3', 33.3], ['m4', 34.0]].forEach(([id, a]) => {
+        $(id).style.backgroundSize = `${eOut(prog(t, a, a + 0.6)) * 100}% 100%`;
+      });
+      // questions appear 34.2+
+      const cats = s.querySelectorAll('.cat');
+      cats.forEach((c, i) => {
+        const a = 34.4 + i * 1.25;
+        const co = eOut(prog(t, a, a + 0.7));
+        c.style.opacity = co;
+        c.style.transform = `translateX(${(1 - co) * 30}px)`;
+      });
+      const cnt = Math.round(eOut(prog(t, 34.4, 38.2)) * 12);
+      $('count5').textContent = t < 34.4 ? 'Reading submission…' : `${cnt} questions · ${Math.round(cnt * 0.75)} recommended`;
+    }
+  }
+  // ---------- S6: 41.6 – 54.2
+  {
+    const s = $('s6');
+    const o = Math.min(eOut(prog(t, 41.6, 42.4)), 1 - eIn(prog(t, 53.6, 54.2)));
+    show(s, (t >= 41.6 && t < 54.2) ? o : 0, null);
+    if (t >= 41.6 && t < 54.2) {
+      rise($('k6'), t, 41.8, 54.2, 14, 0.8, 0.4);
+      const w = $('w6');
+      const wi = eOut(prog(t, 41.7, 42.8));
+      w.style.opacity = wi;
+      w.style.transform = `translateY(${(1 - wi) * 60}px) scale(${1 + eIO(prog(t, 42.8, 54.2)) * 0.02})`;
+      const base = 252 + (t - 41.6);
+      $('rtime').textContent = `${String(Math.floor(base / 60)).padStart(2, '0')}:${String(Math.floor(base % 60)).padStart(2, '0')}`;
+      $('dot').style.opacity = 0.35 + 0.65 * (0.5 + 0.5 * Math.cos(t * 4));
+      $('livedot').style.opacity = 0.35 + 0.65 * (0.5 + 0.5 * Math.cos(t * 4));
+      const sp1 = [43.0, 48.0], sp2 = [48.9, 51.3];
+      const speaking = (tt) => {
+        const tt2 = tt;
+        const on = (tt2 > sp1[0] && tt2 < sp1[1]) || (tt2 > sp2[0] && tt2 < sp2[1]);
+        return on ? 1 : 0.08;
+      };
+      drawWave(t, speaking);
+      const p1 = prog(t, sp1[0], sp1[1]);
+      $('tx1').innerHTML = t > sp1[0] ? `<span class="spk">Daniel</span>${typed(TX1, p1)}` : '';
+      const p2 = prog(t, sp2[0], sp2[1]);
+      $('tx2').innerHTML = t > sp2[0] ? `<span class="spk">Daniel</span>${typed(TX2, p2)}` : '';
+      // cursor: moves to "Clear understanding" at ~51.8, clicks 52.4
+      const cur = $('cur6');
+      const winX = 110, winY = 160;
+      const tgtA = { x: winX + 430 + 48 + 150 + 30, y: winY + 64 + 850 - 64 - 34 - 22 };
+      const start = { x: 1500, y: 700 };
+      const mv = eIO(prog(t, 51.3, 52.2));
+      const cx = lerp(start.x, tgtA.x, mv), cy = lerp(start.y, tgtA.y, mv);
+      const click = prog(t, 52.25, 52.45);
+      cur.style.opacity = window_(t, 51.1, 54.0, 0.3, 0.4);
+      cur.style.transform = `translate(${cx}px, ${cy}px) scale(${1 - Math.sin(click * Math.PI) * 0.18})`;
+      const on = t > 52.35;
+      const mkA = $('mkA');
+      mkA.style.background = on ? 'var(--green)' : 'var(--panel)';
+      mkA.style.color = on ? '#fff' : 'var(--ink)';
+      mkA.style.borderColor = on ? 'var(--green)' : 'var(--rule)';
+      mkA.querySelector('i').style.background = on ? '#fff' : 'var(--green)';
+      mkA.style.transform = `translateY(${Math.sin(click * Math.PI)}px)`;
+      $('railState').textContent = on ? 'Asked · Clear understanding' : 'Asking now';
+      $('railState').style.color = on ? 'var(--green)' : 'var(--reserve)';
+      // observation typing 49.4 – 51.0
+      const ob = $('obs');
+      ob.style.opacity = eOut(prog(t, 49.0, 49.5));
+      ob.style.transform = `translateY(${(1 - eOut(prog(t, 49.0, 49.5))) * 12}px)`;
+      $('obsText').textContent = typed(OBS, prog(t, 49.3, 51.2));
+    }
+  }
+  // ---------- S7: 54.2 – 62.4
+  {
+    const s = $('s7');
+    const o = Math.min(eOut(prog(t, 54.2, 55.0)), 1 - eIn(prog(t, 61.8, 62.4)));
+    show(s, (t >= 54.2 && t < 62.4) ? o : 0, null);
+    if (t >= 54.2 && t < 62.4) {
+      rise($('k7'), t, 54.4, 62.4, 14, 0.8, 0.4);
+      const w = $('w7');
+      const wi = eOut(prog(t, 54.3, 55.4));
+      w.style.opacity = wi;
+      w.style.transform = `translateY(${(1 - wi) * 60}px) scale(${1 + eIO(prog(t, 55.4, 62.4)) * 0.02})`;
+      const cp = eOut(prog(t, 55.4, 56.6));
+      $('e1').textContent = Math.round(cp * 5);
+      $('e2').textContent = Math.round(cp * 2);
+      $('e3').textContent = 0;
+      const sel = eOut(prog(t, 57.0, 57.35));
+      $('o1i').style.transform = `scale(${sel})`;
+      $('o1').style.borderColor = sel > 0.5 ? 'var(--green)' : 'var(--rule)';
+      $('o1').style.color = sel > 0.5 ? 'var(--ink)' : 'var(--quiet)';
+      $('o1').style.background = sel > 0.5 ? '#eef3ef' : 'var(--paper)';
+      const path = $('sigpath');
+      const L = SIG_LEN;
+      path.style.strokeDasharray = L;
+      path.style.strokeDashoffset = L * (1 - eIO(prog(t, 57.8, 59.6)));
+      const se = eOut(prog(t, 59.7, 60.1));
+      $('seal').style.opacity = se;
+      $('seal').style.transform = `scale(${lerp(1.3, 1, se)}) rotate(${lerp(-6, -2, se)}deg)`;
+    }
+  }
+  // ---------- S8: 62.4 – 69.4
+  {
+    const s = $('s8');
+    const o = eOut(prog(t, 62.4, 62.9));
+    show(s, (t >= 62.4 && t < 70.0) ? o : 0, null);
+    if (t >= 62.4 && t < 70.0) {
+      rise($('n1'), t, 62.6, 65.6, 20, 0.5, 0.4);
+      rise($('n2'), t, 63.2, 65.6, 20, 0.5, 0.4);
+      $('n1s').style.width = `${eIO(prog(t, 63.6, 64.0)) * 104}%`;
+      $('n2s').style.width = `${eIO(prog(t, 64.0, 64.4)) * 104}%`;
+      rise($('n3'), t, 64.4, 65.7, 20, 0.5, 0.35);
+      rise($("pair8"), t, 66.0, 69.4, 24, 0.8, 0.4);
+    }
+  }
+  // ---------- S9: 69.4 – 75
+  {
+    const s = $('s9');
+    const o = eOut(prog(t, 69.4, 70.0));
+    show(s, t >= 69.4 ? o : 0, null);
+    if (t >= 69.4) {
+      const wo = eOut(prog(t, 69.7, 70.9));
+      $('wm9').style.opacity = wo;
+      $('wm9').style.transform = `translateY(${(1 - wo) * 20}px)`;
+      $('wm9').style.filter = `blur(${(1 - wo) * 6}px)`;
+      $('rule9').style.width = `${eIO(prog(t, 70.4, 71.4)) * 760}px`;
+      rise($('line9'), t, 71.0, 80, 16, 1.0, 0.1);
+      rise($('sub9'), t, 72.0, 80, 10, 1.0, 0.1);
+    }
+  }
+  // global: flash on "Ask them." cut, fade to black at end
+  const light = (t >= 16.3 && t < 62.4) || t >= 69.6;
+  $('stage').style.background = (t >= 17.0 && t < 62.9) || t >= 70.0 ? '#f4f4f0' : 'var(--night)';
+  $('vig').style.opacity = light ? 0.28 : 1;
+  $('black').style.opacity = eIn(prog(t, 74.0, 75.0)) + (1 - eOut(prog(t, 0, 0.4)));
+}
+
+/* ------- scaling / player ------- */
+function fit() {
+  const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+  const st = $('stage');
+  st.style.transform = `translate(${(innerWidth - 1920 * s) / 2}px, ${(innerHeight - 1080 * s) / 2}px) scale(${s})`;
+}
+window.render = render;
+window.DURATION = DURATION;
+
+const capture = new URLSearchParams(location.search).has('capture');
+if (!capture) {
+  document.body.classList.add('interactive');
+  addEventListener('resize', fit); fit();
+  let t0 = performance.now(), paused = false, offset = 0;
+  const audio = new Audio('score.m4a'); audio.preload = 'auto';
+  let sound = false;
+  const now = () => (paused ? offset : offset + (performance.now() - t0) / 1000);
+  function loop() {
+    let t = now();
+    if (t >= DURATION + 1.5) { offset = 0; t0 = performance.now(); t = 0; if (sound) { audio.currentTime = 0; audio.play().catch(() => {}); } }
+    render(Math.min(t, DURATION));
+    $('scrub').value = Math.min(t, DURATION);
+    const tt = Math.floor(Math.min(t, DURATION));
+    $('clock').textContent = `${Math.floor(tt / 60)}:${String(tt % 60).padStart(2, '0')}`;
+    requestAnimationFrame(loop);
+  }
+  $('play').onclick = () => {
+    if (paused) { t0 = performance.now(); paused = false; $('play').textContent = 'Pause'; if (sound) { audio.currentTime = offset; audio.play().catch(() => {}); } }
+    else { offset = now(); paused = true; $('play').textContent = 'Play'; audio.pause(); }
+  };
+  $('scrub').oninput = (e) => { offset = +e.target.value; t0 = performance.now(); if (sound) audio.currentTime = offset; };
+  $('snd').onclick = () => {
+    sound = !sound; $('snd').textContent = sound ? 'Sound on' : 'Sound off';
+    if (sound) { audio.currentTime = now(); if (!paused) audio.play().catch(() => {}); } else audio.pause();
+  };
+  document.fonts.ready.then(() => { t0 = performance.now(); requestAnimationFrame(loop); });
+} else {
+  $('stage').style.transform = 'none';
+}
+</script>
+</body>
+</html>
