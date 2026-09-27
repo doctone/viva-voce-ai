@@ -28,6 +28,11 @@ self.addEventListener('fetch', (event) => {
   // Never cache HTML navigation requests — they depend on auth state
   if (event.request.mode === 'navigate') return
 
+  // Let the browser stream media itself. Players fetch video in byte ranges,
+  // and a cached full copy answering a range request stops Safari playing it.
+  const { destination, headers } = event.request
+  if (headers.has('range') || destination === 'video' || destination === 'audio') return
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) return cachedResponse

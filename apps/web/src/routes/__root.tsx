@@ -31,9 +31,8 @@ import { getSupabaseServerClient } from "../utils/supabase-server";
 
 const publicMobileNavItems = [
   { label: "Home", to: "/" },
+  { label: "Watch the film", href: "#film" },
   { label: "How it works", href: "#how-it-works" },
-  { label: "Built for teachers", href: "#built-for-teachers" },
-  { label: "Why it matters", href: "#why-it-matters" },
 ] as const;
 
 const fetchUser = createServerFn({ method: "GET" }).handler(async () => {

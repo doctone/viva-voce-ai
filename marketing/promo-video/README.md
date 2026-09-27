@@ -18,7 +18,10 @@ synthesized soundtrack (`score.py`).
 
 ## Watch
 
-The finished film is `viva-voce-ai-film.mp4` (1920 × 1080, 30 fps, H.264 + AAC, 1:15).
+The finished film lives with the site's static assets at
+`apps/web/public/media/viva-voce-ai-film.mp4` (1920 × 1080, 30 fps, H.264 + AAC, 1:15).
+The landing page plays it through `/film.mp4`, a route that serves the file in byte
+ranges so it plays on iPhone and iPad (see `apps/web/src/routes/film[.]mp4.ts`).
 
 To preview the animation live, open `film.html` in a browser. It loops and has
 scrub controls. For sound it needs `score.m4a` next to it (see below).
@@ -30,13 +33,20 @@ cd marketing/promo-video
 npm i playwright-core@1.56
 pip install numpy imageio-ffmpeg
 export FFMPEG=$(python3 -c "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())")
+MEDIA=../../apps/web/public/media
 
 python3 score.py            # original score -> score.wav
 node capture.mjs video      # silent picture -> video.mp4
 $FFMPEG -y -i video.mp4 -i score.wav -map 0:v -map 1:a -c:v copy -c:a aac -b:a 192k \
-  -shortest -movflags +faststart viva-voce-ai-film.mp4
+  -shortest -movflags +faststart $MEDIA/viva-voce-ai-film.mp4
+# The landing page's poster is the film's opening hook, 7 seconds in.
+$FFMPEG -y -ss 7.0 -i $MEDIA/viva-voce-ai-film.mp4 -frames:v 1 -vf scale=1600:-2 -q:v 3 \
+  $MEDIA/viva-voce-ai-film-poster.jpg
 $FFMPEG -y -i score.wav -c:a aac -b:a 192k score.m4a    # sound for the live preview
 ```
+
+The landing page's chapter links and text version (`apps/web/src/components/LandingFilm.tsx`)
+quote the film's timings and on-screen words, so update them alongside any re-cut.
 
 The film and the score share one timeline (seconds), so a change to a scene's timing in
 `film.html` needs the matching cue moved in `score.py`.
