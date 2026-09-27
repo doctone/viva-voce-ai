@@ -125,14 +125,16 @@ export function AuthenticatedSidebar({
     <aside
       className={cn(
         paperPanelClassName,
-        'hidden content-start grid-rows-[auto_1fr_auto] lg:grid',
+        // Pinned to the viewport so the account block stays in view on long
+        // pages; the nav scrolls on its own if it ever outgrows the screen.
+        'hidden content-start grid-rows-[auto_1fr_auto] lg:sticky lg:top-0 lg:grid lg:h-screen lg:self-start',
       )}
     >
       <div className="border-b border-outline-variant px-5 py-5">
         <AuthenticatedSidebarBrand />
       </div>
 
-      <div className="grid content-start py-4">
+      <div className="grid min-h-0 content-start overflow-y-auto py-4">
         <AuthenticatedNavList items={items} />
       </div>
 
