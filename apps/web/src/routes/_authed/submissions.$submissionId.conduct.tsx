@@ -18,6 +18,13 @@ import {
   computeElapsedSeconds,
 } from "../../features/submissions/vivaRecordingCapture";
 import { useVivaAudioCapture } from "../../features/submissions/useVivaAudioCapture";
+import {
+  createSupabaseVivaRecordRepository,
+  saveVivaRecordDraft,
+  signVivaRecord,
+  type VivaRecordDraftInput,
+} from "../../features/submissions/vivaRecord";
+import { VivaRecordPanel } from "./submissions/-VivaRecordPanel";
 import { getSupabaseBrowserClient } from "../../utils/supabase-browser";
 import { cn } from "~/lib/utils";
 import { eyebrowClassName, mutedTextClassName } from "~/lib/class-names";
@@ -164,6 +171,74 @@ export function ConductVivaSessionPage() {
     queryKey: ["viva-session", vivaQuestionSetId],
   });
   const vivaSession = vivaSessionQuery.data ?? null;
+
+  const endedSessionQuery = useQuery({
+    enabled: Boolean(vivaQuestionSetId) && !vivaSessionQuery.isLoading && !vivaSession,
+    queryFn: async () => {
+      const { data, error } = await getSupabaseBrowserClient()
+        .from("viva_sessions")
+        .select("id")
+        .eq("viva_question_set_id", vivaQuestionSetId as string)
+        .eq("status", "ended")
+        .order("ended_at", { ascending: false })
+        .limit(1);
+
+      if (error) {
+        throw new Error("We could not load the ended Viva Session.");
+      }
+
+      return (data as Array<{ id: string }> | null)?.[0]?.id ?? null;
+    },
+    queryKey: ["ended-viva-session", vivaQuestionSetId],
+  });
+  const endedSessionId = endedSessionQuery.data ?? null;
+
+  const vivaRecordQuery = useQuery({
+    enabled: Boolean(endedSessionId),
+    queryFn: () =>
+      createSupabaseVivaRecordRepository(getSupabaseBrowserClient()).find(
+        endedSessionId as string,
+      ),
+    queryKey: ["viva-record", endedSessionId],
+  });
+
+  const saveRecordDraft = React.useCallback(
+    async (input: VivaRecordDraftInput) => {
+      const result = await saveVivaRecordDraft(
+        endedSessionId as string,
+        input,
+        createSupabaseVivaRecordRepository(getSupabaseBrowserClient()),
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: ["viva-record", endedSessionId],
+      });
+
+      if (result.outcome === "already_signed") {
+        throw new Error("This Viva Record is already signed.");
+      }
+    },
+    [endedSessionId, queryClient],
+  );
+
+  const signRecord = React.useCallback(
+    async (input: VivaRecordDraftInput) => {
+      const result = await signVivaRecord(
+        endedSessionId as string,
+        input,
+        createSupabaseVivaRecordRepository(getSupabaseBrowserClient()),
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: ["viva-record", endedSessionId],
+      });
+
+      if (result.outcome === "rejected") {
+        throw new Error(result.reasons.join(" "));
+      }
+    },
+    [endedSessionId, queryClient],
+  );
 
   const setQuestionsQuery = useQuery({
     queryFn: () => fetchOrderedSetQuestions(submissionId),
@@ -334,6 +409,20 @@ export function ConductVivaSessionPage() {
             Loading…
           </p>
         </Card>
+      </div>
+    );
+  }
+
+  if (!vivaSession && endedSessionId && !vivaRecordQuery.isLoading) {
+    return (
+      <div className="grid gap-6">
+        {conductBreadcrumb}
+        <VivaRecordPanel
+          key={vivaRecordQuery.data?.status ?? "none"}
+          onSaveDraft={saveRecordDraft}
+          onSign={signRecord}
+          record={vivaRecordQuery.data ?? null}
+        />
       </div>
     );
   }
