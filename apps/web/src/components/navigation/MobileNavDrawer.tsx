@@ -2,13 +2,20 @@ import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { cn } from '~/lib/utils'
-import { eyebrowClassName, paperPanelClassName } from '~/lib/class-names'
+import { paperPanelClassName } from '~/lib/class-names'
 import { Button } from '../ui/Button'
 import {
   authenticatedNavLinkActiveClassName,
   authenticatedNavLinkClassName,
   authenticatedNavLinkInactiveClassName,
+  AuthenticatedSidebarBrand,
 } from './AuthenticatedSidebar'
+
+/** Thumb-sized rows (48px) with a readable label, still in the app's label voice. */
+const mobileNavLinkClassName = cn(
+  authenticatedNavLinkClassName,
+  'min-h-12 gap-4 px-5 text-[13px]',
+)
 
 export type MobileNavItem =
   | { icon?: ReactNode; label: string; to: string }
@@ -44,7 +51,9 @@ export function MobileNavDrawer({
         <DialogPrimitive.Content
           className={cn(
             paperPanelClassName,
-            'fixed inset-y-0 left-0 z-40 grid w-[280px] max-w-[85vw] content-start grid-rows-[auto_1fr_auto] gap-8 p-8 lg:hidden',
+            // Sections own their padding so the nav rows run edge to edge and
+            // the footer sits clear of the home indicator on notched phones.
+            'fixed inset-y-0 left-0 z-40 grid w-[320px] max-w-[88vw] grid-rows-[auto_1fr_auto] lg:hidden',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left',
             'duration-200 ease-out motion-reduce:animate-none motion-reduce:transition-none',
@@ -57,17 +66,8 @@ export function MobileNavDrawer({
             Site navigation links{footer ? ' and account actions' : ''}
           </DialogPrimitive.Description>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img
-                src="/favicon.svg"
-                alt=""
-                className="h-9 w-9 shrink-0 rounded-[6px] object-contain"
-              />
-              <span className="font-display text-[18px] font-medium leading-[1.2] text-primary">
-                Viva Voce AI
-              </span>
-            </div>
+          <div className="flex items-center justify-between gap-3 border-b border-outline-variant px-5 py-3">
+            <AuthenticatedSidebarBrand />
             <DialogPrimitive.Close asChild>
               <Button
                 aria-label="Close navigation menu"
@@ -81,14 +81,14 @@ export function MobileNavDrawer({
           </div>
 
           <nav
-            className="-mx-8 grid content-start justify-items-stretch"
+            className="grid min-h-0 content-start justify-items-stretch overflow-y-auto py-3"
             aria-label="Primary"
           >
             {items.map((item) => {
               const content = (
                 <>
                   {item.icon ? (
-                    <span aria-hidden="true" className="shrink-0 [&>svg]:size-4">
+                    <span aria-hidden="true" className="shrink-0 [&>svg]:size-5">
                       {item.icon}
                     </span>
                   ) : null}
@@ -100,7 +100,7 @@ export function MobileNavDrawer({
                 <Link
                   key={item.label}
                   to={item.to}
-                  className={authenticatedNavLinkClassName}
+                  className={mobileNavLinkClassName}
                   activeProps={{
                     className: authenticatedNavLinkActiveClassName,
                   }}
@@ -117,7 +117,7 @@ export function MobileNavDrawer({
                   key={item.label}
                   href={item.href}
                   className={cn(
-                    authenticatedNavLinkClassName,
+                    mobileNavLinkClassName,
                     authenticatedNavLinkInactiveClassName,
                   )}
                   onClick={closeMenu}
@@ -129,7 +129,7 @@ export function MobileNavDrawer({
           </nav>
 
           {footer ? (
-            <div className="grid gap-2 border-t border-outline-variant pt-4">
+            <div className="grid gap-2 border-t border-outline-variant pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
               {footer}
             </div>
           ) : null}
