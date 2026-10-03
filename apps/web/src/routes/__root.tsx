@@ -28,6 +28,7 @@ import {
 } from "~/lib/class-names";
 import { seo } from "../utils/seo";
 import { getSupabaseServerClient } from "../utils/supabase-server";
+import { getCachedUser } from "../utils/user-cache";
 
 const publicMobileNavItems = [
   { label: "Home", to: "/" },
@@ -50,7 +51,7 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
 
 export const Route = createRootRoute({
   beforeLoad: async ({ location }) => {
-    const user = await fetchUser();
+    const user = await getCachedUser(fetchUser);
     const isAuthPage =
       location.pathname === "/login" || location.pathname === "/signup";
     const isPublicPage = isAuthPage || location.pathname === "/";

@@ -19,14 +19,18 @@ const authenticatedAppShellItems = [
 type AuthenticatedAppShellProps = {
   items?: readonly AuthenticatedNavItem[]
   children: ReactNode
+  /** Render the account block as a placeholder while the user loads. */
+  isPending?: boolean
   userEmail?: string
 }
 
 export function AuthenticatedAppShell({
   items = authenticatedAppShellItems,
   children,
-  userEmail = 'teacher@example.com',
+  isPending = false,
+  userEmail: userEmailProp = 'teacher@example.com',
 }: AuthenticatedAppShellProps) {
+  const userEmail = isPending ? undefined : userEmailProp
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -57,7 +61,7 @@ export function AuthenticatedAppShell({
         footer={<AuthenticatedAccountBlock userEmail={userEmail} />}
       />
 
-      <main className="min-w-0 px-6 pb-16 pt-8">{children}</main>
+      <main className="min-w-0 animate-in px-6 pb-16 pt-8 duration-300 fade-in slide-in-from-bottom-1 motion-reduce:animate-none">{children}</main>
     </div>
   )
 }
