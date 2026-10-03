@@ -188,4 +188,47 @@ describe('AuthenticatedAppShell', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
   })
+
+  describe('sidebar collapsing', () => {
+    beforeEach(() => {
+      window.localStorage.clear()
+    })
+
+    it('collapses to icon-only, keeps links reachable by name, and remembers the choice', async () => {
+      renderShellWithRoutes()
+
+      const collapse = await screen.findByRole('button', { name: 'Collapse sidebar' })
+      expect(collapse).toHaveAttribute('aria-expanded', 'true')
+
+      await act(async () => {
+        fireEvent.click(collapse)
+      })
+
+      const expand = screen.getByRole('button', { name: 'Expand sidebar' })
+      expect(expand).toHaveAttribute('aria-expanded', 'false')
+      expect(screen.getByRole('link', { name: 'Submissions' })).toHaveAttribute(
+        'title',
+        'Submissions',
+      )
+      expect(screen.getByRole('link', { name: 'Logout' })).toBeInTheDocument()
+      expect(window.localStorage.getItem('viva-voce:sidebar-collapsed')).toBe('true')
+
+      await act(async () => {
+        fireEvent.click(expand)
+      })
+
+      expect(screen.getByRole('button', { name: 'Collapse sidebar' })).toBeInTheDocument()
+      expect(window.localStorage.getItem('viva-voce:sidebar-collapsed')).toBe('false')
+    })
+
+    it('starts collapsed when the teacher previously collapsed it', async () => {
+      window.localStorage.setItem('viva-voce:sidebar-collapsed', 'true')
+
+      renderShellWithRoutes()
+
+      expect(
+        await screen.findByRole('button', { name: 'Expand sidebar' }),
+      ).toBeInTheDocument()
+    })
+  })
 })
