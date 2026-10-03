@@ -18,8 +18,10 @@ export function Login() {
     fn: useServerFn(loginFn),
     onSuccess: async (ctx) => {
       if (!ctx.data?.error) {
-        await router.invalidate()
-        router.navigate({ to: '/submissions' })
+        // Navigating re-runs the root beforeLoad, which refreshes the user.
+        // invalidate() first would redirect from /login and then navigate
+        // again: three server round trips with the login form on screen.
+        await router.navigate({ to: '/submissions', replace: true })
         return
       }
     },
@@ -33,6 +35,7 @@ export function Login() {
     <Auth
       actionText="Log in"
       status={loginMutation.status}
+      pendingText="Signing you in…"
       onSubmit={(e) => {
         const formData = new FormData(e.target as HTMLFormElement)
 

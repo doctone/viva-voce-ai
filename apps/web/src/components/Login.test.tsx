@@ -118,7 +118,7 @@ describe('Login', () => {
 
     await fillAndSubmit(user)
 
-    expect(await screen.findByRole('button', { name: 'Working' })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: 'Signing you in…' })).toBeDisabled()
 
     deferred.resolve({ data: {}, error: null })
 
