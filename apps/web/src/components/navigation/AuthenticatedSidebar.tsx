@@ -86,18 +86,28 @@ export function AuthenticatedNavList({
 export function AuthenticatedAccountBlock({
   userEmail,
 }: {
-  userEmail: string
+  /** Omit while the user is still loading to show a placeholder. */
+  userEmail?: string
 }) {
   return (
     <div className="grid gap-3">
       <div className="flex items-center gap-3 px-5">
-        <AccountBadge email={userEmail} />
-        <span
-          className="min-w-0 truncate font-sans text-[13px] leading-5 text-on-surface"
-          title={userEmail}
-        >
-          {userEmail}
-        </span>
+        {userEmail === undefined ? (
+          <div aria-hidden="true" className="flex w-full animate-pulse items-center gap-3">
+            <span className="size-8 shrink-0 rounded-[var(--radius)] bg-surface-container-high" />
+            <span className="h-3 w-32 bg-surface-container-high" />
+          </div>
+        ) : (
+          <>
+            <AccountBadge email={userEmail} />
+            <span
+              className="min-w-0 truncate font-sans text-[13px] leading-5 text-on-surface"
+              title={userEmail}
+            >
+              {userEmail}
+            </span>
+          </>
+        )}
       </div>
       <Link
         to="/logout"
@@ -114,7 +124,7 @@ export function AuthenticatedAccountBlock({
 
 type AuthenticatedSidebarProps = {
   items: readonly AuthenticatedNavItem[]
-  userEmail: string
+  userEmail?: string
 }
 
 export function AuthenticatedSidebar({

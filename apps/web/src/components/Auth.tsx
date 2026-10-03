@@ -6,15 +6,21 @@ export function Auth({
   actionText,
   onSubmit,
   status,
+  pendingText = 'Working',
   afterSubmit,
   footer,
 }: {
   actionText: string
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
   status: 'pending' | 'idle' | 'success' | 'error'
+  pendingText?: string
   afterSubmit?: React.ReactNode
   footer?: React.ReactNode
 }) {
+  // `success` counts as busy: the mutation resolves just before the router
+  // swaps pages, and re-enabling the form in that gap reads as a flash.
+  const isBusy = status === 'pending' || status === 'success'
+
   return (
     <div className="min-h-screen">
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
@@ -41,6 +47,7 @@ export function Auth({
               }}
               className="grid gap-8"
             >
+              <fieldset disabled={isBusy} className="contents">
               <TextField
                 id="email"
                 label="Email"
@@ -55,9 +62,10 @@ export function Auth({
                 type="password"
                 placeholder="Enter your password"
               />
-              <Button type="submit" fullWidth disabled={status === 'pending'}>
-                {status === 'pending' ? 'Working' : actionText}
+              <Button type="submit" fullWidth isLoading={isBusy}>
+                {isBusy ? pendingText : actionText}
               </Button>
+              </fieldset>
               {afterSubmit ? afterSubmit : null}
             </form>
             {footer ? <div className="mt-6">{footer}</div> : null}
