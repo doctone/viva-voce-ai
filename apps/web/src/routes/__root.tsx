@@ -199,16 +199,18 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <div className={pageShellClassName}>
+          {/* Outside the padded page frame so the bar runs edge to edge on phones. */}
+          {shouldShowTopbar ? (
+            <MobileNavHeader
+              isMenuOpen={isMobileNavOpen}
+              onOpenMenu={() => setIsMobileNavOpen(true)}
+            />
+          ) : null}
           <div className={shouldShowTopbar ? pageFrameClassName : ""}>
             {shouldShowTopbar ? (
               <>
-                <header className="mb-16 flex flex-wrap items-center gap-4 border-b border-outline-variant pb-4">
-                  <MobileNavHeader
-                    isMenuOpen={isMobileNavOpen}
-                    onOpenMenu={() => setIsMobileNavOpen(true)}
-                  />
-
-                  <div className="hidden lg:contents">
+                <header className="mb-16 hidden flex-wrap items-center gap-4 border-b border-outline-variant pb-4 lg:flex">
+                  <div className="contents">
                     <div className="grid gap-1">
                       <Link to="/" className={brandTitleClassName}>
                         Viva Voce AI
