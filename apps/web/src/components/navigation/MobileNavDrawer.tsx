@@ -53,7 +53,7 @@ export function MobileNavDrawer({
             paperPanelClassName,
             // Sections own their padding so the nav rows run edge to edge and
             // the footer sits clear of the home indicator on notched phones.
-            'fixed inset-y-0 left-0 z-40 grid w-[320px] max-w-[88vw] grid-rows-[auto_1fr_auto] lg:hidden',
+            'fixed inset-y-0 left-0 z-40 grid w-full grid-rows-[auto_1fr_auto] sm:w-[360px] lg:hidden',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left',
             'duration-200 ease-out motion-reduce:animate-none motion-reduce:transition-none',
