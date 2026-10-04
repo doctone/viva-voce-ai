@@ -24,6 +24,11 @@ import {
   signVivaRecord,
   type VivaRecordDraftInput,
 } from "../../features/submissions/vivaRecord";
+import {
+  amendVivaRecord,
+  createSupabaseVivaRecordAmendmentRepository,
+  type AmendmentInput,
+} from "../../features/submissions/vivaRecordAmendment";
 import { VivaRecordPanel } from "./submissions/-VivaRecordPanel";
 import { getSupabaseBrowserClient } from "../../utils/supabase-browser";
 import { cn } from "~/lib/utils";
@@ -240,6 +245,63 @@ export function ConductVivaSessionPage() {
     [endedSessionId, queryClient],
   );
 
+  const signedRecord =
+    vivaRecordQuery.data?.status === "signed" ? vivaRecordQuery.data : null;
+  const currentUserQuery = useQuery({
+    queryFn: async () =>
+      (await getSupabaseBrowserClient().auth.getUser()).data.user?.id ?? null,
+    queryKey: ["current-user-id"],
+  });
+  const amendmentsQuery = useQuery({
+    enabled: Boolean(signedRecord),
+    queryFn: () =>
+      createSupabaseVivaRecordAmendmentRepository(
+        getSupabaseBrowserClient(),
+        (id) =>
+          id === signedRecord?.snapshot.teacher.id
+            ? signedRecord.snapshot.teacher.name
+            : id,
+      ).list(signedRecord?.id as string),
+    queryKey: ["viva-record-amendments", signedRecord?.id],
+  });
+
+  const amendRecord = React.useCallback(
+    async (input: AmendmentInput, expectedVersion: number) => {
+      const actorId = currentUserQuery.data;
+
+      if (!signedRecord || !actorId) {
+        throw new Error("Sign in again to amend this record.");
+      }
+
+      const result = await amendVivaRecord(
+        { actorId, expectedVersion, input, record: signedRecord },
+        createSupabaseVivaRecordAmendmentRepository(
+          getSupabaseBrowserClient(),
+          (id) => (id === signedRecord.snapshot.teacher.id ? signedRecord.snapshot.teacher.name : id),
+        ),
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: ["viva-record-amendments", signedRecord.id],
+      });
+
+      if (result.outcome === "forbidden") {
+        throw new Error("Only the teacher who signed this record can amend it.");
+      }
+
+      if (result.outcome === "conflict") {
+        throw new Error(
+          "This record was amended by someone else. Review the latest version and try again.",
+        );
+      }
+
+      if (result.outcome === "rejected") {
+        throw new Error(result.reasons.join(" "));
+      }
+    },
+    [currentUserQuery.data, queryClient, signedRecord],
+  );
+
   const setQuestionsQuery = useQuery({
     queryFn: () => fetchOrderedSetQuestions(submissionId),
     queryKey: ["viva-question-set-questions", submissionId],
@@ -418,7 +480,13 @@ export function ConductVivaSessionPage() {
       <div className="grid gap-6">
         {conductBreadcrumb}
         <VivaRecordPanel
+          amendments={amendmentsQuery.data ?? []}
+          canAmend={
+            Boolean(signedRecord) &&
+            currentUserQuery.data === signedRecord?.snapshot.teacher.id
+          }
           key={vivaRecordQuery.data?.status ?? "none"}
+          onAmend={amendRecord}
           onSaveDraft={saveRecordDraft}
           onSign={signRecord}
           record={vivaRecordQuery.data ?? null}
