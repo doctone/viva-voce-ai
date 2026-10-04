@@ -9,6 +9,7 @@ import {
   PageFrame,
   buttonClassName,
 } from "../../components/ui";
+import { RecordingPlayback } from "./submissions/-RecordingPlayback";
 import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
 import {
   claimVivaGenerationRun,
@@ -1129,14 +1130,10 @@ export function SubmissionDetailPage() {
                     {record.file_name}
                   </p>
                   {record.access.status === "allowed" ? (
-                    <audio
-                      className="h-9 w-full"
-                      data-testid="submission-viva-player"
-                      controls
-                      src={record.access.signedUrl}
-                    >
-                      <track kind="captions" />
-                    </audio>
+                    <RecordingPlayback
+                      signedUrl={record.access.signedUrl}
+                      submissionVivaId={record.id}
+                    />
                   ) : (
                     <p
                       className="text-sm text-error"
