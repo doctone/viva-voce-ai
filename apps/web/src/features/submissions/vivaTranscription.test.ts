@@ -83,6 +83,73 @@ describe('transcribeVivaChunk', () => {
   })
 })
 
+describe('transcribeVivaChunk with diarization', () => {
+  const utterances = [
+    { providerSpeaker: 'A', startMs: 500, endMs: 2000, text: 'Why?' },
+    { providerSpeaker: 'B', startMs: 4000, endMs: 6000, text: 'Because.' },
+  ]
+
+  function withUtterances() {
+    const saved: unknown[] = []
+    return {
+      saved,
+      repo: createRepository({
+        findAskOffsetsMs: async () => [0],
+        saveUtterances: async ({ utterances }) => {
+          saved.push(...utterances)
+        },
+      }),
+    }
+  }
+
+  it('stores text and attributed utterances', async () => {
+    const { repo, saved } = withUtterances()
+
+    const result = await transcribeVivaChunk(chunk, repo, async () => 'plain', async () => utterances)
+
+    expect(result).toEqual({ outcome: 'transcribed', text: 'Why? Because.' })
+    expect(saved).toHaveLength(2)
+    expect(saved[0]).toMatchObject({ speaker: 'teacher' })
+  })
+
+  it('keeps plain text when diarization fails', async () => {
+    const { repo, saved } = withUtterances()
+
+    const result = await transcribeVivaChunk(chunk, repo, async () => 'plain', async () => {
+      throw new Error('boom')
+    })
+
+    expect(result).toEqual({ outcome: 'transcribed', text: 'plain' })
+    expect(repo.saved).toEqual([{ sequence: 0, text: 'plain' }])
+    expect(saved).toEqual([])
+  })
+
+  it('keeps the segment when saving utterances fails', async () => {
+    const repo = createRepository({
+      saveUtterances: async () => {
+        throw new Error('db down')
+      },
+    })
+
+    const result = await transcribeVivaChunk(chunk, repo, async () => 'plain', async () => utterances)
+
+    expect(result.outcome).toBe('transcribed')
+    expect(repo.saved).toHaveLength(1)
+  })
+
+  it('does not diarize again on re-transcription', async () => {
+    const { repo, saved } = withUtterances()
+    const diarize = vi.fn(async () => utterances)
+    const again = { ...repo, hasSegment: async () => true }
+
+    const result = await transcribeVivaChunk(chunk, again, async () => 'x', diarize)
+
+    expect(result).toEqual({ outcome: 'already_transcribed' })
+    expect(diarize).not.toHaveBeenCalled()
+    expect(saved).toEqual([])
+  })
+})
+
 describe('assembleTranscript', () => {
   it('reads in spoken order even when segments arrive out of order', () => {
     const transcript = assembleTranscript([

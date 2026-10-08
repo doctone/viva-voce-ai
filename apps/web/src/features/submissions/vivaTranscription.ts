@@ -1,4 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  attributeSpeakers,
+  CHUNK_DURATION_MS,
+  type AttributedUtterance,
+  type RawUtterance,
+} from "./speakerAttribution";
 import { VIVA_RECORDING_BUCKET } from "./vivaRecordingAccess";
 
 export type TranscribeVivaChunkInput = {
@@ -21,7 +27,14 @@ export type VivaTranscriptionRepository = {
   findChunk: (
     input: TranscribeVivaChunkInput,
   ) => Promise<VivaChunkLocation | null>;
+  /** Milliseconds into the recording at which the teacher pressed Ask. */
+  findAskOffsetsMs?: (vivaSessionId: string) => Promise<number[]>;
   hasSegment: (input: TranscribeVivaChunkInput) => Promise<boolean>;
+  saveUtterances?: (
+    input: TranscribeVivaChunkInput & {
+      utterances: readonly AttributedUtterance[];
+    },
+  ) => Promise<void>;
   saveSegment: (
     input: TranscribeVivaChunkInput & { text: string },
   ) => Promise<void>;
@@ -31,6 +44,12 @@ export type TranscribeAudio = (input: {
   audio: Blob;
   fileName: string;
 }) => Promise<string>;
+
+/** Like TranscribeAudio, but returns who spoke when. May throw; callers fall back. */
+export type DiarizeAudio = (input: {
+  audio: Blob;
+  fileName: string;
+}) => Promise<RawUtterance[]>;
 
 export type TranscribeVivaChunkResult =
   | { outcome: "transcribed"; text: string }
@@ -60,6 +79,7 @@ export async function transcribeVivaChunk(
   input: TranscribeVivaChunkInput,
   repository: VivaTranscriptionRepository,
   transcribeAudio: TranscribeAudio,
+  diarizeAudio?: DiarizeAudio,
 ): Promise<TranscribeVivaChunkResult> {
   try {
     if (await repository.hasSegment(input)) {
@@ -78,11 +98,24 @@ export async function transcribeVivaChunk(
       return { outcome: "chunk_unavailable" };
     }
 
+    const file = {
+      audio,
+      fileName: buildChunkFileName(input, chunk.mimeType),
+    };
+    let rawUtterances: RawUtterance[] = [];
+
+    if (diarizeAudio) {
+      try {
+        rawUtterances = await diarizeAudio(file);
+      } catch {
+        // Diarization is an enhancement: fall back to plain text below.
+      }
+    }
+
     const text = (
-      await transcribeAudio({
-        audio,
-        fileName: buildChunkFileName(input, chunk.mimeType),
-      })
+      rawUtterances.length > 0
+        ? rawUtterances.map((utterance) => utterance.text.trim()).join(" ")
+        : await transcribeAudio(file)
     ).trim();
 
     // Silence transcribes to an empty string, or to a hallucinated filler the
@@ -93,6 +126,7 @@ export async function transcribeVivaChunk(
     }
 
     await repository.saveSegment({ ...input, text });
+    await saveAttribution(input, rawUtterances, repository);
 
     return { outcome: "transcribed", text };
   } catch (error) {
@@ -103,6 +137,32 @@ export async function transcribeVivaChunk(
           : "We could not transcribe this part of the viva.",
       outcome: "failed",
     };
+  }
+}
+
+// Best effort: the plain-text segment is already stored, so a failure here
+// leaves the chunk readable, just without speakers.
+async function saveAttribution(
+  input: TranscribeVivaChunkInput,
+  rawUtterances: readonly RawUtterance[],
+  repository: VivaTranscriptionRepository,
+): Promise<void> {
+  if (rawUtterances.length === 0 || !repository.saveUtterances) {
+    return;
+  }
+
+  try {
+    const askOffsetsMs =
+      (await repository.findAskOffsetsMs?.(input.vivaSessionId)) ?? [];
+    const utterances = attributeSpeakers(
+      rawUtterances.filter((utterance) => utterance.text.trim() !== ""),
+      input.sequence * CHUNK_DURATION_MS,
+      askOffsetsMs,
+    );
+
+    await repository.saveUtterances({ ...input, utterances });
+  } catch {
+    // Intentionally ignored; see above.
   }
 }
 
@@ -158,6 +218,44 @@ export function createSupabaseVivaTranscriptionRepository(
 
       return ((data as Array<{ id: string }> | null) ?? []).length > 0;
     },
+    findAskOffsetsMs: async (vivaSessionId) => {
+      const { data } = await supabase
+        .from("thread_entries")
+        .select("elapsed_seconds")
+        .eq("viva_session_id", vivaSessionId)
+        .eq("kind", "asked");
+
+      return (
+        (data as Array<{ elapsed_seconds: number | null }> | null) ?? []
+      )
+        .filter((row) => row.elapsed_seconds !== null)
+        .map((row) => (row.elapsed_seconds as number) * 1000);
+    },
+    saveUtterances: async ({ sequence, utterances, vivaSessionId }) => {
+      const { error } = await supabase
+        .from("viva_transcript_utterances")
+        .upsert(
+          utterances.map((utterance, position) => ({
+            confidence: utterance.confidence,
+            end_ms: Math.round(utterance.endMs),
+            position,
+            sequence,
+            speaker: utterance.speaker,
+            speaker_source: utterance.speakerSource,
+            start_ms: Math.round(utterance.startMs),
+            text: utterance.text,
+            viva_session_id: vivaSessionId,
+          })),
+          {
+            ignoreDuplicates: true,
+            onConflict: "viva_session_id,sequence,position",
+          },
+        );
+
+      if (error) {
+        throw new Error("We could not save the speakers for this part.");
+      }
+    },
     saveSegment: async ({ sequence, text, vivaSessionId }) => {
       const { error } = await supabase.from("viva_transcript_segments").insert({
         sequence,
@@ -208,5 +306,54 @@ export function createOpenAiTranscriber(
     }
 
     return response.text();
+  };
+}
+
+const DIARIZATION_MODEL = "gpt-4o-transcribe-diarize";
+
+export function createOpenAiDiarizer(
+  fetchImpl: typeof fetch = fetch,
+): DiarizeAudio {
+  return async ({ audio, fileName }) => {
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      throw new Error("OPENAI_API_KEY is not configured.");
+    }
+
+    const form = new FormData();
+    form.append("file", audio, fileName);
+    form.append(
+      "model",
+      process.env.AI_DIARIZATION_MODEL ?? DIARIZATION_MODEL,
+    );
+    form.append("response_format", "diarized_json");
+    form.append("chunking_strategy", "auto");
+
+    const response = await fetchImpl(TRANSCRIPTION_ENDPOINT, {
+      body: form,
+      headers: { Authorization: `Bearer ${apiKey}` },
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Diarization failed with status ${response.status}.`);
+    }
+
+    const body = (await response.json()) as {
+      segments?: Array<{
+        end: number;
+        speaker: string;
+        start: number;
+        text: string;
+      }>;
+    };
+
+    return (body.segments ?? []).map((segment) => ({
+      endMs: Math.round(segment.end * 1000),
+      providerSpeaker: segment.speaker,
+      startMs: Math.round(segment.start * 1000),
+      text: segment.text,
+    }));
   };
 }

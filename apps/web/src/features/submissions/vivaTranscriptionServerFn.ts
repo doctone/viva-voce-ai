@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getSupabaseServerClient } from '../../utils/supabase-server'
 import {
+  createOpenAiDiarizer,
   createOpenAiTranscriber,
   createSupabaseVivaTranscriptionRepository,
   transcribeVivaChunk,
@@ -13,5 +14,6 @@ export const transcribeVivaChunkFn = createServerFn({ method: 'POST' })
       data,
       createSupabaseVivaTranscriptionRepository(getSupabaseServerClient()),
       createOpenAiTranscriber(),
+      createOpenAiDiarizer(),
     )
   })
