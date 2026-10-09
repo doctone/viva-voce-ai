@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Breadcrumb,
@@ -30,6 +30,15 @@ import {
   type TranscriptSegment,
 } from "../../features/submissions/vivaTranscription";
 import { selectVisibleTranscript } from "../../features/submissions/liveTranscription";
+import {
+  correctUtteranceSpeaker,
+  fetchAskedQuestionWindows,
+  fetchStoredUtterances,
+  type StoredUtterance,
+} from "../../features/submissions/transcriptUtterances";
+import type { Speaker } from "../../features/submissions/speakerAttribution";
+import { liveTailBeyondStored } from "../../features/submissions/talkTime";
+import { LabelledTranscript } from "./submissions/-LabelledTranscript";
 import {
   selectSupersededRecordings,
   type SubmissionRecordingRef,
@@ -672,6 +681,47 @@ export function SubmissionDetailPage() {
   });
 
   const storedTranscript = assembleTranscript(transcriptQuery.data ?? []);
+  const utterancesQuery = useQuery({
+    enabled: Boolean(vivaSessionId),
+    queryFn: () =>
+      fetchStoredUtterances(getSupabaseBrowserClient(), vivaSessionId as string),
+    queryKey: ["viva-utterances", vivaSessionId],
+    refetchInterval:
+      captureStatus === "recording" ||
+      captureStatus === "paused" ||
+      isSettlingTranscript
+        ? 3_000
+        : false,
+  });
+  const askedWindowsQuery = useQuery({
+    enabled: Boolean(vivaSessionId),
+    queryFn: () =>
+      fetchAskedQuestionWindows(getSupabaseBrowserClient(), vivaSessionId as string),
+    queryKey: ["viva-ask-windows", vivaSessionId],
+  });
+  const correctSpeaker = useMutation({
+    mutationFn: ({ speaker, utteranceId }: { speaker: Speaker; utteranceId: string }) =>
+      correctUtteranceSpeaker(getSupabaseBrowserClient(), utteranceId, speaker),
+    // Apply the correction locally first so talk time updates immediately.
+    onMutate: async ({ speaker, utteranceId }) => {
+      const key = ["viva-utterances", vivaSessionId];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<StoredUtterance[]>(key);
+      queryClient.setQueryData<StoredUtterance[]>(key, (current) =>
+        current?.map((utterance) =>
+          utterance.id === utteranceId
+            ? { ...utterance, speaker, speakerSource: "teacher" }
+            : utterance,
+        ),
+      );
+      return { previous };
+    },
+    onError: (_error, _input, context) =>
+      queryClient.setQueryData(["viva-utterances", vivaSessionId], context?.previous),
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ["viva-utterances", vivaSessionId] }),
+  });
+  const utterances = utterancesQuery.data ?? [];
   const liveTranscription = useLiveTranscription(
     capture.getMediaStream,
     captureStatus === "recording",
@@ -1083,19 +1133,39 @@ export function SubmissionDetailPage() {
                       : "Transcribed from the recording"}
                   </span>
                 </div>
-                <p
-                  aria-live="polite"
-                  className={cn(
-                    "max-w-[80ch] text-sm leading-7 text-on-surface",
-                    transcript === "" && mutedTextClassName,
-                  )}
-                >
-                  {transcript === ""
-                    ? isLive
-                      ? "Listening…"
-                      : "Nothing transcribed yet."
-                    : transcript}
-                </p>
+                {utterances.length > 0 ? (
+                  <LabelledTranscript
+                    liveTail={
+                      isLive
+                        ? liveTailBeyondStored(liveTranscription.text, storedTranscript)
+                        : ""
+                    }
+                    onCorrect={(utteranceId, speaker) =>
+                      correctSpeaker.mutate({ speaker, utteranceId })
+                    }
+                    questions={askedWindowsQuery.data ?? []}
+                    utterances={utterances}
+                  />
+                ) : (
+                  <p
+                    aria-live="polite"
+                    className={cn(
+                      "max-w-[80ch] text-sm leading-7 text-on-surface",
+                      transcript === "" && mutedTextClassName,
+                    )}
+                  >
+                    {transcript === ""
+                      ? isLive
+                        ? "Listening…"
+                        : "Nothing transcribed yet."
+                      : transcript}
+                  </p>
+                )}
+                {correctSpeaker.error instanceof Error ? (
+                  <p className="text-sm leading-6 text-error" role="alert">
+                    {correctSpeaker.error.message}
+                  </p>
+                ) : null}
                 {failedTranscriptionCount > 0 ? (
                   <p className={cn(mutedTextClassName, "text-sm leading-6")}>
                     {failedTranscriptionCount}{" "}
