@@ -10,6 +10,9 @@ export const RECORDING_MIME_TYPE_CANDIDATES = [
   "audio/mp4",
 ] as const;
 
+// Each uploaded chunk, and so each transcript segment, covers this much audio.
+export const CHUNK_TIMESLICE_MS = 15_000;
+
 export function negotiateRecordingMimeType(
   isTypeSupported: (mimeType: string) => boolean,
   candidates: readonly string[] = RECORDING_MIME_TYPE_CANDIDATES,

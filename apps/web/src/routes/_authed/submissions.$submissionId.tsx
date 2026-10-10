@@ -66,6 +66,17 @@ import {
   QuestionCard,
 } from "./submissions/-QuestionCard";
 import { RecordVivaPanel } from "./submissions/-RecordVivaPanel";
+import {
+  DockedVivaPlayer,
+  type VivaSeekRequest,
+} from "./submissions/-DockedVivaPlayer";
+import { VivaTranscript } from "./submissions/-VivaTranscript";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/Tabs";
 
 export const Route = createFileRoute("/_authed/submissions/$submissionId")({
   component: SubmissionDetailPage,
@@ -102,6 +113,15 @@ type SubmissionQuestion = {
 };
 
 type GenerationState = "idle" | "running" | "failed";
+
+type SubmissionTab = "viva" | "submission" | "questions";
+
+function isSubmissionTab(value: string): value is SubmissionTab {
+  return value === "viva" || value === "submission" || value === "questions";
+}
+
+const submissionTabTriggerClassName =
+  "h-11 flex-1 rounded-none text-sm font-bold text-on-surface-variant hover:text-primary data-active:text-primary group-data-[variant=line]/tabs-list:data-active:after:bg-primary-container";
 
 async function fetchSubmission(submissionId: string) {
   const supabase = getSupabaseBrowserClient();
@@ -572,6 +592,10 @@ export function SubmissionDetailPage() {
   const [recordingErrorMessage, setRecordingErrorMessage] = React.useState<
     string | null
   >(null);
+  const [activeTab, setActiveTab] = React.useState<SubmissionTab>("viva");
+  const [seekRequest, setSeekRequest] = React.useState<VivaSeekRequest | null>(
+    null,
+  );
   const vivaSessionIdRef = React.useRef<string | null>(null);
   const hasTriggeredGenerationRef = React.useRef(false);
   const submissionQuery = useQuery({
@@ -592,6 +616,13 @@ export function SubmissionDetailPage() {
     queryKey: ["submission-viva", submissionId],
   });
   const vivaAudioRecords = vivaAudioQuery.data ?? [];
+  const playableRecording = vivaAudioRecords
+    .map((record) =>
+      record.access.status === "allowed"
+        ? { file_name: record.file_name, access: record.access }
+        : null,
+    )
+    .find((record) => record !== null);
 
   // Runs only once the microphone is available, so a declined prompt never
   // leaves a Viva Session behind. A granted prompt is the equipment check.
@@ -685,6 +716,9 @@ export function SubmissionDetailPage() {
     liveText: liveTranscription.text,
     storedText: storedTranscript,
   });
+  // The searchable segment list only appears once stored text has caught up;
+  // until then the live feed is shown as it arrives.
+  const isShowingLiveText = isLive || transcript !== storedTranscript;
 
   // One ticking clock while recording; paused time is banked so the timer does
   // not jump forward over a pause.
@@ -1053,7 +1087,39 @@ export function SubmissionDetailPage() {
         </>
       }
     >
-      <div className="grid gap-12">
+      <Tabs
+        className="gap-6"
+        onValueChange={(value) => {
+          if (isSubmissionTab(value)) {
+            setActiveTab(value);
+          }
+        }}
+        value={activeTab}
+      >
+        {/* Sits under the 69px sticky mobile nav header, which is hidden at lg. */}
+        <TabsList
+          aria-label="Submission sections"
+          className="sticky top-[69px] z-10 -mx-6 h-auto w-auto gap-0 border-b border-outline-variant bg-background p-0 px-6 lg:top-0"
+          variant="line"
+        >
+          <TabsTrigger className={submissionTabTriggerClassName} value="viva">
+            Viva
+          </TabsTrigger>
+          <TabsTrigger className={submissionTabTriggerClassName} value="submission">
+            Submission
+          </TabsTrigger>
+          <TabsTrigger className={submissionTabTriggerClassName} value="questions">
+            Questions
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Panels stay mounted so a half-edited question survives a tab switch. */}
+        <TabsContent
+          className="text-base"
+          forceMount
+          hidden={activeTab !== "viva"}
+          value="viva"
+        >
         <RecordVivaPanel
           elapsedSeconds={elapsedSeconds}
           failedChunkCount={capture.failedChunkCount}
@@ -1071,30 +1137,23 @@ export function SubmissionDetailPage() {
           status={captureStatus}
           transcript={
             vivaSessionId ? (
-              <>
-                <div className="flex flex-wrap items-baseline justify-between gap-3">
-                  <h3 className={eyebrowClassName}>Transcript</h3>
-                  <span className={cn(mutedTextClassName, "text-sm")}>
-                    {isLive
-                      ? liveTranscription.isConnected
-                        ? "Live"
-                        : "Connecting…"
-                      : "Transcribed from the recording"}
-                  </span>
-                </div>
-                <p
-                  aria-live="polite"
-                  className={cn(
-                    "max-w-[80ch] text-sm leading-7 text-on-surface",
-                    transcript === "" && mutedTextClassName,
-                  )}
-                >
-                  {transcript === ""
-                    ? isLive
-                      ? "Listening…"
-                      : "Nothing transcribed yet."
-                    : transcript}
-                </p>
+              <VivaTranscript
+                liveText={isShowingLiveText ? transcript : null}
+                onSeek={
+                  playableRecording && !isLive
+                    ? (seconds) =>
+                        setSeekRequest({ id: Date.now(), seconds })
+                    : undefined
+                }
+                segments={transcriptQuery.data ?? []}
+                statusLabel={
+                  isLive
+                    ? liveTranscription.isConnected
+                      ? "Live"
+                      : "Connecting…"
+                    : "Transcribed from the recording"
+                }
+              >
                 {failedTranscriptionCount > 0 ? (
                   <p className={cn(mutedTextClassName, "text-sm leading-6")}>
                     {failedTranscriptionCount}{" "}
@@ -1115,39 +1174,30 @@ export function SubmissionDetailPage() {
                     {transcriptQuery.error.message}
                   </p>
                 ) : null}
-              </>
+              </VivaTranscript>
             ) : null
           }
           footer={
             <>
-              {vivaAudioRecords.map((record) => (
-                <article
-                  key={record.id}
-                  className="grid gap-2 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] sm:items-center sm:gap-4"
-                >
-                  <p className="truncate text-sm font-medium">
-                    {record.file_name}
-                  </p>
-                  {record.access.status === "allowed" ? (
-                    <audio
-                      className="h-9 w-full"
-                      data-testid="submission-viva-player"
-                      controls
-                      src={record.access.signedUrl}
-                    >
-                      <track kind="captions" />
-                    </audio>
-                  ) : (
+              {/* A playable recording lives in the docked player instead. */}
+              {vivaAudioRecords.map((record) =>
+                record.access.status === "allowed" ? null : (
+                  <article
+                    key={record.id}
+                    className="grid gap-2 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] sm:items-center sm:gap-4"
+                  >
+                    <p className="truncate text-sm font-medium">
+                      {record.file_name}
+                    </p>
                     <p
                       className="text-sm text-error"
                       data-testid="submission-viva-unavailable"
                     >
                       {describeUnavailableVivaRecording(record.access.status)}
                     </p>
-                  )}
-                </article>
-              ))}
-
+                  </article>
+                ),
+              )}
               <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
                 <div className="grid gap-1" role="status">
                   {isUploadingViva ? (
@@ -1250,39 +1300,63 @@ export function SubmissionDetailPage() {
           }
         />
 
-        <article aria-labelledby="submission-text-heading" className="grid gap-6">
-          <SectionHeader id="submission-text-heading" title="Submission" />
-          <div className={cn(readingClassName, "max-w-[68ch] space-y-5")}>
-            {submissionParagraphs.map((paragraph, index) => (
-              <p key={`${index}-${paragraph.slice(0, 32)}`}>{paragraph}</p>
-            ))}
-          </div>
-        </article>
+        </TabsContent>
 
-        <section aria-labelledby="viva-questions-heading" className="grid gap-4">
-          <SectionHeader
-            id="viva-questions-heading"
-            meta={`About ${estimatedDurationMinutes} min of questioning`}
-            title="Questions"
-          />
+        <TabsContent
+          className="text-base"
+          forceMount
+          hidden={activeTab !== "submission"}
+          value="submission"
+        >
+          <article className="grid gap-6">
+            <SectionHeader id="submission-text-heading" title="Submission" />
+            <div className={cn(readingClassName, "max-w-[68ch] space-y-5")}>
+              {submissionParagraphs.map((paragraph, index) => (
+                <p key={`${index}-${paragraph.slice(0, 32)}`}>{paragraph}</p>
+              ))}
+            </div>
+          </article>
+        </TabsContent>
 
-          {questions.map((question) => (
-            <QuestionCard
-              key={question.id}
-              id={question.id}
-              isHighlighted={question.isHighlighted}
-              label={question.label}
-              questionText={question.questionText}
-              teacherNote={question.teacherNote}
-              onSave={(questionText) =>
-                saveQuestionText(question.id, questionText)
-              }
+        <TabsContent
+          className="text-base"
+          forceMount
+          hidden={activeTab !== "questions"}
+          value="questions"
+        >
+          <section className="grid gap-4">
+            <SectionHeader
+              id="viva-questions-heading"
+              meta={`About ${estimatedDurationMinutes} min of questioning`}
+              title="Questions"
             />
-          ))}
 
-          <AddManualQuestionCard onAdd={addManualQuestion} />
-        </section>
-      </div>
+            {questions.map((question) => (
+              <QuestionCard
+                key={question.id}
+                id={question.id}
+                isHighlighted={question.isHighlighted}
+                label={question.label}
+                questionText={question.questionText}
+                teacherNote={question.teacherNote}
+                onSave={(questionText) =>
+                  saveQuestionText(question.id, questionText)
+                }
+              />
+            ))}
+
+            <AddManualQuestionCard onAdd={addManualQuestion} />
+          </section>
+        </TabsContent>
+      </Tabs>
+
+      {playableRecording && !isLive ? (
+        <DockedVivaPlayer
+          fileName={playableRecording.file_name}
+          seekRequest={seekRequest}
+          src={playableRecording.access.signedUrl}
+        />
+      ) : null}
     </PageFrame>
   );
 }
