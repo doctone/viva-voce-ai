@@ -13,6 +13,8 @@ export type VivaSeekRequest = {
 
 type DockedVivaPlayerProps = {
   fileName: string;
+  /** Lets other views (the synchronized transcript) follow and seek playback. */
+  onAudioElementChange?: (audio: HTMLAudioElement | null) => void;
   seekRequest: VivaSeekRequest | null;
   src: string;
 };
@@ -29,6 +31,7 @@ function playQuietly(audio: HTMLAudioElement) {
  */
 export function DockedVivaPlayer({
   fileName,
+  onAudioElementChange,
   seekRequest,
   src,
 }: DockedVivaPlayerProps) {
@@ -37,6 +40,12 @@ export function DockedVivaPlayer({
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [currentSeconds, setCurrentSeconds] = React.useState(0);
   const [durationSeconds, setDurationSeconds] = React.useState(0);
+
+  React.useEffect(() => {
+    onAudioElementChange?.(audioRef.current);
+
+    return () => onAudioElementChange?.(null);
+  }, [onAudioElementChange]);
 
   React.useEffect(() => {
     const audio = audioRef.current;

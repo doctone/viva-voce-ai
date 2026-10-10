@@ -28,6 +28,7 @@ import {
 } from "~/lib/class-names";
 import { seo } from "../utils/seo";
 import { getSupabaseServerClient } from "../utils/supabase-server";
+import { getCachedUser } from "../utils/user-cache";
 
 const publicMobileNavItems = [
   { label: "Home", to: "/" },
@@ -50,7 +51,7 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
 
 export const Route = createRootRoute({
   beforeLoad: async ({ location }) => {
-    const user = await fetchUser();
+    const user = await getCachedUser(fetchUser);
     const isAuthPage =
       location.pathname === "/login" || location.pathname === "/signup";
     const isPublicPage = isAuthPage || location.pathname === "/";
@@ -198,16 +199,18 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <div className={pageShellClassName}>
+          {/* Outside the padded page frame so the bar runs edge to edge on phones. */}
+          {shouldShowTopbar ? (
+            <MobileNavHeader
+              isMenuOpen={isMobileNavOpen}
+              onOpenMenu={() => setIsMobileNavOpen(true)}
+            />
+          ) : null}
           <div className={shouldShowTopbar ? pageFrameClassName : ""}>
             {shouldShowTopbar ? (
               <>
-                <header className="mb-16 flex flex-wrap items-center gap-4 border-b border-outline-variant pb-4">
-                  <MobileNavHeader
-                    isMenuOpen={isMobileNavOpen}
-                    onOpenMenu={() => setIsMobileNavOpen(true)}
-                  />
-
-                  <div className="hidden lg:contents">
+                <header className="mb-16 hidden flex-wrap items-center gap-4 border-b border-outline-variant pb-4 lg:flex">
+                  <div className="contents">
                     <div className="grid gap-1">
                       <Link to="/" className={brandTitleClassName}>
                         Viva Voce AI

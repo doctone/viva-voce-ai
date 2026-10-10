@@ -9,6 +9,8 @@ import type { TranscriptSegment } from "../../../features/submissions/vivaTransc
 
 type VivaTranscriptProps = {
   children?: React.ReactNode;
+  /** The speaker-labelled transcript, which takes precedence when present. */
+  labelled?: React.ReactNode;
   /** Shown instead of the segment list while the viva is live or settling. */
   liveText: string | null;
   /** Absent when there is no playable recording to jump into. */
@@ -19,6 +21,7 @@ type VivaTranscriptProps = {
 
 export function VivaTranscript({
   children,
+  labelled,
   liveText,
   onSeek,
   segments,
@@ -35,7 +38,9 @@ export function VivaTranscript({
         <span className={cn(mutedTextClassName, "text-sm")}>{statusLabel}</span>
       </div>
 
-      {liveText !== null ? (
+      {labelled ? (
+        labelled
+      ) : liveText !== null ? (
         <p
           aria-live="polite"
           className={cn(

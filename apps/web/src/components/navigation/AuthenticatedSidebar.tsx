@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
+import { LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { cn } from '~/lib/utils'
 import { focusRingClassName, paperPanelClassName } from '~/lib/class-names'
 
@@ -38,7 +39,11 @@ function AccountBadge({ email }: { email: string }) {
   )
 }
 
-export function AuthenticatedSidebarBrand() {
+export function AuthenticatedSidebarBrand({
+  collapsed = false,
+}: {
+  collapsed?: boolean
+}) {
   return (
     <div className="flex items-center gap-3">
       <img
@@ -46,19 +51,26 @@ export function AuthenticatedSidebarBrand() {
         alt=""
         className="size-9 shrink-0 rounded-[6px] object-contain"
       />
-      <span className="font-display text-[17px] font-medium leading-[1.2] tracking-[-0.01em] text-primary">
-        Viva Voce AI
-      </span>
+      {collapsed ? null : (
+        <span className="font-display text-[17px] font-medium leading-[1.2] tracking-[-0.01em] text-primary">
+          Viva Voce AI
+        </span>
+      )}
     </div>
   )
 }
 
+/** Icon-only rows centre their icon; the label stays as the accessible name. */
+const collapsedNavLinkClassName = 'justify-center gap-0 border-l-0 px-0'
+
 export function AuthenticatedNavList({
   items,
   label = 'Primary',
+  collapsed = false,
 }: {
   items: readonly AuthenticatedNavItem[]
   label?: string
+  collapsed?: boolean
 }) {
   return (
     <nav aria-label={label} className="grid content-start">
@@ -66,7 +78,11 @@ export function AuthenticatedNavList({
         <Link
           key={item.to}
           to={item.to}
-          className={authenticatedNavLinkClassName}
+          className={cn(
+            authenticatedNavLinkClassName,
+            collapsed && collapsedNavLinkClassName,
+          )}
+          title={collapsed ? item.label : undefined}
           activeProps={{ className: authenticatedNavLinkActiveClassName }}
           inactiveProps={{ className: authenticatedNavLinkInactiveClassName }}
           activeOptions={{ exact: true }}
@@ -76,7 +92,7 @@ export function AuthenticatedNavList({
               {item.icon}
             </span>
           ) : null}
-          {item.label}
+          <span className={collapsed ? 'sr-only' : undefined}>{item.label}</span>
         </Link>
       ))}
     </nav>
@@ -85,28 +101,51 @@ export function AuthenticatedNavList({
 
 export function AuthenticatedAccountBlock({
   userEmail,
+  collapsed = false,
 }: {
-  userEmail: string
+  /** Omit while the user is still loading to show a placeholder. */
+  userEmail?: string
+  collapsed?: boolean
 }) {
   return (
     <div className="grid gap-3">
-      <div className="flex items-center gap-3 px-5">
-        <AccountBadge email={userEmail} />
-        <span
-          className="min-w-0 truncate font-sans text-[13px] leading-5 text-on-surface"
-          title={userEmail}
-        >
-          {userEmail}
-        </span>
+      <div
+        className={cn(
+          'flex items-center gap-3 px-5',
+          collapsed && 'justify-center px-0',
+        )}
+      >
+        {userEmail === undefined ? (
+          <div aria-hidden="true" className="flex w-full animate-pulse items-center gap-3">
+            <span className="size-8 shrink-0 rounded-[var(--radius)] bg-surface-container-high" />
+            <span className="h-3 w-32 bg-surface-container-high" />
+          </div>
+        ) : (
+          <>
+            <AccountBadge email={userEmail} />
+            <span
+              className={cn(
+                'min-w-0 truncate font-sans text-[13px] leading-5 text-on-surface',
+                collapsed && 'sr-only',
+              )}
+              title={userEmail}
+            >
+              {userEmail}
+            </span>
+          </>
+        )}
       </div>
       <Link
         to="/logout"
+        title={collapsed ? 'Logout' : undefined}
         className={cn(
           authenticatedNavLinkClassName,
           authenticatedNavLinkInactiveClassName,
+          collapsed && collapsedNavLinkClassName,
         )}
       >
-        Logout
+        <LogOut aria-hidden="true" className="size-4 shrink-0" />
+        <span className={collapsed ? 'sr-only' : undefined}>Logout</span>
       </Link>
     </div>
   )
@@ -114,12 +153,16 @@ export function AuthenticatedAccountBlock({
 
 type AuthenticatedSidebarProps = {
   items: readonly AuthenticatedNavItem[]
-  userEmail: string
+  userEmail?: string
+  collapsed?: boolean
+  onToggleCollapsed?: () => void
 }
 
 export function AuthenticatedSidebar({
   items,
   userEmail,
+  collapsed = false,
+  onToggleCollapsed,
 }: AuthenticatedSidebarProps) {
   return (
     <aside
@@ -127,19 +170,46 @@ export function AuthenticatedSidebar({
         paperPanelClassName,
         // Pinned to the viewport so the account block stays in view on long
         // pages; the nav scrolls on its own if it ever outgrows the screen.
-        'hidden content-start grid-rows-[auto_1fr_auto] lg:sticky lg:top-0 lg:grid lg:h-screen lg:self-start',
+        'hidden min-w-0 content-start grid-rows-[auto_1fr_auto] overflow-hidden lg:sticky lg:top-0 lg:grid lg:h-screen lg:self-start',
       )}
     >
-      <div className="border-b border-outline-variant px-5 py-5">
-        <AuthenticatedSidebarBrand />
+      <div
+        className={cn(
+          'flex items-center border-b border-outline-variant px-5 py-5',
+          collapsed && 'justify-center px-0',
+        )}
+      >
+        <AuthenticatedSidebarBrand collapsed={collapsed} />
       </div>
 
       <div className="grid min-h-0 content-start overflow-y-auto py-4">
-        <AuthenticatedNavList items={items} />
+        <AuthenticatedNavList items={items} collapsed={collapsed} />
       </div>
 
-      <div className="border-t border-outline-variant py-4">
-        <AuthenticatedAccountBlock userEmail={userEmail} />
+      <div className="grid gap-3 border-t border-outline-variant py-4">
+        <AuthenticatedAccountBlock userEmail={userEmail} collapsed={collapsed} />
+        {onToggleCollapsed ? (
+          <button
+            type="button"
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            onClick={onToggleCollapsed}
+            className={cn(
+              authenticatedNavLinkClassName,
+              authenticatedNavLinkInactiveClassName,
+              'w-full cursor-pointer',
+              collapsed && collapsedNavLinkClassName,
+            )}
+          >
+            {collapsed ? (
+              <PanelLeftOpen aria-hidden="true" className="size-4 shrink-0" />
+            ) : (
+              <PanelLeftClose aria-hidden="true" className="size-4 shrink-0" />
+            )}
+            {collapsed ? null : <span>Collapse</span>}
+          </button>
+        ) : null}
       </div>
     </aside>
   )

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Breadcrumb,
@@ -9,6 +9,7 @@ import {
   PageFrame,
   buttonClassName,
 } from "../../components/ui";
+import { RecordingTranscriptSection } from "./submissions/-RecordingTranscriptSection";
 import { useGenerateSubmissionViva } from "../../features/submissions/useGenerateSubmissionViva";
 import {
   claimVivaGenerationRun,
@@ -29,6 +30,15 @@ import {
   type TranscriptSegment,
 } from "../../features/submissions/vivaTranscription";
 import { selectVisibleTranscript } from "../../features/submissions/liveTranscription";
+import {
+  correctUtteranceSpeaker,
+  fetchAskedQuestionWindows,
+  fetchStoredUtterances,
+  type StoredUtterance,
+} from "../../features/submissions/transcriptUtterances";
+import type { Speaker } from "../../features/submissions/speakerAttribution";
+import { liveTailBeyondStored } from "../../features/submissions/talkTime";
+import { LabelledTranscript } from "./submissions/-LabelledTranscript";
 import {
   selectSupersededRecordings,
   type SubmissionRecordingRef,
@@ -593,6 +603,8 @@ export function SubmissionDetailPage() {
     string | null
   >(null);
   const [activeTab, setActiveTab] = React.useState<SubmissionTab>("viva");
+  const [dockedAudioElement, setDockedAudioElement] =
+    React.useState<HTMLAudioElement | null>(null);
   const [seekRequest, setSeekRequest] = React.useState<VivaSeekRequest | null>(
     null,
   );
@@ -619,7 +631,7 @@ export function SubmissionDetailPage() {
   const playableRecording = vivaAudioRecords
     .map((record) =>
       record.access.status === "allowed"
-        ? { file_name: record.file_name, access: record.access }
+        ? { access: record.access, file_name: record.file_name, id: record.id }
         : null,
     )
     .find((record) => record !== null);
@@ -702,6 +714,47 @@ export function SubmissionDetailPage() {
   });
 
   const storedTranscript = assembleTranscript(transcriptQuery.data ?? []);
+  const utterancesQuery = useQuery({
+    enabled: Boolean(vivaSessionId),
+    queryFn: () =>
+      fetchStoredUtterances(getSupabaseBrowserClient(), vivaSessionId as string),
+    queryKey: ["viva-utterances", vivaSessionId],
+    refetchInterval:
+      captureStatus === "recording" ||
+      captureStatus === "paused" ||
+      isSettlingTranscript
+        ? 3_000
+        : false,
+  });
+  const askedWindowsQuery = useQuery({
+    enabled: Boolean(vivaSessionId),
+    queryFn: () =>
+      fetchAskedQuestionWindows(getSupabaseBrowserClient(), vivaSessionId as string),
+    queryKey: ["viva-ask-windows", vivaSessionId],
+  });
+  const correctSpeaker = useMutation({
+    mutationFn: ({ speaker, utteranceId }: { speaker: Speaker; utteranceId: string }) =>
+      correctUtteranceSpeaker(getSupabaseBrowserClient(), utteranceId, speaker),
+    // Apply the correction locally first so talk time updates immediately.
+    onMutate: async ({ speaker, utteranceId }) => {
+      const key = ["viva-utterances", vivaSessionId];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<StoredUtterance[]>(key);
+      queryClient.setQueryData<StoredUtterance[]>(key, (current) =>
+        current?.map((utterance) =>
+          utterance.id === utteranceId
+            ? { ...utterance, speaker, speakerSource: "teacher" }
+            : utterance,
+        ),
+      );
+      return { previous };
+    },
+    onError: (_error, _input, context) =>
+      queryClient.setQueryData(["viva-utterances", vivaSessionId], context?.previous),
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ["viva-utterances", vivaSessionId] }),
+  });
+  const utterances = utterancesQuery.data ?? [];
   const liveTranscription = useLiveTranscription(
     capture.getMediaStream,
     captureStatus === "recording",
@@ -1096,10 +1149,10 @@ export function SubmissionDetailPage() {
         }}
         value={activeTab}
       >
-        {/* Sits under the 69px sticky mobile nav header, which is hidden at lg. */}
+        {/* Sits under the 61px sticky mobile nav header, which is hidden at lg. */}
         <TabsList
           aria-label="Submission sections"
-          className="sticky top-[69px] z-10 -mx-6 h-auto w-auto gap-0 border-b border-outline-variant bg-background p-0 px-6 lg:top-0"
+          className="sticky top-[61px] z-10 -mx-6 h-auto w-auto gap-0 border-b border-outline-variant bg-background p-0 px-6 lg:top-0"
           variant="line"
         >
           <TabsTrigger className={submissionTabTriggerClassName} value="viva">
@@ -1138,6 +1191,22 @@ export function SubmissionDetailPage() {
           transcript={
             vivaSessionId ? (
               <VivaTranscript
+                labelled={
+                  utterances.length > 0 ? (
+                    <LabelledTranscript
+                      liveTail={
+                        isLive
+                          ? liveTailBeyondStored(liveTranscription.text, storedTranscript)
+                          : ""
+                      }
+                      onCorrect={(utteranceId, speaker) =>
+                        correctSpeaker.mutate({ speaker, utteranceId })
+                      }
+                      questions={askedWindowsQuery.data ?? []}
+                      utterances={utterances}
+                    />
+                  ) : undefined
+                }
                 liveText={isShowingLiveText ? transcript : null}
                 onSeek={
                   playableRecording && !isLive
@@ -1154,6 +1223,11 @@ export function SubmissionDetailPage() {
                     : "Transcribed from the recording"
                 }
               >
+                {correctSpeaker.error instanceof Error ? (
+                  <p className="text-sm leading-6 text-error" role="alert">
+                    {correctSpeaker.error.message}
+                  </p>
+                ) : null}
                 {failedTranscriptionCount > 0 ? (
                   <p className={cn(mutedTextClassName, "text-sm leading-6")}>
                     {failedTranscriptionCount}{" "}
@@ -1179,9 +1253,18 @@ export function SubmissionDetailPage() {
           }
           footer={
             <>
-              {/* A playable recording lives in the docked player instead. */}
+              {/* A playable recording plays in the docked player; its synchronized
+                  transcript stays here, driving that player. */}
               {vivaAudioRecords.map((record) =>
-                record.access.status === "allowed" ? null : (
+                record.access.status === "allowed" ? (
+                  record.id === playableRecording?.id ? (
+                    <RecordingTranscriptSection
+                      audioElement={dockedAudioElement}
+                      key={record.id}
+                      submissionVivaId={record.id}
+                    />
+                  ) : null
+                ) : (
                   <article
                     key={record.id}
                     className="grid gap-2 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] sm:items-center sm:gap-4"
@@ -1353,6 +1436,7 @@ export function SubmissionDetailPage() {
       {playableRecording && !isLive ? (
         <DockedVivaPlayer
           fileName={playableRecording.file_name}
+          onAudioElementChange={setDockedAudioElement}
           seekRequest={seekRequest}
           src={playableRecording.access.signedUrl}
         />
