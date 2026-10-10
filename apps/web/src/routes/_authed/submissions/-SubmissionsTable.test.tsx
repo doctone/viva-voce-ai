@@ -29,7 +29,7 @@ describe('SubmissionsTable', () => {
 
     const [, firstRow] = await screen.findAllByRole('row')
 
-    expect(within(firstRow).getByText('Student STU-1042')).toBeInTheDocument()
+    expect(within(firstRow).getByText('STU-1042')).toBeInTheDocument()
     expect(
       screen.getByRole('columnheader', { name: 'Submitted' }),
     ).toHaveAttribute('aria-sort', 'descending')
@@ -44,7 +44,7 @@ describe('SubmissionsTable', () => {
 
     const [, firstRow] = screen.getAllByRole('row')
 
-    expect(within(firstRow).getByText('Student STU-1098')).toBeInTheDocument()
+    expect(within(firstRow).getByText('STU-1098')).toBeInTheDocument()
     expect(
       screen.getByRole('columnheader', { name: 'Submitted' }),
     ).toHaveAttribute('aria-sort', 'ascending')
