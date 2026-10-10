@@ -40,6 +40,7 @@ export function Signup() {
 
   return (
     <Auth
+      heading="Create your account"
       actionText="Sign up"
       status={signupMutation.status}
       onSubmit={(e) => {

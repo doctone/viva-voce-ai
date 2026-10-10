@@ -209,7 +209,8 @@ This system is flat by default. Depth comes from warm tonal separation, visible 
 
 ### Auth Split Panel
 - **Description:** The authentication layout pairs a disciplined form panel with a photographic reassurance panel.
-- **Behavior:** The right-side image is only present at larger breakpoints. Its overlay should remain readable and muted, never cinematic.
+- **Form panel:** No card. The form sits directly on Archival Paper in a 380px column: wordmark top-left, a Display heading, the switch-account link beneath it, then boxed fields (white fill, hairline border) because a bottom-rule field has nothing to anchor it without a panel.
+- **Behavior:** The right-side image is only present at larger breakpoints. Its only overlay is a single serif line on a navy fade at the bottom edge: readable and muted, never cinematic.
 
 ## Do's and Don'ts
 

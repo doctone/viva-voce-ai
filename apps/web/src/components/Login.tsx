@@ -33,6 +33,7 @@ export function Login() {
 
   return (
     <Auth
+      heading="Welcome back"
       actionText="Log in"
       status={loginMutation.status}
       pendingText="Signing you in…"
