@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { Button, buttonClassName, EmptyState, PageFrame } from '../../../components/ui'
 import { SubmissionsTable } from './-SubmissionsTable'
 import { SubmissionsToolbar } from './-SubmissionsToolbar'
+import { SubmissionStageSummary } from './-SubmissionStageSummary'
 import { useSubmissions } from './-useSubmissions'
 import {
   countSubmissionsByStatus,
@@ -88,9 +89,7 @@ export function SubmissionsPage() {
 
   return (
     <PageFrame
-      eyebrow="Workspace"
       title="Submissions"
-      description="Every submission in the workspace, newest first. Open one to read it, review its questions, and record the viva."
       actions={
         <Link to="/submissions/new" className={buttonClassName()}>
           New Submission
@@ -121,6 +120,8 @@ export function SubmissionsPage() {
         />
       ) : (
         <div className="grid gap-5">
+          <SubmissionStageSummary counts={counts} />
+
           <SubmissionsToolbar
             counts={counts}
             onSearchChange={setSearch}

@@ -33,34 +33,24 @@ type SubmissionsTableProps = {
 }
 
 /**
- * Status reads as a dot plus a word, not a filled chip: on a list where most
- * rows share a state, filled chips turn the table into a wall of colour. The
- * dot carries the state, and only the actionable one is inked in the primary.
+ * Only the stage that needs the teacher is filled: on a list where most rows
+ * share a state, filling every chip turns the table into a wall of colour.
+ * Waiting reads as an unfinished dashed outline, done as a quiet grey.
  */
-const STATUS_DOT_CLASSNAME: Record<SubmissionStatus, string> = {
-  pending: 'border border-outline bg-transparent',
-  questions_ready: 'bg-primary',
-  recorded: 'bg-outline',
-}
-
-const STATUS_TEXT_CLASSNAME: Record<SubmissionStatus, string> = {
-  pending: 'text-on-surface-variant',
-  questions_ready: 'text-on-surface',
-  recorded: 'text-on-surface-variant',
+const STATUS_PILL_CLASSNAME: Record<SubmissionStatus, string> = {
+  pending: 'border border-dashed border-outline bg-transparent text-on-surface-variant',
+  questions_ready: 'border border-primary-container bg-primary-container text-on-primary',
+  recorded: 'border border-transparent bg-surface-container text-on-surface-variant',
 }
 
 function StatusChip({ status }: { status: SubmissionStatus }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-2 text-[12px] font-bold uppercase leading-none tracking-[0.08em] whitespace-nowrap',
-        STATUS_TEXT_CLASSNAME[status],
+        'inline-flex h-[26px] items-center rounded-full px-2.5 text-[12px] font-bold leading-none whitespace-nowrap',
+        STATUS_PILL_CLASSNAME[status],
       )}
     >
-      <span
-        aria-hidden="true"
-        className={cn('size-2 shrink-0', STATUS_DOT_CLASSNAME[status])}
-      />
       {STATUS_LABEL[status]}
     </span>
   )
@@ -85,30 +75,30 @@ export function formatStudentReference(studentId: string) {
 const columns = [
   columnHelper.accessor('submissionTitle', {
     header: 'Submission',
-    cell: (info) => {
-      const { id: submissionId, studentId } = info.row.original
-
-      return (
-        <div className="grid gap-1">
-          <Link
-            to="/submissions/$submissionId"
-            params={{ submissionId }}
-            className={cn(
-              'text-[15px] font-medium leading-6 text-on-surface underline-offset-4 hover:text-primary hover:underline md:line-clamp-2',
-              focusRingClassName,
-            )}
-          >
-            {info.getValue()}
-          </Link>
-          <span
-            className="font-sans text-[12px] leading-5 text-on-surface-variant [font-variant-numeric:tabular-nums]"
-            title={studentId}
-          >
-            Student {formatStudentReference(studentId)}
-          </span>
-        </div>
-      )
-    },
+    cell: (info) => (
+      <Link
+        to="/submissions/$submissionId"
+        params={{ submissionId: info.row.original.id }}
+        className={cn(
+          'text-[15px] font-semibold leading-6 text-on-surface underline-offset-4 hover:text-primary hover:underline md:line-clamp-2',
+          focusRingClassName,
+        )}
+      >
+        {info.getValue()}
+      </Link>
+    ),
+  }),
+  columnHelper.accessor('studentId', {
+    header: 'Student',
+    enableSorting: false,
+    cell: (info) => (
+      <span
+        className="text-[13px] text-on-surface-variant [font-variant-numeric:tabular-nums]"
+        title={info.getValue()}
+      >
+        {formatStudentReference(info.getValue())}
+      </span>
+    ),
   }),
   columnHelper.accessor('dateSubmitted', {
     header: 'Submitted',
@@ -130,8 +120,9 @@ const columns = [
 
 const HEADER_WIDTH_CLASSNAME: Record<string, string> = {
   submissionTitle: 'w-auto',
-  dateSubmitted: 'w-[18%]',
-  status: 'w-[24%]',
+  studentId: 'w-[14%]',
+  dateSubmitted: 'w-[16%]',
+  status: 'w-[20%]',
 }
 
 /**
@@ -141,7 +132,9 @@ const HEADER_WIDTH_CLASSNAME: Record<string, string> = {
 const MOBILE_CELL: Record<string, { className: string; showLabel: boolean }> = {
   submissionTitle: { className: 'order-1', showLabel: false },
   status: { className: 'order-2 justify-items-start', showLabel: false },
-  dateSubmitted: { className: 'order-3', showLabel: true },
+  // Label and value share a line so each card stays a glance tall.
+  studentId: { className: 'order-3 max-md:flex max-md:items-baseline max-md:gap-2', showLabel: true },
+  dateSubmitted: { className: 'order-4 max-md:flex max-md:items-baseline max-md:gap-2', showLabel: true },
 }
 
 const MOBILE_SORT_OPTIONS = [
@@ -272,13 +265,26 @@ export function SubmissionsTable({ rows, summary }: SubmissionsTableProps) {
                   <th
                     key={header.id}
                     scope="col"
-                    aria-sort={sortDirection ? ARIA_SORT[sortDirection] : 'none'}
+                    aria-sort={
+                      header.column.getCanSort()
+                        ? sortDirection
+                          ? ARIA_SORT[sortDirection]
+                          : 'none'
+                        : undefined
+                    }
                     className={cn(
                       'sticky top-0 z-10 border-b border-outline-variant bg-surface-container-low px-5 py-2.5 text-left align-middle',
                       HEADER_WIDTH_CLASSNAME[header.column.id],
                     )}
                   >
-                    {header.isPlaceholder ? null : (
+                    {header.isPlaceholder ? null : !header.column.getCanSort() ? (
+                      <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-on-surface-variant">
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                      </span>
+                    ) : (
                       <button
                         type="button"
                         onClick={header.column.getToggleSortingHandler()}

@@ -68,6 +68,8 @@ import {
   mutedTextClassName,
   paperPanelClassName,
   readingClassName,
+  segmentedItemClassName,
+  segmentedTrackClassName,
 } from "~/lib/class-names";
 import { getSupabaseBrowserClient } from "../../utils/supabase-browser";
 import {
@@ -130,8 +132,10 @@ function isSubmissionTab(value: string): value is SubmissionTab {
   return value === "viva" || value === "submission" || value === "questions";
 }
 
-const submissionTabTriggerClassName =
-  "h-11 flex-1 rounded-none text-sm font-bold text-on-surface-variant hover:text-primary data-active:text-primary group-data-[variant=line]/tabs-list:data-active:after:bg-primary-container";
+const submissionTabTriggerClassName = cn(
+  segmentedItemClassName,
+  "h-10 flex-1 px-5 text-sm lg:flex-none",
+);
 
 async function fetchSubmission(submissionId: string) {
   const supabase = getSupabaseBrowserClient();
@@ -1150,21 +1154,25 @@ export function SubmissionDetailPage() {
         value={activeTab}
       >
         {/* Sits under the 61px sticky mobile nav header, which is hidden at lg. */}
-        <TabsList
-          aria-label="Submission sections"
-          className="sticky top-[61px] z-10 -mx-6 h-auto w-auto gap-0 border-b border-outline-variant bg-background p-0 px-6 lg:top-0"
-          variant="line"
-        >
-          <TabsTrigger className={submissionTabTriggerClassName} value="viva">
-            Viva
-          </TabsTrigger>
-          <TabsTrigger className={submissionTabTriggerClassName} value="submission">
-            Submission
-          </TabsTrigger>
-          <TabsTrigger className={submissionTabTriggerClassName} value="questions">
-            Questions
-          </TabsTrigger>
-        </TabsList>
+        <div className="sticky top-[61px] z-10 -mx-6 bg-background px-6 py-2 lg:top-0">
+          <TabsList
+            aria-label="Submission sections"
+            className={cn(
+              segmentedTrackClassName,
+              "h-auto w-full group-data-horizontal/tabs:h-auto lg:w-fit",
+            )}
+          >
+            <TabsTrigger className={submissionTabTriggerClassName} value="viva">
+              Viva
+            </TabsTrigger>
+            <TabsTrigger className={submissionTabTriggerClassName} value="submission">
+              Submission
+            </TabsTrigger>
+            <TabsTrigger className={submissionTabTriggerClassName} value="questions">
+              Questions
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Panels stay mounted so a half-edited question survives a tab switch. */}
         <TabsContent

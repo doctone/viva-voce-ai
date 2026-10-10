@@ -31,8 +31,9 @@ describe('SubmissionsTable', () => {
     expect(screen.getByRole('columnheader', { name: 'Submission' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Submitted' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Student' })).toBeInTheDocument()
 
-    expect(screen.getByText('Student STU-1042')).toBeInTheDocument()
+    expect(screen.getByText('STU-1042')).toBeInTheDocument()
     expect(screen.getByText('Modernist Poetry Oral Defence')).toBeInTheDocument()
     expect(screen.getByText('10 Mar 2026')).toBeInTheDocument()
     expect(screen.getByText('Awaiting Questions')).toBeInTheDocument()
@@ -68,7 +69,7 @@ describe('SubmissionsTable', () => {
 
     const [, firstRow] = await screen.findAllByRole('row')
 
-    expect(within(firstRow).getByText('Student STU-1042')).toBeInTheDocument()
+    expect(within(firstRow).getByText('STU-1042')).toBeInTheDocument()
     expect(
       screen.getByRole('columnheader', { name: 'Submitted' }),
     ).toHaveAttribute('aria-sort', 'descending')
@@ -83,7 +84,7 @@ describe('SubmissionsTable', () => {
 
     const [, firstRow] = screen.getAllByRole('row')
 
-    expect(within(firstRow).getByText('Student STU-1098')).toBeInTheDocument()
+    expect(within(firstRow).getByText('STU-1098')).toBeInTheDocument()
     expect(
       screen.getByRole('columnheader', { name: 'Submitted' }),
     ).toHaveAttribute('aria-sort', 'ascending')

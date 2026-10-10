@@ -1,6 +1,10 @@
 import { cn } from '~/lib/utils'
-import { focusRingClassName } from '~/lib/class-names'
-import { buttonClassName } from '../../../components/ui/Button'
+import {
+  focusRingClassName,
+  segmentedCountClassName,
+  segmentedItemClassName,
+  segmentedTrackClassName,
+} from '~/lib/class-names'
 import {
   STATUS_FILTER_LABEL,
   STATUS_FILTER_ORDER,
@@ -15,8 +19,17 @@ type SubmissionsToolbarProps = {
   status: StatusFilter
 }
 
-const filterBaseClassName =
-  'inline-flex h-11 items-center gap-2 border px-4 text-[12px] font-bold uppercase tracking-[0.08em] whitespace-nowrap transition-[background-color,border-color,color] duration-150 ease-out focus-visible:relative focus-visible:z-10'
+/**
+ * A phone fits four segments only with one-word labels. The full label stays
+ * the accessible name, so a screen reader hears the same words as the stage
+ * summary and the table.
+ */
+const SHORT_FILTER_LABEL: Record<StatusFilter, string> = {
+  all: 'All',
+  pending: 'Awaiting',
+  questions_ready: 'Ready',
+  recorded: 'Recorded',
+}
 
 export function SubmissionsToolbar({
   counts,
@@ -26,8 +39,8 @@ export function SubmissionsToolbar({
   status,
 }: SubmissionsToolbarProps) {
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_auto] lg:items-center lg:justify-between lg:gap-6">
-      <div className="flex h-9 items-center gap-2 border-b border-outline px-1 transition-[border-color,background-color] duration-150 ease-out focus-within:border-primary focus-within:bg-surface-container-lowest">
+    <div className="grid gap-3 lg:flex lg:items-center lg:justify-between lg:gap-6">
+      <div className="flex h-11 items-center gap-2 rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest px-3 transition-[border-color] duration-150 ease-out focus-within:border-primary lg:h-10 lg:w-[22rem]">
         <label htmlFor="submissions-search" className="sr-only">
           Search
         </label>
@@ -47,7 +60,7 @@ export function SubmissionsToolbar({
           type="search"
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search submissions"
+          placeholder="Search by title or student"
           className="min-w-0 flex-1 bg-transparent text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none"
         />
         {search === '' ? null : (
@@ -67,35 +80,22 @@ export function SubmissionsToolbar({
       <div
         role="group"
         aria-label="Filter submissions by status"
-        className="flex flex-wrap items-center gap-y-2 lg:justify-self-end"
+        className={cn(segmentedTrackClassName, 'grid grid-cols-4 lg:inline-flex')}
       >
-        {STATUS_FILTER_ORDER.map((filter) => {
-          const isActive = filter === status
-
-          return (
-            <button
-              key={filter}
-              type="button"
-              aria-pressed={isActive}
-              onClick={() => onStatusChange(filter)}
-              className={buttonClassName({
-                className: cn(filterBaseClassName, '-ml-px first:ml-0'),
-                size: 'sm',
-                variant: isActive ? 'primary' : 'secondary',
-              })}
-            >
-              {STATUS_FILTER_LABEL[filter]}
-              <span
-                className={cn(
-                  'font-sans text-[11px] font-bold [font-variant-numeric:tabular-nums]',
-                  isActive ? 'text-on-primary/70' : 'text-on-surface-variant/70',
-                )}
-              >
-                {counts[filter]}
-              </span>
-            </button>
-          )
-        })}
+        {STATUS_FILTER_ORDER.map((filter) => (
+          <button
+            key={filter}
+            type="button"
+            aria-label={`${STATUS_FILTER_LABEL[filter]} ${counts[filter]}`}
+            aria-pressed={filter === status}
+            onClick={() => onStatusChange(filter)}
+            className={cn(segmentedItemClassName, 'h-10 px-2 lg:h-9 lg:px-3.5')}
+          >
+            <span className="lg:hidden">{SHORT_FILTER_LABEL[filter]}</span>
+            <span className="hidden lg:inline">{STATUS_FILTER_LABEL[filter]}</span>
+            <span className={segmentedCountClassName}>{counts[filter]}</span>
+          </button>
+        ))}
       </div>
     </div>
   )
