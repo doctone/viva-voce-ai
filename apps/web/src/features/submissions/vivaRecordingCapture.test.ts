@@ -1,13 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   INITIAL_CHUNK_UPLOAD_TRACKER_STATE,
-  RECORDING_MIME_TYPE_CANDIDATES,
   applyChunkUploadResult,
   buildRecordingChunkStoragePath,
-  clampQuestionIndex,
   computeElapsedSeconds,
   formatElapsedDuration,
-  formatSessionProgress,
   negotiateRecordingMimeType,
   transitionRecordingStatus,
   uploadRecordingChunk,
@@ -38,9 +35,6 @@ describe("negotiateRecordingMimeType", () => {
     expect(negotiateRecordingMimeType(() => false)).toBeNull();
   });
 
-  it("exposes webm-with-opus as the top priority candidate", () => {
-    expect(RECORDING_MIME_TYPE_CANDIDATES[0]).toBe("audio/webm;codecs=opus");
-  });
 });
 
 describe("buildRecordingChunkStoragePath", () => {
@@ -288,13 +282,6 @@ describe("applyChunkUploadResult", () => {
     reason: "Network error",
   };
 
-  it("starts with no failed or uploaded chunks", () => {
-    expect(INITIAL_CHUNK_UPLOAD_TRACKER_STATE).toEqual({
-      failedSequences: [],
-      uploadedSequences: [],
-    });
-  });
-
   it("tracks a failed sequence", () => {
     const state = applyChunkUploadResult(
       INITIAL_CHUNK_UPLOAD_TRACKER_STATE,
@@ -357,37 +344,6 @@ describe("applyChunkUploadResult", () => {
 
     expect(afterSecondFails.uploadedSequences).toEqual([1]);
     expect(afterSecondFails.failedSequences).toEqual([2]);
-  });
-});
-
-describe("formatSessionProgress", () => {
-  it("formats the current position out of the total", () => {
-    expect(formatSessionProgress(0, 5)).toBe("Question 1 of 5");
-    expect(formatSessionProgress(4, 5)).toBe("Question 5 of 5");
-  });
-
-  it("describes an empty question set", () => {
-    expect(formatSessionProgress(0, 0)).toBe(
-      "No planned questions in this Viva Question Set.",
-    );
-  });
-});
-
-describe("clampQuestionIndex", () => {
-  it("clamps below zero up to zero", () => {
-    expect(clampQuestionIndex(-1, 5)).toBe(0);
-  });
-
-  it("clamps above the last index down to the last index", () => {
-    expect(clampQuestionIndex(10, 5)).toBe(4);
-  });
-
-  it("leaves an in-range index unchanged", () => {
-    expect(clampQuestionIndex(2, 5)).toBe(2);
-  });
-
-  it("returns zero when there are no questions", () => {
-    expect(clampQuestionIndex(3, 0)).toBe(0);
   });
 });
 

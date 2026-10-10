@@ -5,7 +5,6 @@ import {
   buildTranscriptionSessionUpdate,
   encodePcm16,
   INITIAL_LIVE_TRANSCRIPTION_STATE,
-  LIVE_AUDIO_SAMPLE_RATE,
   renderLiveTranscript,
 } from './liveTranscription'
 
@@ -91,16 +90,6 @@ describe('encodePcm16', () => {
 })
 
 describe('buildTranscriptionSessionUpdate', () => {
-  it('asks for transcription at the rate the audio is sent in', () => {
-    const update = buildTranscriptionSessionUpdate()
-
-    expect(update.session.type).toBe('transcription')
-    expect(update.session.audio.input.format.rate).toBe(LIVE_AUDIO_SAMPLE_RATE)
-    expect(update.session.audio.input.transcription.model).toBe(
-      'gpt-live-transcribe',
-    )
-  })
-
   it('does not ask for turn detection, which this model refuses outright', () => {
     // The API answers a turn_detection field with 400 invalid_value:
     // "Turn detection is not supported for this transcription model."

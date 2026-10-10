@@ -58,6 +58,20 @@ pnpm test          # run the full test suite (turbo run test)
 pnpm test:web      # run only the web app's Vitest suite
 ```
 
+### Testing strategy
+
+Tests are behaviour specifications. Read `apps/web/TESTING.md` before writing,
+changing or deleting a test.
+
+- Test at the highest seam that shows the behaviour: the page for anything a
+  teacher sees, and the exported domain function for deep branching logic.
+- Fake only at the boundary: MSW for HTTP, jsdom-missing browser APIs, time,
+  and the TanStack Start server runtime. Everything else runs for real.
+- Assert outcomes: visible text, roles and accessible state, HTTP request
+  bodies, return values and a fake's final state.
+- Before adding a test, name the regression it catches that no existing test
+  catches.
+
 ### Mutation testing
 
 Mutation testing (via [Stryker](https://stryker-mutator.io/)) checks whether the test

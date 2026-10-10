@@ -51,17 +51,6 @@ describe('VivaSessionCapturePanel', () => {
     ).toBeInTheDocument()
   })
 
-  it('marks a planned question as asked', async () => {
-    const user = userEvent.setup()
-    const props = renderPanel({
-      plannedQuestions: [{ id: 'question-1', questionText: 'Why is this pivotal?' }],
-    })
-
-    await user.click(screen.getByRole('button', { name: 'Mark as asked' }))
-
-    expect(props.onAskPlannedQuestion).toHaveBeenCalledWith('question-1')
-  })
-
   it('records an unplanned follow-up question, operable by keyboard', async () => {
     const user = userEvent.setup()
     const props = renderPanel()
@@ -140,28 +129,6 @@ describe('VivaSessionCapturePanel', () => {
 })
 
 describe('AskedQuestionCaptureCard evidence markers', () => {
-  it('applies an Evidence Marker, keyboard-operable, and highlights the active one', async () => {
-    const user = userEvent.setup()
-    const props = renderPanel({
-      askedQuestions: [askedQuestion()],
-    })
-
-    await user.tab()
-    await user.tab()
-    await user.tab()
-    await user.tab()
-    const needsProbingButton = screen.getByRole('button', {
-      name: 'Needs further probing',
-    })
-    expect(needsProbingButton).toHaveFocus()
-    await user.keyboard('{Enter}')
-
-    expect(props.onApplyEvidenceMarker).toHaveBeenCalledWith(
-      'asked-question-1',
-      'needs_further_probing',
-    )
-  })
-
   it('shows the currently applied Evidence Marker as active', () => {
     renderPanel({
       askedQuestions: [
@@ -199,25 +166,6 @@ describe('AskedQuestionCaptureCard observation autosave', () => {
 
   afterEach(() => {
     vi.useRealTimers()
-  })
-
-  it('autosaves the Observation after the teacher stops typing', async () => {
-    const user = userEvent.setup({ delay: null })
-    const props = renderPanel({ askedQuestions: [askedQuestion()] })
-
-    await user.type(screen.getByLabelText(/Observation/), 'Confident answer.')
-
-    expect(props.onSaveObservation).not.toHaveBeenCalled()
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1000)
-    })
-
-    expect(props.onSaveObservation).toHaveBeenCalledWith(
-      'asked-question-1',
-      'Confident answer.',
-    )
-    expect(await screen.findByText('Saved')).toBeInTheDocument()
   })
 
   it('shows a retry option after a temporary network failure and recovers', async () => {

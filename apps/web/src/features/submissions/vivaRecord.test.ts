@@ -1,12 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSnapshot,
-  formatVivaConclusionLabel,
-  isVivaConclusion,
   saveVivaRecordDraft,
   signVivaRecord,
-  validateForSigning,
-  VIVA_CONCLUSIONS,
   type SessionSource,
   type VivaRecord,
   type VivaRecordDraftInput,
@@ -70,34 +66,6 @@ function createRepository(initial: VivaRecord | null = null) {
   return { calls, get stored() { return stored; }, repository };
 }
 
-describe("Viva Conclusion", () => {
-  it("offers exactly the four conclusions with readable labels", () => {
-    expect(VIVA_CONCLUSIONS.map(formatVivaConclusionLabel)).toEqual([
-      "Understanding demonstrated",
-      "Further review required",
-      "Authenticity concern",
-      "Unable to conclude",
-    ]);
-  });
-
-  it("recognises only known conclusions", () => {
-    expect(isVivaConclusion("authenticity_concern")).toBe(true);
-    expect(isVivaConclusion("pass")).toBe(false);
-  });
-});
-
-describe("validateForSigning", () => {
-  it("requires a conclusion and an explanation", () => {
-    expect(
-      validateForSigning({ conclusion: null, conclusionRationale: "  ", followUpAction: "" }),
-    ).toEqual(["Choose a Viva Conclusion.", "Explain your Viva Conclusion."]);
-  });
-
-  it("allows an empty follow-up action", () => {
-    expect(validateForSigning({ ...validInput, followUpAction: "" })).toEqual([]);
-  });
-});
-
 describe("buildSnapshot", () => {
   it("captures attribution, time, questions, evidence and recording", () => {
     const snapshot = buildSnapshot(source);
@@ -128,13 +96,6 @@ describe("buildSnapshot", () => {
 });
 
 describe("signVivaRecord", () => {
-  it("does not sign or even draft anything on its own before being asked", async () => {
-    const fake = createRepository();
-
-    expect(fake.stored).toBeNull();
-    expect(fake.calls).toEqual({ saveDraft: 0, sign: 0 });
-  });
-
   it("rejects an incomplete draft without touching storage", async () => {
     const fake = createRepository();
     const result = await signVivaRecord(

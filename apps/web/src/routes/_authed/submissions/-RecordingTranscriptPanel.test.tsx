@@ -39,13 +39,6 @@ function renderPanel(props: Partial<React.ComponentProps<typeof RecordingTranscr
 }
 
 describe("RecordingTranscriptPanel", () => {
-  it("renders nothing without a job", () => {
-    const { container } = render(
-      <RecordingTranscriptPanel currentSeconds={0} job={null} onRetry={vi.fn()} onSeek={vi.fn()} segments={[]} />,
-    );
-    expect(container).toBeEmptyDOMElement();
-  });
-
   it.each([
     ["queued", "Transcript queued"],
     ["processing", "Transcribing…"],

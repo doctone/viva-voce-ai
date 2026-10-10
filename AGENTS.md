@@ -12,6 +12,20 @@ bd close <id>         # Complete work
 bd dolt push          # Push beads data to remote
 ```
 
+## Testing Strategy
+
+Tests are behaviour specifications. Read `apps/web/TESTING.md` before writing,
+changing or deleting a test.
+
+- Test at the highest seam that shows the behaviour: the page for anything a
+  teacher sees, and the exported domain function for deep branching logic.
+- Fake only at the boundary: MSW for HTTP, jsdom-missing browser APIs, time,
+  and the TanStack Start server runtime. Everything else runs for real.
+- Assert outcomes: visible text, roles and accessible state, HTTP request
+  bodies, return values and a fake's final state.
+- Before adding a test, name the regression it catches that no existing test
+  catches.
+
 ## Non-Interactive Shell Commands
 
 **ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.

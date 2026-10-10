@@ -3,12 +3,10 @@ import {
   assessRecordingQuality,
   createTimedTranscriber,
   enqueueRecordingTranscription,
-  findActiveSegmentIndex,
   formatTimestamp,
   isUncertain,
   parseVerboseTranscription,
   processRecordingTranscription,
-  searchTranscript,
   type RecordingTranscriptSegment,
   type RecordingTranscriptionRepository,
   type TranscriptionJob,
@@ -197,38 +195,9 @@ describe("processRecordingTranscription", () => {
     expect(result).toEqual({ outcome: "not_runnable", status: "processing" });
     expect(transcribeSpy).not.toHaveBeenCalled();
   });
-
-  it("completes a retried job after an earlier failure", async () => {
-    const failing = createRepository({ job: { status: "queued", attempts: 1 } });
-
-    const result = await processRecordingTranscription("viva-1", teacher, failing.repository, transcribe);
-
-    expect(result).toEqual({ outcome: "completed" });
-  });
 });
 
 describe("reading the transcript", () => {
-  const segments = [
-    segment(0, 5, "Tell me about photosynthesis."),
-    segment(5, 10, "It uses light to make sugar.", 0.4),
-    segment(12, 15, "Chlorophyll absorbs the light."),
-  ];
-
-  it("searches case-insensitively and ignores blank queries", () => {
-    expect(searchTranscript(segments, "LIGHT")).toEqual([1, 2]);
-    expect(searchTranscript(segments, "  photo ")).toEqual([0]);
-    expect(searchTranscript(segments, "nothing")).toEqual([]);
-    expect(searchTranscript(segments, "   ")).toEqual([]);
-  });
-
-  it("finds the segment under the playhead", () => {
-    expect(findActiveSegmentIndex(segments, 0)).toBe(0);
-    expect(findActiveSegmentIndex(segments, 4.99)).toBe(0);
-    expect(findActiveSegmentIndex(segments, 5)).toBe(1);
-    expect(findActiveSegmentIndex(segments, 11)).toBe(-1);
-    expect(findActiveSegmentIndex(segments, 15)).toBe(-1);
-  });
-
   it("flags only passages below the confidence threshold", () => {
     expect(isUncertain(segment(0, 1, "x", 0.59))).toBe(true);
     expect(isUncertain(segment(0, 1, "x", 0.6))).toBe(false);

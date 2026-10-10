@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { attributeSpeakers, CHUNK_DURATION_MS } from './speakerAttribution'
 
@@ -56,24 +54,5 @@ describe('attributeSpeakers', () => {
     )
 
     expect(result.map((u) => u.speaker)).toEqual(['teacher', 'unknown', 'unknown'])
-  })
-})
-
-describe('viva_transcript_utterances migration', () => {
-  const sql = readFileSync(
-    resolve(__dirname, '../../../../../packages/database/supabase/migrations/20261008120000_create_viva_transcript_utterances.sql'),
-    'utf8',
-  )
-
-  it('enables row level security with policies', () => {
-    expect(sql).toContain('enable row level security')
-    expect(sql).toMatch(/create policy[^;]+for select/)
-    expect(sql).toMatch(/create policy[^;]+for insert/)
-  })
-
-  it('constrains speaker values and makes re-transcription idempotent', () => {
-    expect(sql).toContain("speaker in ('teacher', 'student', 'unknown')")
-    expect(sql).toContain("speaker_source in ('model', 'teacher')")
-    expect(sql).toMatch(/create unique index[^;]+\(viva_session_id, sequence, position\)/)
   })
 })

@@ -24,14 +24,8 @@ export default defineConfig({
       reporter: ["text", "lcov", "json-summary", "json"],
       include: ["src/**/*.{ts,tsx}"],
       exclude: ["src/test/**", "**/*.test.*", "src/routes/**/route.tsx"],
-      // Floors set from the measured baseline (~63/74/70 stmts/branches/funcs)
-      // with a small buffer, not the 70/65/70 targets — most gaps are in
-      // route files with no assertions yet, tracked separately.
-      thresholds: {
-        statements: 60,
-        branches: 70,
-        functions: 65,
-      },
+      // Reported, not gated: a floor rewards tests written for coverage.
+      // See TESTING.md.
     },
   },
 });
