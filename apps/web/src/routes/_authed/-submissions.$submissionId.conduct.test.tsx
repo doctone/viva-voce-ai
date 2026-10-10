@@ -1,10 +1,12 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ConductVivaSessionPage } from './submissions.$submissionId.conduct'
 import {
+  createTestAskedQuestion,
   createTestQuestion,
+  type TestAskedQuestion,
   createTestSubmission,
   createTestVivaQuestionSet,
   createTestVivaSession,
@@ -34,9 +36,20 @@ let captureState: { failedChunkCount: number; status: string } = {
   status: 'idle',
 }
 
+let liveTranscriptionState = {
+  errorMessage: null as string | null,
+  isConnected: false,
+  text: '',
+}
+
+vi.mock('../../features/submissions/useLiveTranscription', () => ({
+  useLiveTranscription: () => liveTranscriptionState,
+}))
+
 vi.mock('../../features/submissions/useVivaAudioCapture', () => ({
   useVivaAudioCapture: () => ({
     ...captureSpies,
+    getMediaStream: () => null,
     failedChunkCount: captureState.failedChunkCount,
     status: captureState.status,
   }),
@@ -51,6 +64,11 @@ function renderConductPage(
   )
 }
 
+async function findCurrentQuestionText(text: string) {
+  const card = await screen.findByRole('region', { name: 'Current question' })
+  return within(card).findByText(text)
+}
+
 const questionOne = createTestQuestion({
   id: 'question-1',
   question_text: 'Why does the response describe Lord Mansfield as pivotal?',
@@ -58,6 +76,7 @@ const questionOne = createTestQuestion({
   teacher_note: 'Listen for understanding of legal reform.',
 })
 const questionTwo = createTestQuestion({
+  category: 'argumentation_and_reasoning',
   id: 'question-2',
   question_text: 'How does the argument address counter-evidence?',
   set_position: 1,
@@ -67,6 +86,7 @@ const questionTwo = createTestQuestion({
 describe('ConductVivaSessionPage', () => {
   beforeEach(() => {
     captureState = { failedChunkCount: 0, status: 'idle' }
+    liveTranscriptionState = { errorMessage: null, isConnected: false, text: '' }
     captureSpies.retryFailedChunks.mockReset()
     captureSpies.start.mockReset()
     captureSpies.stop.mockReset()
@@ -110,7 +130,7 @@ describe('ConductVivaSessionPage', () => {
     renderConductPage()
 
     expect(
-      await screen.findByText(questionOne.question_text),
+      await findCurrentQuestionText(questionOne.question_text),
     ).toBeInTheDocument()
     expect(
       screen.getByText(/Listen for understanding of legal reform\./),
@@ -135,7 +155,7 @@ describe('ConductVivaSessionPage', () => {
     const user = userEvent.setup()
     renderConductPage()
 
-    await screen.findByText(questionOne.question_text)
+    await findCurrentQuestionText(questionOne.question_text)
     expect(
       screen.getByRole('button', { name: 'Previous question' }),
     ).toBeDisabled()
@@ -143,7 +163,7 @@ describe('ConductVivaSessionPage', () => {
     await user.click(screen.getByRole('button', { name: 'Next question' }))
 
     expect(
-      await screen.findByText(questionTwo.question_text),
+      await findCurrentQuestionText(questionTwo.question_text),
     ).toBeInTheDocument()
     expect(screen.getByText('Question 2 of 2')).toBeInTheDocument()
     expect(
@@ -153,7 +173,7 @@ describe('ConductVivaSessionPage', () => {
     await user.click(screen.getByRole('button', { name: 'Previous question' }))
 
     expect(
-      await screen.findByText(questionOne.question_text),
+      await findCurrentQuestionText(questionOne.question_text),
     ).toBeInTheDocument()
   })
 
@@ -189,7 +209,7 @@ describe('ConductVivaSessionPage', () => {
         { viva_question_id: questionOne.id },
       ])
     })
-    expect(await screen.findByText('Asked')).toBeInTheDocument()
+    expect(await screen.findByText('Asked', { selector: 'span.text-on-surface-variant' })).toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Mark as asked' }),
     ).not.toBeInTheDocument()
@@ -309,7 +329,7 @@ describe('ConductVivaSessionPage', () => {
     const user = userEvent.setup()
     renderConductPage()
 
-    await screen.findByText(questionOne.question_text)
+    await findCurrentQuestionText(questionOne.question_text)
 
     await user.type(
       screen.getByLabelText('Unplanned follow-up question'),
@@ -392,5 +412,192 @@ describe('ConductVivaSessionPage', () => {
     )
 
     expect(captureSpies.togglePause).toHaveBeenCalledTimes(1)
+  })
+
+  describe('question set rail', () => {
+    function useBaseHandlers(askedRows: TestAskedQuestion[] = []) {
+      server.use(
+        ...submissionWithQuestionsHandlers(testSubmission, [
+          questionOne,
+          questionTwo,
+        ]),
+        vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'ready' })),
+        vivaSessionHandler([createTestVivaSession()]),
+        askedQuestionsHandler(askedRows),
+      )
+    }
+
+    it('lists every question in order with its state and progress', async () => {
+      useBaseHandlers([
+        createTestAskedQuestion({
+          asked_at: '2026-07-15T09:05:00.000Z',
+          id: 'asked-1',
+          is_unplanned: false,
+          question_text: questionOne.question_text,
+          viva_question_id: questionOne.id,
+        }),
+      ])
+
+      renderConductPage()
+
+      const rail = await screen.findByRole('list', { name: 'Viva Question Set' })
+      await waitFor(() => {
+        expect(within(rail).getAllByRole('listitem')).toHaveLength(2)
+        expect(within(rail).getByText('Asking now')).toBeInTheDocument()
+      })
+      expect(within(rail).getByText('Not yet asked')).toBeInTheDocument()
+      expect(screen.getByText('Question set · 1 of 2')).toBeInTheDocument()
+    })
+
+    it('marks the current question with aria-current and changes it on selection', async () => {
+      useBaseHandlers()
+      const user = userEvent.setup()
+
+      renderConductPage()
+
+      const rail = await screen.findByRole('list', { name: 'Viva Question Set' })
+      const [first, second] = within(rail).getAllByRole('button')
+      expect(first).toHaveAttribute('aria-current', 'true')
+      expect(second).not.toHaveAttribute('aria-current')
+
+      await user.click(second)
+
+      expect(second).toHaveAttribute('aria-current', 'true')
+      expect(first).not.toHaveAttribute('aria-current')
+      await findCurrentQuestionText(questionTwo.question_text)
+      expect(
+        within(
+          screen.getByRole('region', { name: 'Current question' }),
+        ).getByText('Argumentation & reasoning · Question 2'),
+      ).toBeInTheDocument()
+    })
+
+    it('selecting a question does not stop or pause the recording', async () => {
+      captureState = { failedChunkCount: 0, status: 'recording' }
+      useBaseHandlers()
+      const user = userEvent.setup()
+
+      renderConductPage()
+
+      const rail = await screen.findByRole('list', { name: 'Viva Question Set' })
+      await user.click(within(rail).getAllByRole('button')[1])
+
+      expect(captureSpies.stop).not.toHaveBeenCalled()
+      expect(captureSpies.togglePause).not.toHaveBeenCalled()
+      expect(captureSpies.start).not.toHaveBeenCalled()
+    })
+
+    it('shows an applied evidence marker in the rail straight away', async () => {
+      let askedQuestions: Array<Record<string, unknown>> = []
+      let evidenceMarkers: Array<Record<string, unknown>> = []
+
+      server.use(
+        ...submissionWithQuestionsHandlers(testSubmission, [questionOne]),
+        vivaQuestionSetHandler(createTestVivaQuestionSet({ status: 'ready' })),
+        vivaSessionHandler([createTestVivaSession()]),
+        http.get(`${SUPABASE_URL}/rest/v1/asked_questions`, () =>
+          HttpResponse.json(askedQuestions),
+        ),
+        http.post(`${SUPABASE_URL}/rest/v1/asked_questions`, async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>
+          askedQuestions = [
+            {
+              asked_at: '2026-07-15T09:05:00.000Z',
+              id: 'asked-1',
+              is_unplanned: false,
+              ...body,
+            },
+          ]
+          return HttpResponse.json(askedQuestions, { status: 201 })
+        }),
+        http.get(`${SUPABASE_URL}/rest/v1/observations`, () =>
+          HttpResponse.json([]),
+        ),
+        http.get(`${SUPABASE_URL}/rest/v1/evidence_markers`, () =>
+          HttpResponse.json(evidenceMarkers),
+        ),
+        http.post(`${SUPABASE_URL}/rest/v1/evidence_markers`, async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>
+          evidenceMarkers = [
+            { asked_question_id: 'asked-1', marker_type: body.marker_type },
+          ]
+          return HttpResponse.json(evidenceMarkers, { status: 201 })
+        }),
+      )
+      const user = userEvent.setup()
+
+      renderConductPage()
+
+      await user.click(
+        await screen.findByRole('button', { name: 'Mark as asked' }),
+      )
+      await user.click(
+        await screen.findByRole('button', { name: 'Concern' }),
+      )
+
+      const rail = screen.getByRole('list', { name: 'Viva Question Set' })
+      expect(
+        await within(rail).findByText('Asking now · Concern'),
+      ).toBeInTheDocument()
+    })
+
+    it('nests an unplanned follow-up under the question it followed and makes it selectable', async () => {
+      useBaseHandlers([
+        createTestAskedQuestion({
+          asked_at: '2026-07-15T09:05:00.000Z',
+          id: 'asked-1',
+          is_unplanned: false,
+          question_text: questionOne.question_text,
+          viva_question_id: questionOne.id,
+        }),
+        createTestAskedQuestion({
+          asked_at: '2026-07-15T09:06:00.000Z',
+          id: 'asked-2',
+          is_unplanned: true,
+          question_text: 'What about the counter-argument?',
+          viva_question_id: null,
+        }),
+      ])
+      const user = userEvent.setup()
+
+      renderConductPage()
+
+      const followUp = await screen.findByRole('button', {
+        name: /What about the counter-argument\?/,
+      })
+      const items = within(
+        screen.getByRole('list', { name: 'Viva Question Set' }),
+      ).getAllByRole('listitem')
+      expect(items[1]).toContainElement(followUp)
+
+      await user.click(followUp)
+
+      expect(followUp).toHaveAttribute('aria-current', 'true')
+      expect(
+        within(
+          screen.getByRole('region', { name: 'Current question' }),
+        ).getByText('What about the counter-argument?'),
+      ).toBeInTheDocument()
+    })
+
+    it('shows live transcript as best effort and keeps working when it fails', async () => {
+      captureState = { failedChunkCount: 0, status: 'recording' }
+      liveTranscriptionState = {
+        errorMessage: 'Live transcription disconnected.',
+        isConnected: false,
+        text: '',
+      }
+      useBaseHandlers()
+
+      renderConductPage()
+
+      expect(await screen.findByText(/Best effort/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Live transcription disconnected\./),
+      ).toBeInTheDocument()
+      expect(
+        await screen.findByRole('button', { name: 'Mark as asked' }),
+      ).toBeEnabled()
+    })
   })
 })
