@@ -9,9 +9,8 @@ import {
   INITIAL_CHUNK_UPLOAD_TRACKER_STATE,
   type ChunkUploadTrackerState,
   type RecordingStatus,
+  CHUNK_TIMESLICE_MS,
 } from "./vivaRecordingCapture";
-
-const CHUNK_TIMESLICE_MS = 15_000;
 
 export type VivaAudioCapture = {
   failedChunkCount: number;

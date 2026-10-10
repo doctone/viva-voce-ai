@@ -269,20 +269,22 @@ describe('SubmissionDetailPage', () => {
     expect(screen.queryByRole('heading', { name: 'Preparing viva questions' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Viva questions unavailable' })).not.toBeInTheDocument()
 
-    // The page opens on the work, not on the reading view: the questions are
-    // what a teacher came here to act on.
+    const user = userEvent.setup()
+
     expect(
-      await screen.findByText('Why does the response describe Lord Mansfield as pivotal?'),
+      await screen.findByRole('heading', { name: 'Mercantile law response' }),
     ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'Questions' }))
+
     expect(
-      screen.getByRole('heading', { name: 'Mercantile law response' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: 'Record viva' }),
+      within(screen.getByRole('tabpanel', { name: 'Questions' })).getByText(
+        'Why does the response describe Lord Mansfield as pivotal?',
+      ),
     ).toBeInTheDocument()
   })
 
-  it('leads with the record call to action and shows the full submission below it', async () => {
+  it('opens on the viva and keeps the submission and questions one tab away', async () => {
     generateSubmissionVivaSpy.mockReset()
 
     server.use(
@@ -303,17 +305,30 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
-    // Every part of the page is on screen at once: no tab hides the reading
-    // view behind the questions.
+    const user = userEvent.setup()
+
+    // On a phone the three parts stacked into five screens of scrolling, so
+    // each gets its own tab and the viva, the thing being reviewed, comes first.
     expect(
       await screen.findByRole('button', { name: 'Record viva' }),
     ).toBeInTheDocument()
-    expect(screen.getByText('Body paragraph one.')).toBeInTheDocument()
-    expect(screen.getByText('Body paragraph two.')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Viva', selected: true })).toBeInTheDocument()
+    expect(screen.queryByRole('tabpanel', { name: 'Submission' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'Submission' }))
+
+    const submissionPanel = screen.getByRole('tabpanel', { name: 'Submission' })
+    expect(within(submissionPanel).getByText('Body paragraph one.')).toBeInTheDocument()
+    expect(within(submissionPanel).getByText('Body paragraph two.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Record viva' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'Questions' }))
+
     expect(
-      screen.getByText('Why does the response describe Lord Mansfield as pivotal?'),
+      within(screen.getByRole('tabpanel', { name: 'Questions' })).getByText(
+        'Why does the response describe Lord Mansfield as pivotal?',
+      ),
     ).toBeInTheDocument()
-    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
   })
 
 
@@ -560,11 +575,60 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
-    expect(
-      await screen.findByText(
-        /I wanted to start with the storm and that is why I chose that opening line\./,
+    const transcript = await screen.findByRole('list', { name: 'Transcript' })
+    const lines = within(transcript).getAllByRole('listitem')
+
+    expect(lines.map((line) => line.textContent)).toEqual([
+      expect.stringContaining('I wanted to start with the storm'),
+      expect.stringContaining('and that is why I chose that opening line.'),
+    ])
+  })
+
+  it('searches the transcript and plays the recording from a matching line', async () => {
+    generateSubmissionVivaSpy.mockReset()
+
+    server.use(
+      ...submissionWithQuestionsHandlers(testSubmission, [
+        createTestQuestion({ sort_order: 1 }),
+      ]),
+      submissionVivaHandler([
+        createTestSubmissionViva({ file_name: 'viva.webm' }),
+      ]),
+      vivaQuestionSetHandler(),
+      vivaSessionHandler([createTestVivaSession({ status: 'ended' })]),
+      http.get(`${SUPABASE_REST}/viva_transcript_segments`, () =>
+        HttpResponse.json([
+          { sequence: 0, text: 'I wanted to start with the storm' },
+          { sequence: 1, text: 'and that is why I chose that opening line.' },
+          { sequence: 2, text: 'The storm comes back at the end.' },
+        ]),
       ),
-    ).toBeInTheDocument()
+      signedUrlHandler(),
+    )
+
+    const user = userEvent.setup()
+
+    renderWithRouter(
+      <SubmissionDetailPage />,
+      '/submissions/30420000-0000-0000-0000-000000000000',
+    )
+
+    await screen.findByRole('list', { name: 'Transcript' })
+    await user.type(screen.getByRole('searchbox', { name: 'Search transcript' }), 'storm')
+
+    const transcript = screen.getByRole('list', { name: 'Transcript' })
+    expect(within(transcript).getAllByRole('listitem')).toHaveLength(2)
+    expect(screen.getByText('2 lines match')).toBeInTheDocument()
+
+    // Each chunk is 15 seconds of audio, so the third line starts at 0:30.
+    await user.click(screen.getByRole('button', { name: 'Play from 00:30' }))
+
+    const player = screen.getByRole('region', { name: 'Viva playback' })
+    expect(within(player).getByText('00:30')).toBeInTheDocument()
+
+    // The player stays docked when the teacher goes to read the submission.
+    await user.click(screen.getByRole('tab', { name: 'Submission' }))
+    expect(screen.getByRole('region', { name: 'Viva playback' })).toBeInTheDocument()
   })
 
   it('keeps waiting when a reload interrupts a generation run, then shows the questions', async () => {
@@ -814,8 +878,10 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
+    await user.click(await screen.findByRole('tab', { name: 'Questions' }))
+
     const recommendedCard = (
-      await screen.findByText('Recommended question')
+      screen.getByText('Recommended question')
     ).closest('article')
     const nonRecommendedCard = screen.getByText('Non-recommended question').closest('article')
     const authenticityCard = screen.getByText('Authenticity question').closest('article')
@@ -913,7 +979,8 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
-    await user.click(await screen.findByRole('button', { name: 'Add Manual Question' }))
+    await user.click(await screen.findByRole('tab', { name: 'Questions' }))
+    await user.click(screen.getByRole('button', { name: 'Add Manual Question' }))
 
     await user.type(screen.getByLabelText('Question text'), 'A brand new manual question')
 
@@ -972,8 +1039,9 @@ describe('SubmissionDetailPage', () => {
       '/submissions/30420000-0000-0000-0000-000000000000',
     )
 
+    await user.click(await screen.findByRole('tab', { name: 'Questions' }))
     await user.click(
-      await screen.findByRole('button', { name: 'Edit question: Original question text' }),
+      screen.getByRole('button', { name: 'Edit question: Original question text' }),
     )
 
     const editField = screen.getByLabelText('Edit question text for Comprehension And Accuracy')
