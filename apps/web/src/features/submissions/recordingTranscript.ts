@@ -550,3 +550,52 @@ export async function fetchRecordingTranscript(
     })),
   };
 }
+
+/** Completed-transcript segments with their ids, so evidence can cite them. */
+export async function fetchRecordingTranscriptSegmentsWithIds(
+  supabase: SupabaseClient,
+  submissionVivaId: string,
+): Promise<
+  Array<RecordingTranscriptSegment & { id: string }>
+> {
+  const { data: job, error } = await supabase
+    .from("viva_recording_transcription_jobs")
+    .select("id")
+    .eq("submission_viva_id", submissionVivaId)
+    .eq("status", "completed")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("We could not load the transcript.");
+  }
+
+  if (!job) {
+    return [];
+  }
+
+  const { data, error: segmentsError } = await supabase
+    .from("viva_recording_transcript_segments")
+    .select("id, start_seconds, end_seconds, text, confidence")
+    .eq("job_id", job.id)
+    .order("position", { ascending: true });
+
+  if (segmentsError) {
+    throw new Error("We could not load the transcript.");
+  }
+
+  return (
+    (data as Array<{
+      confidence: number | null;
+      end_seconds: number;
+      id: string;
+      start_seconds: number;
+      text: string;
+    }> | null) ?? []
+  ).map((row) => ({
+    confidence: row.confidence,
+    endSeconds: row.end_seconds,
+    id: row.id,
+    startSeconds: row.start_seconds,
+    text: row.text,
+  }));
+}
