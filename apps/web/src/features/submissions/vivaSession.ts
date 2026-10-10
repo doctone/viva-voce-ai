@@ -1,71 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { QuestionSetStatus } from "./vivaQuestionSet";
 
 export const CONSENT_STATES = ["consent_given", "recording_disabled"] as const;
 export type ConsentState = (typeof CONSENT_STATES)[number];
 
 export type EquipmentCheckResult = "passed" | "failed";
 export type VivaSessionStatus = "active" | "ended";
-
-export type ReadinessChecklist = {
-  accessibilityAdjustments: string;
-  consentDeclinedReason: string;
-  consentState: ConsentState | null;
-  equipmentCheckResult: EquipmentCheckResult | null;
-  expectedDurationMinutes: number | null;
-  questionSetStatus: QuestionSetStatus;
-  studentConfirmed: boolean;
-};
-
-export type ReadinessValidation = {
-  blockingReasons: string[];
-  isReady: boolean;
-};
-
-export function evaluateReadiness(
-  checklist: ReadinessChecklist,
-): ReadinessValidation {
-  const blockingReasons: string[] = [];
-
-  if (checklist.questionSetStatus !== "ready") {
-    blockingReasons.push(
-      "Mark the Viva Question Set ready before starting a Viva Session.",
-    );
-  }
-
-  if (!checklist.studentConfirmed) {
-    blockingReasons.push(
-      "Confirm the student and submission are correct.",
-    );
-  }
-
-  if (checklist.consentState === null) {
-    blockingReasons.push(
-      "Record recording consent, or the reason recording is disabled.",
-    );
-  } else if (
-    checklist.consentState === "recording_disabled" &&
-    checklist.consentDeclinedReason.trim().length === 0
-  ) {
-    blockingReasons.push("Enter a reason recording is disabled.");
-  }
-
-  if (checklist.equipmentCheckResult !== "passed") {
-    blockingReasons.push(
-      "Run the microphone check and confirm it passes.",
-    );
-  }
-
-  if (
-    checklist.expectedDurationMinutes === null ||
-    !Number.isFinite(checklist.expectedDurationMinutes) ||
-    checklist.expectedDurationMinutes <= 0
-  ) {
-    blockingReasons.push("Enter an expected duration greater than zero.");
-  }
-
-  return { blockingReasons, isReady: blockingReasons.length === 0 };
-}
 
 export type VivaSessionRecord = {
   accessibilityAdjustments: string;
@@ -100,10 +39,6 @@ export type VivaSessionRepository = {
   ) => Promise<VivaSessionRecord>;
 };
 
-export type StartVivaSessionResult =
-  | { outcome: "already_active"; session: VivaSessionRecord }
-  | { outcome: "started"; session: VivaSessionRecord };
-
 /**
  * A Viva Session runs until the teacher ends the conversation, so stopping the
  * recording ends it. Leaving it active would make the next take reuse this
@@ -115,23 +50,6 @@ export async function endVivaSession(
   repository: VivaSessionRepository,
 ): Promise<void> {
   await repository.endSession(vivaSessionId);
-}
-
-export async function startVivaSession(
-  input: StartVivaSessionInput,
-  repository: VivaSessionRepository,
-): Promise<StartVivaSessionResult> {
-  const existing = await repository.findActiveSession(
-    input.vivaQuestionSetId,
-  );
-
-  if (existing) {
-    return { outcome: "already_active", session: existing };
-  }
-
-  const session = await repository.insertSession(input);
-
-  return { outcome: "started", session };
 }
 
 /**

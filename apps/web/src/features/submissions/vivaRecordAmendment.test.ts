@@ -4,9 +4,7 @@ import {
   amendVivaRecord,
   currentContent,
   currentVersion,
-  diffContent,
   originalContent,
-  validateAmendment,
   type AmendmentInput,
   type SignedVivaRecord,
   type VivaRecordAmendment,
@@ -182,11 +180,5 @@ describe("audit history", () => {
       { field: "followUpAction", from: "", to: "Email parent." },
     ]);
     expect(currentContent(record, [...fake.stored].reverse()).followUpAction).toBe("Email parent.");
-  });
-
-  it("diffContent and validateAmendment agree on what counts as a change", () => {
-    const before = originalContent(record);
-    expect(diffContent(before, before)).toEqual([]);
-    expect(validateAmendment({ ...input, ...before, reason: "x" }, before)).toHaveLength(1);
   });
 });

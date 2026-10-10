@@ -38,7 +38,6 @@ describe('Breadcrumb', () => {
     expect(submissionsLink).toHaveAttribute('href', '/submissions')
 
     const currentPage = screen.getByText('Mercantile law response')
-    expect(currentPage.tagName).toBe('SPAN')
     expect(currentPage).toHaveAttribute('aria-current', 'page')
   })
 

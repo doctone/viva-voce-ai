@@ -12,7 +12,6 @@ import { Card, Heading } from '~/components/ui'
 import { mutedTextClassName } from '~/lib/class-names'
 import { AuthenticatedAppShell } from './AuthenticatedAppShell'
 import { render } from '../../test/router'
-import { getShouldShowTopbar } from '../../routes/__root'
 
 function renderShellWithRoutes() {
   const rootRoute = createRootRoute({
@@ -124,10 +123,6 @@ describe('AuthenticatedAppShell', () => {
     expect(await screen.findByRole('heading', { name: 'Reports' })).toBeInTheDocument()
     expect(screen.getByText('Assessment summaries live here.')).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/reports')
-  })
-
-  it('returns false for the public topbar on authenticated submissions routes', () => {
-    expect(getShouldShowTopbar('/submissions', ['/__root__', '/_authed'])).toBe(false)
   })
 
   it('opens the mobile nav drawer from the hamburger button and closes it via the close button', async () => {

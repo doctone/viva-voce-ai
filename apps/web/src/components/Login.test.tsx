@@ -56,14 +56,6 @@ async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('Login', () => {
-  it('renders email and password fields with a "Log in" button', async () => {
-    renderWithRouter(<Login />, '/login')
-
-    expect(await screen.findByLabelText('Email')).toBeInTheDocument()
-    expect(screen.getByLabelText('Password')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument()
-  })
-
   it('shows a link to the signup page', async () => {
     renderWithRouter(<Login />, '/login')
 

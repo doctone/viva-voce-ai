@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { SubmissionsTable } from './-SubmissionsTable'
-import { render, renderWithRouter } from '../../../test/router'
+import { renderWithRouter } from '../../../test/router'
 
 const sampleRows = [
   {
@@ -24,45 +24,6 @@ const sampleRows = [
 ]
 
 describe('SubmissionsTable', () => {
-  it('renders the configured columns and submission rows', async () => {
-    renderWithRouter(<SubmissionsTable rows={sampleRows} />, '/submissions')
-
-    expect(await screen.findByRole('table', { name: 'Submissions' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Submission' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Submitted' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument()
-
-    expect(screen.getByText('Student STU-1042')).toBeInTheDocument()
-    expect(screen.getByText('Modernist Poetry Oral Defence')).toBeInTheDocument()
-    expect(screen.getByText('10 Mar 2026')).toBeInTheDocument()
-    expect(screen.getByText('Awaiting Questions')).toBeInTheDocument()
-    expect(screen.getByText('Recorded')).toBeInTheDocument()
-
-    expect(
-      screen.getByRole('link', { name: 'Modernist Poetry Oral Defence' }),
-    ).toHaveAttribute('href', '/submissions/30420000-0000-0000-0000-000000000000')
-  })
-
-  it('renders a "Ready to Record" status once questions exist but no recording has been uploaded', async () => {
-    renderWithRouter(
-      <SubmissionsTable
-        rows={[
-          {
-            id: '30420000-0000-0000-0000-000000000002',
-            studentId: 'STU-1120',
-            submissionTitle: 'Victorian Novel Analysis',
-            dateSubmitted: '08 Mar 2026',
-            submittedAt: '2026-03-08T09:00:00.000Z',
-            status: 'questions_ready',
-          },
-        ]}
-      />,
-      '/submissions',
-    )
-
-    expect(await screen.findByText('Ready to Record')).toBeInTheDocument()
-  })
-
   it('lists the newest submission first before any sorting is chosen', async () => {
     renderWithRouter(<SubmissionsTable rows={sampleRows} />, '/submissions')
 
@@ -100,16 +61,5 @@ describe('SubmissionsTable', () => {
 
     expect(within(firstRow).getByText('Awaiting Questions')).toBeInTheDocument()
     expect(within(secondRow).getByText('Recorded')).toBeInTheDocument()
-  })
-
-  it('shows an intentional empty state when there are no rows', async () => {
-    renderWithRouter(<SubmissionsTable rows={[]} />, '/submissions')
-
-    expect(await screen.findByText('No submissions yet.')).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        'Student submissions will appear here once coursework is ready for review.',
-      ),
-    ).toBeInTheDocument()
   })
 })

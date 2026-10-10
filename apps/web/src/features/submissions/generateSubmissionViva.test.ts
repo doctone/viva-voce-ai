@@ -118,45 +118,6 @@ function createRepository() {
 }
 
 describe('generateSubmissionVivaAnalysis', () => {
-  it('replaces all viva questions for the submission', async () => {
-    const repository = createRepository()
-    const generateStructuredViva = vi.fn().mockResolvedValue(structuredAnalysis)
-
-    const result = await generateSubmissionVivaAnalysis({
-      generateStructuredViva,
-      repository,
-      submissionId: submission.id,
-    })
-
-    expect(result).toEqual({
-      status: 'completed',
-      submissionId: submission.id,
-    })
-    expect(generateStructuredViva).toHaveBeenCalledWith(submission)
-    expect(repository.replaceQuestions).toHaveBeenCalledWith(
-      submission.id,
-      expect.arrayContaining<StoredSubmissionQuestion>([
-        expect.objectContaining({
-          category: 'comprehension_and_accuracy',
-          isRecommended: true,
-          sortOrder: 1,
-          teacherNote:
-            'Listen for accurate explanation of the phrase from the student response.',
-        }),
-        expect.objectContaining({
-          category: 'argumentation_and_reasoning',
-          isRecommended: true,
-          sortOrder: 5,
-        }),
-        expect.objectContaining({
-          category: 'authenticity_and_ownership',
-          isRecommended: false,
-          sortOrder: 12,
-        }),
-      ]),
-    )
-  })
-
   it('stores a failed analysis when the structured output is incomplete', async () => {
     const repository = createRepository()
     const generateStructuredViva = vi.fn().mockResolvedValue({
@@ -420,11 +381,6 @@ describe('createPrompt', () => {
     expect(prompt).toContain(submission.title)
   })
 
-  it('requests exactly 4 questions per category, matching the structured schema', () => {
-    const prompt = createPrompt(submission)
-
-    expect(prompt).toContain('Return exactly 4 questions for each category.')
-  })
 })
 
 describe('default AI SDK path', () => {

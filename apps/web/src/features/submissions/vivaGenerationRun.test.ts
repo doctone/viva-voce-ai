@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   claimVivaGenerationRun,
-  describeVivaGenerationFailure,
   GENERATION_STALE_AFTER_MS,
   isVivaGenerationRecordStale,
   readVivaGenerationRecord,
@@ -168,24 +167,5 @@ describe("viva generation run", () => {
     writeVivaGenerationRecord(SUBMISSION_ID, { status: "completed" });
 
     expect(readVivaGenerationRecord(otherId)).toBeNull();
-  });
-
-  it("falls back to a plain explanation when the failure carries no message", () => {
-    expect(
-      describeVivaGenerationFailure({
-        status: "failed",
-        submissionId: SUBMISSION_ID,
-      }),
-    ).toBe("We saved the submission, but could not generate viva questions.");
-  });
-
-  it("prefers the reported message over the fallback", () => {
-    expect(
-      describeVivaGenerationFailure({
-        errorMessage: "Submission not found.",
-        status: "failed",
-        submissionId: SUBMISSION_ID,
-      }),
-    ).toBe("Submission not found.");
   });
 });

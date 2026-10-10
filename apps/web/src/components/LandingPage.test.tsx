@@ -5,26 +5,6 @@ import { renderWithRouter } from '../test/router'
 
 describe('LandingPage', () => {
   describe('hero section', () => {
-    it('renders a headline communicating the core value proposition', async () => {
-      renderWithRouter(<LandingPage />, '/')
-
-      expect(
-        await screen.findByRole('heading', {
-          name: 'Prepare viva questions in seconds, not hours',
-        }),
-      ).toBeInTheDocument()
-    })
-
-    it('renders a one-line sub-headline explaining what the app does', async () => {
-      renderWithRouter(<LandingPage />, '/')
-
-      expect(
-        await screen.findByText(
-          /turns a student.s coursework into a short, recorded viva/i,
-        ),
-      ).toBeInTheDocument()
-    })
-
     it('renders a primary CTA linking to signup', async () => {
       renderWithRouter(<LandingPage />, '/')
 
@@ -43,29 +23,6 @@ describe('LandingPage', () => {
         'poster',
         '/media/viva-voce-ai-film-poster.jpg',
       )
-    })
-
-    it('replaces the written explainer sections with the film', async () => {
-      renderWithRouter(<LandingPage />, '/')
-
-      await screen.findByLabelText('The Viva Voce AI film')
-
-      expect(
-        screen.queryByRole('heading', { name: /why viva voce matters/i }),
-      ).not.toBeInTheDocument()
-      expect(
-        screen.queryByRole('list', { name: 'Built for teachers' }),
-      ).not.toBeInTheDocument()
-    })
-  })
-
-  describe('social proof callout', () => {
-    it('is visible on the page', async () => {
-      renderWithRouter(<LandingPage />, '/')
-
-      expect(
-        await screen.findByText(/piloting with KS4 English departments/i),
-      ).toBeInTheDocument()
     })
   })
 

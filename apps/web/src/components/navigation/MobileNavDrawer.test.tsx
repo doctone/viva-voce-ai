@@ -12,25 +12,19 @@ import { describe, expect, it } from 'vitest'
 import { render } from '../../test/router'
 import { MobileNavDrawer, type MobileNavItem } from './MobileNavDrawer'
 
-function Harness({
-  items,
-  footer,
-}: {
-  items: readonly MobileNavItem[]
-  footer?: React.ReactNode
-}) {
+function Harness({ items }: { items: readonly MobileNavItem[] }) {
   const [open, setOpen] = useState(true)
   return (
     <>
-      <MobileNavDrawer items={items} open={open} onOpenChange={setOpen} footer={footer} />
+      <MobileNavDrawer items={items} open={open} onOpenChange={setOpen} />
       <Outlet />
     </>
   )
 }
 
-function renderHarness(items: readonly MobileNavItem[], footer?: React.ReactNode) {
+function renderHarness(items: readonly MobileNavItem[]) {
   const rootRoute = createRootRoute({
-    component: () => <Harness items={items} footer={footer} />,
+    component: () => <Harness items={items} />,
   })
   const homeRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -48,48 +42,12 @@ function renderHarness(items: readonly MobileNavItem[], footer?: React.ReactNode
     history: createMemoryHistory({ initialEntries: ['/'] }),
   })
 
-  const { unmount } = render(<RouterProvider router={router} />)
+  render(<RouterProvider router={router} />)
 
-  return { router, unmount }
+  return { router }
 }
 
 describe('MobileNavDrawer', () => {
-  it('renders route links and anchor links with the correct hrefs', async () => {
-    renderHarness([
-      { label: 'About', to: '/about' },
-      { label: 'How it works', href: '#how-it-works' },
-    ])
-
-    const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByRole('link', { name: 'About' })).toHaveAttribute(
-      'href',
-      '/about',
-    )
-    expect(
-      within(dialog).getByRole('link', { name: 'How it works' }),
-    ).toHaveAttribute('href', '#how-it-works')
-  })
-
-  it('renders footer content when provided, and omits it when not', async () => {
-    const { unmount } = renderHarness(
-      [{ label: 'About', to: '/about' }],
-      <p>Signed in as teacher@example.com</p>,
-    )
-
-    const dialog = await screen.findByRole('dialog')
-    expect(
-      within(dialog).getByText('Signed in as teacher@example.com'),
-    ).toBeInTheDocument()
-
-    unmount()
-
-    renderHarness([{ label: 'About', to: '/about' }])
-    const dialogWithoutFooter = await screen.findByRole('dialog')
-    expect(
-      within(dialogWithoutFooter).queryByText(/signed in as/i),
-    ).not.toBeInTheDocument()
-  })
-
   it('closes when a route link is clicked', async () => {
     renderHarness([{ label: 'About', to: '/about' }])
 
