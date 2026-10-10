@@ -22,6 +22,22 @@ export const paperPanelClassName =
 
 export const sectionCardClassName = "grid gap-4 p-8";
 
+/**
+ * One switcher style for every "pick one of a few" control: page tabs and list
+ * filters alike. The chosen item is lifted out of a sunken track rather than
+ * underlined, so the selection reads at a glance without a heavy rule. Items
+ * mark themselves with `aria-pressed` (toggle buttons) or Radix's active state.
+ */
+export const segmentedTrackClassName =
+  "inline-flex items-stretch gap-0.5 rounded-[calc(var(--radius)+2px)] bg-surface-container-high p-[3px]";
+
+export const segmentedItemClassName =
+  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--radius)] border-0 bg-transparent px-3.5 text-[13px] font-semibold text-on-surface-variant shadow-none transition-[background-color,color,box-shadow] duration-150 ease-out hover:text-primary aria-pressed:bg-surface-container-lowest aria-pressed:text-primary aria-pressed:shadow-[0_1px_2px_rgb(26_28_26/0.12)] data-active:bg-surface-container-lowest data-active:text-primary data-active:shadow-[0_1px_2px_rgb(26_28_26/0.12)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_55%,white)]";
+
+/** Counts inside a segmented item recede behind its label. */
+export const segmentedCountClassName =
+  "font-sans font-semibold text-on-surface-variant/70 [font-variant-numeric:tabular-nums]";
+
 export const eyebrowClassName =
   "font-sans text-[12px] font-bold leading-none tracking-[0.08em] text-on-surface-variant uppercase";
 
