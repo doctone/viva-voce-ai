@@ -44,7 +44,7 @@ describe('SubmissionsPage', () => {
 
     renderWithRouter(<SubmissionsPage />, '/submissions')
 
-    expect(await screen.findByText('Student STU-1042')).toBeInTheDocument()
+    expect(await screen.findByText('STU-1042')).toBeInTheDocument()
     expect(screen.getByText('Modernist Poetry Oral Defence')).toBeInTheDocument()
     expect(screen.getByText('12 Mar 2026')).toBeInTheDocument()
     expect(screen.queryByText('2026-03-12T09:00:00.000Z')).not.toBeInTheDocument()
@@ -116,6 +116,26 @@ describe('SubmissionsPage', () => {
       screen.queryByText('Modernist Poetry Oral Defence'),
     ).not.toBeInTheDocument()
     expect(screen.getByText('Showing 1 of 3 submissions')).toBeInTheDocument()
+  })
+
+  it('summarises how many submissions sit at each stage, in workflow order', async () => {
+    server.use(submissionsListHandler(threeSubmissions))
+
+    renderWithRouter(<SubmissionsPage />, '/submissions')
+
+    const stages = await screen.findByRole('list', { name: 'Submission stages' })
+    const tiles = within(stages).getAllByRole('listitem')
+
+    expect(tiles.map((tile) => within(tile).getByRole('heading').textContent)).toEqual([
+      'Awaiting Questions',
+      'Ready to Record',
+      'Recorded',
+    ])
+    expect(tiles.map((tile) => within(tile).getByTestId('stage-count').textContent)).toEqual([
+      '1',
+      '1',
+      '1',
+    ])
   })
 
   it('shows how many submissions sit in each status on the filter controls', async () => {
