@@ -479,6 +479,17 @@ export function ConductVivaSessionPage() {
     return (
       <div className="grid gap-6">
         {conductBreadcrumb}
+        {signedRecord ? (
+          <div>
+            <Link
+              to="/submissions/$submissionId/record"
+              params={{ submissionId }}
+              className={buttonClassName()}
+            >
+              View A4 record
+            </Link>
+          </div>
+        ) : null}
         <VivaRecordPanel
           amendments={amendmentsQuery.data ?? []}
           canAmend={
