@@ -37,10 +37,9 @@ import {
   ConductModePanel,
   type ConductModeQuestion,
 } from "./submissions/-ConductModePanel";
-import {
-  VivaSessionCapturePanel,
-  type CaptureAskedQuestion,
-} from "./submissions/-VivaSessionCapturePanel";
+import type { CaptureAskedQuestion } from "./submissions/-VivaSessionCapturePanel";
+import { useLiveTranscription } from "../../features/submissions/useLiveTranscription";
+import { deriveQuestionSetRail } from "../../features/submissions/questionSetRail";
 import { fetchCaptureAskedQuestions } from "./submissions/-captureAskedQuestions";
 
 export const Route = createFileRoute(
@@ -59,14 +58,11 @@ type VivaQuestionSetIdRow = {
 };
 
 type SetQuestionRow = {
+  category: string;
   id: string;
   question_text: string;
   set_position: number | null;
   teacher_note: string;
-};
-
-type AskedQuestionVivaIdRow = {
-  viva_question_id: string | null;
 };
 
 async function fetchSubmissionTitle(
@@ -109,11 +105,11 @@ async function fetchQuestionSetId(
 
 async function fetchOrderedSetQuestions(
   submissionId: string,
-): Promise<Array<{ id: string; questionText: string; teacherNote: string; setPosition: number | null }>> {
+): Promise<Array<{ category: string; id: string; questionText: string; teacherNote: string; setPosition: number | null }>> {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from("viva_questions")
-    .select("id, question_text, teacher_note, set_position")
+    .select("id, question_text, teacher_note, set_position, category")
     .eq("submission_id", submissionId);
 
   if (error) {
@@ -124,6 +120,7 @@ async function fetchOrderedSetQuestions(
 
   return sortQuestionsBySetPosition(
     rows.map((row) => ({
+      category: row.category,
       id: row.id,
       questionText: row.question_text,
       setPosition: row.set_position ?? null,
@@ -132,28 +129,13 @@ async function fetchOrderedSetQuestions(
   );
 }
 
-async function fetchAskedVivaQuestionIds(
-  vivaSessionId: string,
-): Promise<string[]> {
-  const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from("asked_questions")
-    .select("viva_question_id")
-    .eq("viva_session_id", vivaSessionId);
-
-  if (error) {
-    throw new Error("We could not load Asked Questions.");
-  }
-
-  return ((data as AskedQuestionVivaIdRow[] | null) ?? [])
-    .map((row) => row.viva_question_id)
-    .filter((id): id is string => id !== null);
-}
-
 export function ConductVivaSessionPage() {
   const { submissionId } = Route.useParams();
   const queryClient = useQueryClient();
   const [currentIndex, setCurrentIndex] = React.useState(0);
+  const [selectedFollowUpId, setSelectedFollowUpId] = React.useState<
+    string | null
+  >(null);
   const [now, setNow] = React.useState(() => new Date());
 
   const submissionQuery = useQuery({
@@ -308,20 +290,10 @@ export function ConductVivaSessionPage() {
   });
   const orderedQuestions = setQuestionsQuery.data ?? [];
 
-  const askedIdsQuery = useQuery({
-    enabled: Boolean(vivaSession),
-    queryFn: () => fetchAskedVivaQuestionIds((vivaSession as { id: string }).id),
-    queryKey: ["asked-viva-question-ids", vivaSession?.id ?? null],
-  });
-  const askedVivaQuestionIds = React.useMemo(
-    () => new Set(askedIdsQuery.data ?? []),
-    [askedIdsQuery.data],
-  );
-
   const conductQuestions: ConductModeQuestion[] = orderedQuestions.map(
     (question) => ({
+      category: question.category,
       id: question.id,
-      isAsked: askedVivaQuestionIds.has(question.id),
       questionText: question.questionText,
       teacherNote: question.teacherNote,
     }),
@@ -343,6 +315,11 @@ export function ConductVivaSessionPage() {
     [vivaSession?.id],
   );
   const capture = useVivaAudioCapture(resolveVivaSessionId);
+  // Best effort: a failure here never touches recording or the stored record.
+  const liveTranscription = useLiveTranscription(
+    capture.getMediaStream,
+    capture.status === "recording",
+  );
 
   const captureQuestionsQuery = useQuery({
     enabled: Boolean(vivaSession),
@@ -358,15 +335,27 @@ export function ConductVivaSessionPage() {
       return;
     }
 
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: ["asked-viva-question-ids", vivaSession.id],
-      }),
-      queryClient.invalidateQueries({
-        queryKey: ["asked-questions", vivaSession.id],
-      }),
-    ]);
+    await queryClient.invalidateQueries({
+      queryKey: ["asked-questions", vivaSession.id],
+    });
   }, [queryClient, vivaSession]);
+
+  const rail = deriveQuestionSetRail(
+    orderedQuestions,
+    captureAskedQuestions.map((asked) => ({
+      evidenceMarkerType: asked.evidenceMarker?.markerType ?? null,
+      id: asked.id,
+      isUnplanned: asked.isUnplanned,
+      questionText: asked.questionText,
+      vivaQuestionId: asked.vivaQuestionId,
+    })),
+  );
+  const currentRailItem = rail.items[currentIndex] ?? null;
+  const currentAskedQuestionId =
+    selectedFollowUpId ?? currentRailItem?.askedQuestionId ?? null;
+  const currentAskedQuestion =
+    captureAskedQuestions.find((asked) => asked.id === currentAskedQuestionId) ??
+    null;
 
   const saveAskedQuestionObservation = React.useCallback(
     async (askedQuestionId: string, content: string) => {
@@ -526,43 +515,43 @@ export function ConductVivaSessionPage() {
     <div className="grid gap-6">
       {conductBreadcrumb}
       <ConductModePanel
+        currentAskedQuestion={currentAskedQuestion}
         currentIndex={currentIndex}
         elapsedSeconds={elapsedSeconds}
         failedChunkCount={capture.failedChunkCount}
+        getMediaStream={capture.getMediaStream}
+        liveTranscript={liveTranscription}
+        onApplyEvidenceMarker={applyAskedQuestionEvidenceMarker}
         onAskCurrentQuestion={askCurrentQuestion}
         onAskFollowUpQuestion={askFollowUpQuestion}
-        onNext={() =>
+        onNext={() => {
+          setSelectedFollowUpId(null);
           setCurrentIndex((index) =>
             clampQuestionIndex(index + 1, conductQuestions.length),
-          )
-        }
-        onPrevious={() =>
+          );
+        }}
+        onPrevious={() => {
+          setSelectedFollowUpId(null);
           setCurrentIndex((index) =>
             clampQuestionIndex(index - 1, conductQuestions.length),
-          )
-        }
+          );
+        }}
         onRetryFailedChunks={capture.retryFailedChunks}
+        onSaveObservation={saveAskedQuestionObservation}
+        onSelectFollowUp={setSelectedFollowUpId}
+        onSelectQuestion={(index) => {
+          setSelectedFollowUpId(null);
+          setCurrentIndex(clampQuestionIndex(index, conductQuestions.length));
+        }}
         onStartRecording={capture.start}
         onStopRecording={() => {
-              void capture.stop();
-            }}
+          void capture.stop();
+        }}
         onTogglePauseRecording={capture.togglePause}
         questions={conductQuestions}
+        rail={rail}
         recordingStatus={capture.status}
         submissionTitle={submissionQuery.data?.submission_title ?? ""}
-      />
-      <VivaSessionCapturePanel
-        askedQuestions={captureAskedQuestions}
-        isLoadingAskedQuestions={captureQuestionsQuery.isLoading}
-        onApplyEvidenceMarker={applyAskedQuestionEvidenceMarker}
-        onAskFollowUpQuestion={askFollowUpQuestion}
-        onAskPlannedQuestion={askCurrentQuestion}
-        onSaveObservation={saveAskedQuestionObservation}
-        plannedQuestions={orderedQuestions.map((question) => ({
-          id: question.id,
-          questionText: question.questionText,
-        }))}
-        showAskControls={false}
       />
       {captureQuestionsQuery.error instanceof Error ? (
         <p className="text-sm leading-6 text-error" role="alert">

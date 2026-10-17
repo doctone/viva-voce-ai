@@ -40,14 +40,17 @@ export type CapturePlannedQuestion = {
 
 type AskedQuestionCaptureCardProps = {
   askedQuestion: CaptureAskedQuestion;
+  /** Conduct mode shows the question in its own card, so it hides the repeat. */
+  showQuestion?: boolean;
   onApplyEvidenceMarker: (markerType: EvidenceMarkerType) => Promise<void>;
   onSaveObservation: (content: string) => Promise<void>;
 };
 
 type SaveStatus = "error" | "idle" | "saved" | "saving" | "unsaved";
 
-function AskedQuestionCaptureCard({
+export function AskedQuestionCaptureCard({
   askedQuestion,
+  showQuestion = true,
   onApplyEvidenceMarker,
   onSaveObservation,
 }: AskedQuestionCaptureCardProps) {
@@ -169,14 +172,16 @@ function AskedQuestionCaptureCard({
 
   return (
     <div className="grid gap-4 rounded-[var(--radius)] border border-outline-variant bg-surface-container-lowest p-4">
-      <div className="grid gap-1">
-        <span className={eyebrowClassName}>
-          {askedQuestion.isUnplanned ? "Unplanned follow-up" : "Asked question"}
-        </span>
-        <p className="text-sm leading-6 text-on-surface">
-          {askedQuestion.questionText}
-        </p>
-      </div>
+      {showQuestion ? (
+        <div className="grid gap-1">
+          <span className={eyebrowClassName}>
+            {askedQuestion.isUnplanned ? "Unplanned follow-up" : "Asked question"}
+          </span>
+          <p className="text-sm leading-6 text-on-surface">
+            {askedQuestion.questionText}
+          </p>
+        </div>
+      ) : null}
 
       <fieldset className="grid gap-2">
         <legend className="text-sm font-bold text-on-surface">
