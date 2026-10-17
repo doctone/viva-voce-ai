@@ -193,3 +193,64 @@
     animation: none !important;
   }
 }
+
+/* Viva record: one A4 sheet on screen, in print and in the saved PDF. */
+.record-sheet {
+  box-sizing: border-box;
+  width: 210mm;
+  min-height: 297mm;
+  max-width: 100%;
+  padding: 14mm;
+  background: #fff;
+  color: #1a1c1a;
+}
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  body:has(.record-root) * {
+    visibility: hidden;
+  }
+
+  body:has(.record-root),
+  html:has(.record-root) {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  body:has(.record-root) .record-root,
+  body:has(.record-root) .record-root * {
+    visibility: visible;
+  }
+
+  .record-root {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .record-sheet {
+    width: 210mm;
+    height: 297mm;
+    min-height: 0;
+    overflow: hidden;
+    border: 0;
+    box-shadow: none;
+    break-after: page;
+  }
+
+  .record-sheet:last-child {
+    break-after: auto;
+  }
+
+  .record-no-print {
+    display: none !important;
+  }
+}

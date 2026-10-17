@@ -20,6 +20,7 @@ import { Route as AuthedStudentRecordsRouteImport } from './routes/_authed/stude
 import { Route as AuthedSubmissionsIndexRouteImport } from './routes/_authed/submissions.index'
 import { Route as AuthedSubmissionsNewRouteImport } from './routes/_authed/submissions.new'
 import { Route as AuthedSubmissionsSubmissionIdRouteImport } from './routes/_authed/submissions.$submissionId'
+import { Route as AuthedSubmissionsSubmissionIdRecordRouteImport } from './routes/_authed/submissions.$submissionId.record'
 import { Route as AuthedSubmissionsSubmissionIdConductRouteImport } from './routes/_authed/submissions.$submissionId.conduct'
 
 const SignupRoute = SignupRouteImport.update({
@@ -77,6 +78,12 @@ const AuthedSubmissionsSubmissionIdRoute =
     path: '/$submissionId',
     getParentRoute: () => AuthedSubmissionsRoute,
   } as any)
+const AuthedSubmissionsSubmissionIdRecordRoute =
+  AuthedSubmissionsSubmissionIdRecordRouteImport.update({
+    id: '/record',
+    path: '/record',
+    getParentRoute: () => AuthedSubmissionsSubmissionIdRoute,
+  } as any)
 const AuthedSubmissionsSubmissionIdConductRoute =
   AuthedSubmissionsSubmissionIdConductRouteImport.update({
     id: '/conduct',
@@ -96,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/submissions/new': typeof AuthedSubmissionsNewRoute
   '/submissions/': typeof AuthedSubmissionsIndexRoute
   '/submissions/$submissionId/conduct': typeof AuthedSubmissionsSubmissionIdConductRoute
+  '/submissions/$submissionId/record': typeof AuthedSubmissionsSubmissionIdRecordRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -108,6 +116,7 @@ export interface FileRoutesByTo {
   '/submissions/new': typeof AuthedSubmissionsNewRoute
   '/submissions': typeof AuthedSubmissionsIndexRoute
   '/submissions/$submissionId/conduct': typeof AuthedSubmissionsSubmissionIdConductRoute
+  '/submissions/$submissionId/record': typeof AuthedSubmissionsSubmissionIdRecordRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -123,6 +132,7 @@ export interface FileRoutesById {
   '/_authed/submissions/new': typeof AuthedSubmissionsNewRoute
   '/_authed/submissions/': typeof AuthedSubmissionsIndexRoute
   '/_authed/submissions/$submissionId/conduct': typeof AuthedSubmissionsSubmissionIdConductRoute
+  '/_authed/submissions/$submissionId/record': typeof AuthedSubmissionsSubmissionIdRecordRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/submissions/new'
     | '/submissions/'
     | '/submissions/$submissionId/conduct'
+    | '/submissions/$submissionId/record'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/submissions/new'
     | '/submissions'
     | '/submissions/$submissionId/conduct'
+    | '/submissions/$submissionId/record'
   id:
     | '__root__'
     | '/'
@@ -164,6 +176,7 @@ export interface FileRouteTypes {
     | '/_authed/submissions/new'
     | '/_authed/submissions/'
     | '/_authed/submissions/$submissionId/conduct'
+    | '/_authed/submissions/$submissionId/record'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -254,6 +267,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSubmissionsSubmissionIdRouteImport
       parentRoute: typeof AuthedSubmissionsRoute
     }
+    '/_authed/submissions/$submissionId/record': {
+      id: '/_authed/submissions/$submissionId/record'
+      path: '/record'
+      fullPath: '/submissions/$submissionId/record'
+      preLoaderRoute: typeof AuthedSubmissionsSubmissionIdRecordRouteImport
+      parentRoute: typeof AuthedSubmissionsSubmissionIdRoute
+    }
     '/_authed/submissions/$submissionId/conduct': {
       id: '/_authed/submissions/$submissionId/conduct'
       path: '/conduct'
@@ -266,12 +286,15 @@ declare module '@tanstack/react-router' {
 
 interface AuthedSubmissionsSubmissionIdRouteChildren {
   AuthedSubmissionsSubmissionIdConductRoute: typeof AuthedSubmissionsSubmissionIdConductRoute
+  AuthedSubmissionsSubmissionIdRecordRoute: typeof AuthedSubmissionsSubmissionIdRecordRoute
 }
 
 const AuthedSubmissionsSubmissionIdRouteChildren: AuthedSubmissionsSubmissionIdRouteChildren =
   {
     AuthedSubmissionsSubmissionIdConductRoute:
       AuthedSubmissionsSubmissionIdConductRoute,
+    AuthedSubmissionsSubmissionIdRecordRoute:
+      AuthedSubmissionsSubmissionIdRecordRoute,
   }
 
 const AuthedSubmissionsSubmissionIdRouteWithChildren =
