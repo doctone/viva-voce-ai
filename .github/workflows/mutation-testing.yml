@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -37,8 +39,21 @@ jobs:
       # existing features files (e.g. untested Supabase wiring) score below the
       # configured break threshold. Report the score without failing the build
       # until coverage of business logic catches up.
+      # Mutate only the feature files this PR changes (and are not tests or
+      # excluded wiring). A full run takes far longer and re-tests untouched code.
       - name: Run mutation testing
-        run: pnpm test:mutate
+        run: |
+          files=$(git diff --name-only --diff-filter=d "origin/${{ github.base_ref }}...HEAD" -- \
+            'apps/web/src/features/**/*.ts' 'apps/web/src/features/**/*.tsx' \
+            ':!*.test.ts' ':!*.test.tsx' ':!*ServerFn.ts' ':!*OpenAi.ts' ':!*/use*.ts' \
+            | sed 's#^apps/web/##' | paste -sd, -)
+          if [ -z "$files" ] && git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -q stryker.config.mjs; then
+            pnpm test:mutate
+          elif [ -n "$files" ]; then
+            pnpm test:mutate --mutate "$files"
+          else
+            echo "No mutable feature files changed."
+          fi
         continue-on-error: true
 
       - name: Upload Stryker HTML report

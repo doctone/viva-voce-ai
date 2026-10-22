@@ -11,6 +11,8 @@ export default {
     // Thin framework wiring (server functions, hooks) has no business logic to mutate yet.
     "!src/features/**/*ServerFn.ts",
     "!src/features/**/use*.ts",
+    // Vendor wiring: the prompt and schema are checked by the evaluation fixtures, not by mutation.
+    "!src/features/**/*OpenAi.ts",
   ],
   thresholds: {
     break: 60,
