@@ -1,9 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
   draftAssessmentSummary,
-  openAiSummaryDrafter,
   type ApprovedEvidence,
 } from './assessmentSummary'
+import { openAiSummaryDrafter } from './assessmentSummaryOpenAi'
 import { getSupabaseServerClient } from '../../utils/supabase-server'
 
 export const draftAssessmentSummaryFn = createServerFn({ method: 'POST' })
