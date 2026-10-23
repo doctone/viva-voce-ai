@@ -60,3 +60,7 @@ yarn.lock
 
 # Verification runs (.claude/skills/verify-viva-voce)
 .verify/
+
+# e2e runner output (apps/e2e); the replay cache is the only part worth committing
+**/.e2e/*
+!**/.e2e/cache/
