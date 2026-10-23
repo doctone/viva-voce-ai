@@ -70,3 +70,48 @@ Zod) already have an owner.
 
 Coverage is reported on PRs without a floor. Mutation testing
 (`pnpm test:mutate`) is the measure of whether tests catch regressions.
+
+## End-to-end tests
+
+E2E tests live in `apps/e2e` (a separate workspace package, so `pnpm test`
+and the Vitest loop never run them). They use the open-source
+[`e2e`](https://tester.army/e2e) runner to drive Chromium against the real
+app (`vite dev` on port 3200) and the local Supabase stack. Run them with
+`pnpm test:e2e` after `pnpm db:start`. They need Node 22.22.3+ or 24.8+; see
+`apps/e2e/.nvmrc`. The run refuses any `SUPABASE_URL` other than
+`http://127.0.0.1:54321`. A failing run leaves `.e2e/report.json`, traces and
+screenshots in `apps/e2e/.e2e/`.
+
+Tests are deterministic: locators and `expect`, no model. Agent steps come
+later.
+
+### When a journey earns an E2E test
+
+Write one only when the regression lives in something jsdom and MSW cannot
+show:
+
+- SSR auth cookies and redirects on a full page load.
+- Supabase row-level security and storage, with the real database.
+- Server functions over HTTP, not in-process.
+- Real media APIs (`MediaRecorder`, `getUserMedia`, audio playback).
+- Navigation across several pages.
+
+If a page test can show the behaviour, it stays a page test. Page tests are
+faster, cheaper to debug and cover the edge cases. Keep E2E to a few
+journeys that a broken deploy would hurt, not one per feature.
+
+### Which layer owns which regression
+
+| Regression | Owner |
+| --- | --- |
+| Copy, validation, disabled and error states, request bodies | Page test |
+| Branching logic in a domain function | Domain function test |
+| A teacher cannot reach another teacher's rows | E2E (RLS) |
+| Login sets a session that survives a reload | E2E (cookies) |
+| Recording a viva uploads audio that plays back | E2E (media, storage) |
+
+### What E2E may fake
+
+Only third-party services we do not run, which today means OpenAI. Never fake
+our own code or Supabase. Everything else is the real app against the real
+local stack.
