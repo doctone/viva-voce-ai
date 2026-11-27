@@ -206,10 +206,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               onOpenMenu={() => setIsMobileNavOpen(true)}
             />
           ) : null}
-          <div className={shouldShowTopbar ? pageFrameClassName : ""}>
+          <div className={shouldShowTopbar && pathname !== "/" ? pageFrameClassName : ""}>
             {shouldShowTopbar ? (
               <>
-                <header className="mb-16 hidden flex-wrap items-center gap-4 border-b border-outline-variant pb-4 lg:flex">
+                {pathname !== "/" && <header className="mb-16 hidden flex-wrap items-center gap-4 border-b border-outline-variant pb-4 lg:flex">
                   <div className="contents">
                     <div className="grid gap-1">
                       <Link to="/" className={brandTitleClassName}>
@@ -262,7 +262,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                       )}
                     </nav>
                   </div>
-                </header>
+                </header>}
 
                 <MobileNavDrawer
                   items={publicMobileNavItems}
