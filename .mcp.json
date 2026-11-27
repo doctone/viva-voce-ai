@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "e2e": {
+      "command": "sh",
+      "args": ["-c", "cd apps/e2e && exec pnpm exec e2e mcp"]
+    }
+  }
+}
